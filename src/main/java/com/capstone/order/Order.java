@@ -2,32 +2,33 @@ package com.capstone.order;
 
 import java.sql.Date;
 import java.sql.Time;
-import java.sql.Timestamp;
+import java.util.List;
 
 public class Order {
 
-    private String id;
-    private String cust;
-    private String shipper;
-    private String mall;
-    private Date createDate;
-    private Time createTime;
-    private Time lastUpdate;
-    private int status;
-    private String note;
-    private double costShopping;
-    private double costDelivery;
-    private double totalCost;
-    private Date dateDelivery;
-    private Time timeDelivery;
-    private TimeTravel timeTravel;
-    private Evidence evidence;
+    private String id; //server
+    private String cust; //cust
+    private String shipper; //shipper
+    private String mall; //cust
+    private Date createDate; //server
+    private Time createTime; //server
+    private Time lastUpdate; //server
+    private int status; //server
+    private String note; //cust
+    private double costShopping; //cust
+    private double costDelivery; //cust
+    private double totalCost; //cust
+    private Date dateDelivery; //cust
+    private Time timeDelivery; //cust
+    private TimeTravel timeTravel; //cust
+    private Evidence evidence; //shipper
+    private List<OrderDetail> detail;
 
     public Order() {
     }
 
     public Order(String id, String cust, String mall, Date createDate, Time createTime, Time lastUpdate, int status, String note,
-            double costShopping, double costDelivery, double totalCost, Date dateDelivery, Time timeDelivery, TimeTravel timeTravel) {
+            double costShopping, double costDelivery, double totalCost, Date dateDelivery, Time timeDelivery, TimeTravel timeTravel, List<OrderDetail> detail) {
         this.id = id;
         this.cust = cust;
         this.mall = mall;
@@ -42,6 +43,7 @@ public class Order {
         this.dateDelivery = dateDelivery;
         this.timeDelivery = timeDelivery;
         this.timeTravel = timeTravel;
+        this.detail = detail;
     }
 
     public String getId() {
@@ -158,5 +160,13 @@ public class Order {
 
     public Time getCreateTime() {
         return createTime;
+    }
+
+    public List<OrderDetail> getDetail() {
+        return detail;
+    }
+
+    public void setDetail(List<OrderDetail> detail) {
+        this.detail = detail;
     }
 }
