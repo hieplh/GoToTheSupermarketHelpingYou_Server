@@ -1,5 +1,8 @@
 package com.capstone.controller;
 
+import com.capstone.helper.DateTimeHelper;
+import com.capstone.helper.GsonHelper;
+import com.capstone.main.Main;
 import com.capstone.msg.ErrorMsg;
 import com.capstone.order.Order;
 import com.capstone.order.OrderDetail;
@@ -10,13 +13,18 @@ import java.sql.SQLException;
 import java.sql.Time;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.springframework.http.HttpStatus;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,16 +34,37 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 public class OrderController {
 
+    public static Map<Order, Integer> mapOrderInQueue = null;
+    public static List<Order> listOrderInProcess = new ArrayList<>();
+    public static Map<String, Order> mapOrders = new HashMap<>();
+
+    @GetMapping("/orders")
+    public String deliveryOrder() {
+        if (mapOrderInQueue == null) {
+            new Main().loadMapOrderInQueue();
+        }
+
+        return GsonHelper.gson(listOrderInProcess);
+    }
+
     @PostMapping("/orders")
     public ResponseEntity newOrder(@RequestBody Order obj) {
         try {
             Order order = new Order(new OrderService().generateId(obj),
-                    obj.getCust(), obj.getMall(),
-                    new java.sql.Date(new Date().getTime()), new Time(new Date().getTime()),
-                    new Time(new Date().getTime()), 1, obj.getNote(),
-                    obj.getCostShopping(), obj.getCostDelivery(), obj.getTotalCost(),
-                    obj.getDateDelivery(), obj.getTimeDelivery(), obj.getTimeTravel(),
-                    obj.getDetail());
+                    obj.getCust(),
+                    obj.getMarket(),
+                    new java.sql.Date(new Date().getTime()),
+                    new Time(new Date().getTime()),
+                    new Time(new Date().getTime()),
+                    "10",
+                    obj.getNote(),
+                    obj.getCostShopping(),
+                    obj.getCostDelivery(),
+                    obj.getTotalCost(),
+                    obj.getDateDelivery(),
+                    obj.getTimeDelivery(),
+                    obj.getTimeTravel(),
+                    obj.getDetails());
 
             String result = new OrderService().insertOrder(order);
 
@@ -43,9 +72,26 @@ public class OrderController {
                 return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
-            if (new OrderService().insertOrderDetail(result, order.getDetail()) == null) {
+            if (new OrderService().insertOrderDetail(result, order.getDetails()) == null) {
                 return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
             }
+        } catch (SQLException | ClassNotFoundException e) {
+            Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
+            return new ResponseEntity<>(new ErrorMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        new OrderService().addOrderInqueue(obj);
+        return new ResponseEntity(HttpStatus.OK);
+    }
+
+    @GetMapping("/order/accept/{orderId}/shipper/{shipperId}")
+    public ResponseEntity acceptOrder(@PathVariable("orderId") String orderId, @PathVariable("shipperId") String shipperId) {
+        Order order = mapOrders.get(orderId);
+        order.setShipper(shipperId);
+        order.setStatus("21");
+        mapOrders.put(orderId, order);
+        
+        try {
+            new OrderService().updatetOrder(order);
         } catch (SQLException | ClassNotFoundException e) {
             Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
             return new ResponseEntity<>(new ErrorMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -62,6 +108,21 @@ public class OrderController {
                     + String.valueOf(LocalTime.now(ZoneId.of("GMT+7")).getSecond());
         }
 
+        void addOrderInMapOrders(Order order) {
+            mapOrders.put(order.getId(), order);
+        }
+
+        void addOrderInqueue(Order order) {
+            if (mapOrderInQueue == null) {
+                mapOrderInQueue = new HashMap<>();
+            }
+            mapOrderInQueue.put(order, getTimeForShipper(order));
+        }
+
+        int getTimeForShipper(Order order) {
+            return new DateTimeHelper().calculateTimeForShipper(order, order.getTimeTravel());
+        }
+
         String insertOrder(Order order) throws SQLException, ClassNotFoundException {
             Connection con = null;
             PreparedStatement stmt = null;
@@ -75,11 +136,11 @@ public class OrderController {
                     stmt = con.prepareStatement(sql);
                     stmt.setString(1, order.getId());
                     stmt.setString(2, order.getCust());
-                    stmt.setString(3, order.getMall());
+                    stmt.setString(3, order.getMarket());
                     stmt.setDate(4, order.getCreateDate());
                     stmt.setTime(5, order.getCreateTime());
                     stmt.setTime(6, order.getLastUpdate());
-                    stmt.setInt(7, order.getStatus());
+                    stmt.setInt(7, 10);
                     stmt.setString(8, order.getNote());
                     stmt.setDouble(9, order.getCostShopping());
                     stmt.setDouble(10, order.getCostDelivery());
@@ -114,7 +175,7 @@ public class OrderController {
                     for (OrderDetail detail : details) {
                         stmt.setString(1, idOrder + String.valueOf(++count));
                         stmt.setString(2, detail.getFood());
-                        stmt.setDouble(3, detail.getPriceOrginal());
+                        stmt.setDouble(3, detail.getPriceOriginal());
                         stmt.setInt(4, detail.getSaleOff());
                         stmt.setDouble(5, detail.getPricePaid());
                         stmt.setDouble(6, detail.getWeight());
@@ -124,6 +185,32 @@ public class OrderController {
                     int[] arr = stmt.executeBatch();
                     con.commit();
                     return arr;
+                }
+            } finally {
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (con != null) {
+                    con.close();
+                }
+            }
+            return null;
+        }
+
+        String updatetOrder(Order order) throws SQLException, ClassNotFoundException {
+            Connection con = null;
+            PreparedStatement stmt = null;
+
+            try {
+                con = DBUtils.getConnection();
+                if (con != null) {
+                    String sql = "UPDATE ORDERS SET SHIPPER = ?, STATUS = ?\n"
+                            + "WHERE ID = ?";
+                    stmt = con.prepareStatement(sql);
+                    stmt.setString(1, order.getShipper());
+                    stmt.setInt(2, Integer.parseInt(order.getStatus()));
+                    stmt.setString(3, order.getId());
+                    return stmt.executeUpdate() > 0 ? order.getId() : null;
                 }
             } finally {
                 if (stmt != null) {

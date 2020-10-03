@@ -4,58 +4,67 @@ import java.sql.Date;
 
 public class Account {
 
-    String id;
-    String username;
-    String password;
-    String email;
-    int role;
-    Date createDate;
-    Date lastLogin;
-    Date lastUpdate;
-    int numOrder;
-    int numCancel;
-    double wallet;
-    int status;
-    boolean isActive;
-    Profile profile;
+    private String id;
+    private String username;
+    private String password;
+    private String firstName;
+    private String middleName;
+    private String lastName;
+    private String email;
+    private String phone;
+    private Date dob;
+    private int role;
+    private Date createDate;
+    private int numOrder;
+    private int numCancel;
+    private double wallet;
+    private int status;
+    private boolean isActive;
 
     public Account() {
     }
 
-    public Account(String username, String email, int role, int status, Profile profile) {
-        this.username = username;
-        this.email = email;
-        this.role = role;
-        this.status = status;
-        this.profile = profile;
-    }
-
-    public Account(String id, String username, String password, String email, int role, Date createDate, Date lastLogin, Date lastUpdate, int numOrder, int numCancel, double wallet, int status, boolean isActive) {
+    public Account(String id, String username, String password, String firstName, String middleName, String lastName, String email, String phone, Date dob, int role, Date createDate, int numOrder, int numCancel, double wallet, int status, boolean isActive) {
         this.id = id;
         this.username = username;
         this.password = password;
+        this.firstName = firstName;
+        this.middleName = middleName;
+        this.lastName = lastName;
         this.email = email;
+        this.phone = phone;
+        this.dob = dob;
         this.role = role;
         this.createDate = createDate;
-        this.lastLogin = lastLogin;
-        this.lastUpdate = lastUpdate;
         this.numOrder = numOrder;
         this.numCancel = numCancel;
         this.wallet = wallet;
         this.status = status;
         this.isActive = isActive;
+    }    
+
+    public Account(String id, String firstName, String middleName, String lastName, String email, String phone, Date dob,
+            int role, int numOrder, int numCancel, double wallet, int status) {
+        this.id = id;
+        this.firstName = firstName;
+        this.middleName = middleName;
+        this.lastName = lastName;
+        this.email = email;
+        this.phone = phone;
+        this.dob = dob;
+        this.role = role;
+        this.numOrder = numOrder;
+        this.numCancel = numCancel;
+        this.wallet = wallet;
+        this.status = status;
     }
 
     public String getId() {
         return id;
     }
-    
+
     public void setId(String id) {
         this.id = id;
-    }
-
-    public String getUsername() {
-        return username;
     }
 
     public void setUsername(String username) {
@@ -86,14 +95,6 @@ public class Account {
         this.createDate = createDate;
     }
 
-    public void setLastLogin(Date lastLogin) {
-        this.lastLogin = lastLogin;
-    }
-
-    public void setLastUpdate(Date lastUpdate) {
-        this.lastUpdate = lastUpdate;
-    }
-
     public void setNumOrder(int numOrder) {
         this.numOrder = numOrder;
     }
@@ -122,12 +123,48 @@ public class Account {
         this.isActive = isActive;
     }
 
-    public Profile getProfile() {
-        return profile;
+    public String getFirstName() {
+        return firstName;
     }
 
-    public void setProfile(Profile profile) {
-        this.profile = profile;
+    public String getMiddleName() {
+        return middleName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public Date getDob() {
+        return dob;
+    }
+
+    public int getNumOrder() {
+        return numOrder;
+    }
+
+    public int getNumCancel() {
+        return numCancel;
+    }
+
+    public void setMiddleName(String middleName) {
+        this.middleName = middleName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public void setDob(Date dob) {
+        this.dob = dob;
     }
 
 }

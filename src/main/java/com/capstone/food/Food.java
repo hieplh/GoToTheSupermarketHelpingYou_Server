@@ -1,19 +1,9 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package com.capstone.food;
 
 import com.google.gson.annotations.SerializedName;
 
-/**
- *
- * @author Admin
- */
 public class Food {
 
-    @SerializedName("id")
     String id;
 
     @SerializedName("name")
@@ -22,18 +12,18 @@ public class Food {
     @SerializedName("image")
     String image;
 
-    @SerializedName("description")
     String description;
-
-    @SerializedName("price")
     double price;
-
-    @SerializedName("saleoff")
     SaleOff saleOff;
 
     public Food() {
     }
 
+    public Food(String name, String image) {
+        this.name = name;
+        this.image = image;
+    }
+    
     public Food(String id, String name, String image, String description, double price) {
         this.id = id;
         this.name = name;

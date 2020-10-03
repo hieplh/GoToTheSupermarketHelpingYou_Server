@@ -1,7 +1,6 @@
 package com.capstone.controller;
 
 import com.capstone.account.Account;
-import com.capstone.account.Profile;
 import com.capstone.msg.ErrorMsg;
 import com.capstone.utils.DBUtils;
 import java.sql.Connection;
@@ -44,26 +43,28 @@ public class AccountController {
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
-                    String sql = "SELECT A.USERNAME, A.EMAIL, A.ROLE, A.STATUS,\n"
-                            + "F.FIRST_NAME, F.MID_NAME, F.LAST_NAME, F.PHONE, F.DOB\n"
+                    String sql = "SELECT A.ID, A. A.EMAIL, A.ROLE, A.STATUS, A.WALLET\n"
+                            + "A.FIRST_NAME, A.MID_NAME, A.LAST_NAME, A.PHONE, A.DOB\n"
+                            + "A.NUM_ORDERED, A.NUM_CANCEL"
                             + "FROM ACCOUNT A\n"
-                            + "JOIN PROFILE F\n"
-                            + "ON A.ID = F.ACCOUNT\n"
                             + "WHERE A.USERNAME = ? AND A.PASSWORD = ? AND A.IS_ACTIVE = 1";
                     stmt = con.prepareStatement(sql);
                     stmt.setString(1, username);
                     stmt.setString(2, password);
                     rs = stmt.executeQuery();
                     if (rs.next()) {
-                        return new Account(rs.getString("USERNAME"),
+                        return new Account(rs.getString("ID"),
+                                rs.getString("FIRST_NAME"),
+                                rs.getString("MID_NAME"),
+                                rs.getString("LAST_NAME"),
                                 rs.getString("EMAIL"),
+                                rs.getString("PHONE"),
+                                rs.getDate("DOB"),
                                 rs.getInt("ROLE"),
-                                rs.getInt("STATUS"),
-                                new Profile(rs.getString("FIRST_NAME"),
-                                        rs.getString("MID_NAME"),
-                                        rs.getString("LAST_NAME"),
-                                        rs.getString("PHONE"),
-                                        rs.getDate("DOB")));
+                                rs.getInt("NUM_ORDERED"),
+                                rs.getInt("NUM_CANCEL"),
+                                rs.getDouble("WALLET"),
+                                rs.getInt("STATUS"));
                     }
                 }
             } finally {

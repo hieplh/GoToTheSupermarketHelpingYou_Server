@@ -1,5 +1,6 @@
 package com.capstone.controller;
 
+import com.capstone.mall.Mall;
 import com.capstone.msg.ErrorMsg;
 import com.capstone.utils.DBUtils;
 import java.sql.Connection;
@@ -22,7 +23,7 @@ public class MallController {
 
     @GetMapping("/malls")
     public ResponseEntity<?> getApiMalls() {
-        List<Mall> listMalls = null;
+        List<Mall> listMalls;
         try {
             listMalls = new MallService().getMalls();
         } catch (SQLException | ClassNotFoundException e) {
@@ -43,7 +44,7 @@ public class MallController {
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
-                    String sql = "SELECT ID, NAME, ADDR_1, ADDR_2, ADDR_3, ADDR_4\n"
+                    String sql = "SELECT ID, NAME, ADDR_1, ADDR_2, ADDR_3, ADDR_4, LAT, LNG\n"
                             + "FROM MALL";
                     stmt = con.prepareStatement(sql);
                     rs = stmt.executeQuery();
@@ -56,7 +57,9 @@ public class MallController {
                                 rs.getString("ADDR_1"),
                                 rs.getString("ADDR_2"),
                                 rs.getString("ADDR_3"),
-                                rs.getString("ADDR_4")));
+                                rs.getString("ADDR_4"),
+                                rs.getString("LAT"),
+                                rs.getString("LNG")));
                     }
                 }
             } finally {
@@ -72,28 +75,5 @@ public class MallController {
             }
             return listMalls;
         }
-    }
-
-    class Mall {
-
-        String id;
-        String name;
-        String addr1;
-        String addr2;
-        String addr3;
-        String addr4;
-
-        public Mall() {
-        }
-
-        public Mall(String id, String name, String addr1, String addr2, String addr3, String addr4) {
-            this.id = id;
-            this.name = name;
-            this.addr1 = addr1;
-            this.addr2 = addr2;
-            this.addr3 = addr3;
-            this.addr4 = addr4;
-        }
-
     }
 }
