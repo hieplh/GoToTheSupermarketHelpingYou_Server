@@ -26,11 +26,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 public class FoodController {
 
+    FoodService service = new FoodService();
+    
     @GetMapping("/foods/{id_mall}")
     public ResponseEntity<?> getApiAllFoodsAtMall(@PathVariable("id_mall") String mall) {
         List<Food> listFoods = null;
         try {
-            listFoods = new FoodService().getAllFoodsAtMall(mall);
+            listFoods = service.getAllFoodsAtMall(mall);
         } catch (SQLException | ClassNotFoundException e) {
             Logger.getLogger(FoodController.class.getName()).log(Level.SEVERE, e.getMessage());
             return new ResponseEntity<>(new ErrorMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);

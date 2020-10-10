@@ -10,7 +10,7 @@ public class ContextListener implements ServletContextListener {
 
     @Override
     public void contextInitialized(ServletContextEvent sce) {
-        new Main().loadMapOrderInQueue();
+        new Main().init();
     }
 
     @Override

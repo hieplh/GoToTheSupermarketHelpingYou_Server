@@ -94,4 +94,9 @@ public class OrderDetail {
         this.image = image;
     }
 
+    @Override
+    public String toString() {
+        return "OrderDetail{" + "id=" + id + ", food=" + food + ", image=" + image + ", priceOriginal=" + priceOriginal + ", pricePaid=" + pricePaid + ", weight=" + weight + ", saleOff=" + saleOff + '}';
+    }
+
 }

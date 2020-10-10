@@ -51,4 +51,9 @@ public class TimeTravel {
         this.traffic = traffic;
     }
 
+    @Override
+    public String toString() {
+        return "TimeTravel{" + "going=" + going + ", shopping=" + shopping + ", delivery=" + delivery + ", traffic=" + traffic + '}';
+    }
+
 }

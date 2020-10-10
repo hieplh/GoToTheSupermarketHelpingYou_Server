@@ -2,7 +2,7 @@ package com.capstone.controller;
 
 import com.capstone.helper.DateTimeHelper;
 import com.capstone.helper.GsonHelper;
-import com.capstone.main.Main;
+import com.capstone.iface.IOrder;
 import com.capstone.msg.ErrorMsg;
 import com.capstone.order.Order;
 import com.capstone.order.OrderDetail;
@@ -34,19 +34,20 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 public class OrderController {
 
-    public static Map<Order, Integer> mapOrderInQueue = null;
-    public static List<Order> listOrderInProcess = new ArrayList<>();
     public static Map<String, Order> mapOrders = new HashMap<>();
+    public static Map<Order, Integer> mapOrderInQueue = new HashMap<>();
+    public static List<Order> listOrderInProcess = new ArrayList<>();
 
-    @GetMapping("/orders")
-    public String deliveryOrder() {
-        if (mapOrderInQueue == null) {
-            new Main().loadMapOrderInQueue();
-        }
+    IOrder orderListener = new OrderService();
 
-        return GsonHelper.gson(listOrderInProcess);
+    OrderService service = new OrderService();
+
+    @GetMapping("/testorder")
+    public ResponseEntity test() {
+        service.checkOrderInqueue();
+        return new ResponseEntity(GsonHelper.gson.toJson(listOrderInProcess), HttpStatus.OK);
     }
-
+    
     @PostMapping("/orders")
     public ResponseEntity newOrder(@RequestBody Order obj) {
         try {
@@ -56,7 +57,7 @@ public class OrderController {
                     new java.sql.Date(new Date().getTime()),
                     new Time(new Date().getTime()),
                     new Time(new Date().getTime()),
-                    "10",
+                    "12",
                     obj.getNote(),
                     obj.getCostShopping(),
                     obj.getCostDelivery(),
@@ -66,32 +67,34 @@ public class OrderController {
                     obj.getTimeTravel(),
                     obj.getDetails());
 
-            String result = new OrderService().insertOrder(order);
+            String result = service.insertOrder(order);
 
             if (result == null) {
                 return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
-            if (new OrderService().insertOrderDetail(result, order.getDetails()) == null) {
+            if (service.insertOrderDetail(result, order.getDetails()) == null) {
                 return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
             }
+            
+            service.addOrderInqueue(obj);
+            service.checkOrderInqueue();
         } catch (SQLException | ClassNotFoundException e) {
             Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
             return new ResponseEntity<>(new ErrorMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        new OrderService().addOrderInqueue(obj);
         return new ResponseEntity(HttpStatus.OK);
     }
 
-    @GetMapping("/order/accept/{orderId}/shipper/{shipperId}")
-    public ResponseEntity acceptOrder(@PathVariable("orderId") String orderId, @PathVariable("shipperId") String shipperId) {
+    @GetMapping("/order/{orderId}/shipper/{shipperId}")
+    public ResponseEntity updatetOrder(@PathVariable("orderId") String orderId, @PathVariable("shipperId") String shipperId) {
         Order order = mapOrders.get(orderId);
         order.setShipper(shipperId);
         order.setStatus("21");
         mapOrders.put(orderId, order);
-        
+
         try {
-            new OrderService().updatetOrder(order);
+            service.updatetOrder(order);
         } catch (SQLException | ClassNotFoundException e) {
             Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
             return new ResponseEntity<>(new ErrorMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -99,7 +102,22 @@ public class OrderController {
         return new ResponseEntity(HttpStatus.OK);
     }
 
-    class OrderService {
+    public IOrder getOrderListener() {
+        return orderListener;
+    }
+
+    class OrderService implements IOrder {
+
+        @Override
+        public void checkOrderInqueue() {
+            for (Map.Entry<Order, Integer> order : OrderController.mapOrderInQueue.entrySet()) {
+                System.out.println("Local Time: " + LocalTime.now(ZoneId.of("GMT+7")).toString());
+                int totalMinuteCurrent = DateTimeHelper.parseTimeToMinute(LocalTime.now(ZoneId.of("GMT+7")));
+                if (totalMinuteCurrent >= order.getValue() - 15 && totalMinuteCurrent <= order.getValue()) {
+                    OrderController.listOrderInProcess.add(order.getKey());
+                }
+            }
+        }
 
         String generateId(Order obj) {
             return obj.getCust()

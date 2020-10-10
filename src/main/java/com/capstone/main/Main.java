@@ -1,10 +1,9 @@
 package com.capstone.main;
 
+import com.capstone.controller.MarketController;
 import com.capstone.controller.OrderController;
-import static com.capstone.controller.OrderController.listOrderInProcess;
-import static com.capstone.controller.OrderController.mapOrderInQueue;
 import com.capstone.helper.DateTimeHelper;
-import com.capstone.mall.Mall;
+import com.capstone.market.Market;
 import com.capstone.order.Order;
 import com.capstone.order.OrderDetail;
 import com.capstone.order.TimeTravel;
@@ -16,10 +15,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -44,30 +41,86 @@ public class Main extends SpringBootServletInitializer {
 
     public static void main(String[] args) {
         SpringApplication.run(Main.class, args);
-        new Main().loadMapOrderInQueue();
-        for (Map.Entry<Order, Integer> entry : mapOrderInQueue.entrySet()) {
-            System.out.println(entry.getValue());
-        }
+//        new Main().init(); 
     }
 
-    public void loadMapOrderInQueue() {
+    public void init() {
         try {
-            List<Order> listOrders = loadOrder();
-            loadOrderDetail(listOrders);
+            Date date = new Date(Calendar.getInstance(
+                    TimeZone.getTimeZone("Asia/Ho_Chi_Minh"), Locale.forLanguageTag("vi-vn"))
+                    .getTimeInMillis());
 
-            if (OrderController.mapOrderInQueue == null) {
-                OrderController.mapOrderInQueue = new HashMap<>();
+            List<Order> totalOrders = loadOrder(date, "%");
+            List<Order> inqueueOrders = loadOrder(date, "12");
+            List<Market> markets = loadMarket();
+
+            if (markets != null) {
+                for (Market market : markets) {
+                    MarketController.mapMarket.put(market.getId(), market);
+                }
             }
-            for (Order order : listOrders) {
-                OrderController.mapOrderInQueue.put(order, new DateTimeHelper().calculateTimeForShipper(order, order.getTimeTravel()));
-                order.setTimeTravel(null);
+
+            if (totalOrders != null) {
+                for (Order order : totalOrders) {
+                    OrderController.mapOrders.put(order.getId(), order);
+                }
             }
-        } catch (SQLException | ClassNotFoundException ex) {
-            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, ex.getMessage());
+
+            if (inqueueOrders != null) {
+                loadOrderDetail(inqueueOrders);
+                for (Order order : inqueueOrders) {
+                    OrderController.mapOrderInQueue.put(order, new DateTimeHelper().calculateTimeForShipper(order, order.getTimeTravel()));
+                    order.setTimeTravel(null);
+                }
+            }
+        } catch (ClassNotFoundException | SQLException e) {
+            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, e.getMessage());
         }
+
     }
 
-    private List<Order> loadOrder() throws SQLException, ClassNotFoundException {
+    private List<Market> loadMarket() throws SQLException, ClassNotFoundException {
+        Connection con = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+        List<Market> listMarkets = null;
+
+        try {
+            con = DBUtils.getConnection();
+            if (con != null) {
+                String sql = "SELECT ID, NAME, ADDR_1, ADDR_2, ADDR_3, ADDR_4, LAT, LNG\n"
+                        + "FROM MALL";
+                stmt = con.prepareStatement(sql);
+                rs = stmt.executeQuery();
+                while (rs.next()) {
+                    if (listMarkets == null) {
+                        listMarkets = new ArrayList<>();
+                    }
+                    listMarkets.add(new Market(rs.getString("ID"),
+                            rs.getString("NAME"),
+                            rs.getString("ADDR_1"),
+                            rs.getString("ADDR_2"),
+                            rs.getString("ADDR_3"),
+                            rs.getString("ADDR_4"),
+                            rs.getString("LAT"),
+                            rs.getString("LNG")));
+                }
+            }
+        } finally {
+            if (rs != null) {
+                rs.close();
+            }
+            if (stmt != null) {
+                stmt.close();
+            }
+            if (con != null) {
+                con.close();
+            }
+        }
+        return listMarkets;
+    }
+
+    private List<Order> loadOrder(Date date, String status) throws SQLException, ClassNotFoundException {
         Connection con = null;
         PreparedStatement stmt = null;
         ResultSet rs = null;
@@ -76,30 +129,19 @@ public class Main extends SpringBootServletInitializer {
         try {
             con = DBUtils.getConnection();
             if (con != null) {
-                String sql = "EXEC GET_ORDERS_INQUEUE_BY_DATE ?";
+                String sql = "EXEC GET_ORDERS_INQUEUE_BY_DATE ?, ?";
                 stmt = con.prepareStatement(sql);
-                stmt.setDate(1, new Date(Calendar.getInstance(
-                        TimeZone.getTimeZone("Asia/Ho_Chi_Minh"), Locale.forLanguageTag("vi-vn"))
-                        .getTimeInMillis()));
+                stmt.setDate(1, date);
+                stmt.setString(2, status);
 
                 rs = stmt.executeQuery();
                 while (rs.next()) {
-                    if (OrderController.mapOrderInQueue == null) {
-                        OrderController.mapOrderInQueue = new HashMap<>();
-                    }
                     if (listOrders == null) {
                         listOrders = new ArrayList<>();
                     }
                     listOrders.add(new Order(rs.getString("ID"),
                             rs.getString("CUST"),
-                            new Mall(null,
-                                    rs.getString("NAME"),
-                                    rs.getString("ADDR_1"),
-                                    rs.getString("ADDR_2"),
-                                    rs.getString("ADDR_3"),
-                                    rs.getString("ADDR_4"),
-                                    rs.getString("LAT"),
-                                    rs.getString("LNG")),
+                            rs.getString("MALL"),
                             rs.getString("NOTE"),
                             rs.getDouble("COST_SHOPPING"),
                             rs.getDouble("COST_DELIVERY"),
@@ -126,67 +168,45 @@ public class Main extends SpringBootServletInitializer {
         return listOrders;
     }
 
-    private void loadOrderDetail(List<Order> listOrders) {
-        ExecutorService executorService = Executors.newFixedThreadPool(2);
-        List<Future<?>> futures = new ArrayList<>();
-        futures.add(executorService.submit(new CallableImp<>(listOrders.subList(0, listOrders.size() / 2))));
-        futures.add(executorService.submit(new CallableImp<>(listOrders.subList(listOrders.size() / 2, listOrders.size()))));
+    private void loadOrderDetail(List<Order> listOrders) throws SQLException, ClassNotFoundException {
+        Connection con = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
 
-        for (Future<?> future : futures) {
-            try {
-                future.get();
-            } catch (InterruptedException | ExecutionException ex) {
-                Logger.getLogger(Main.class.getName()).log(Level.SEVERE, ex.getMessage());
-            }
-        }
-        executorService.shutdown();
-    }
-
-    class CallableImp<T> implements Callable<T> {
-
-        private final List<Order> list;
-
-        public CallableImp(List<Order> list) {
-            this.list = list;
-        }
-
-        @Override
-        public T call() throws Exception {
-            Connection con = null;
-            PreparedStatement stmt = null;
-            ResultSet rs = null;
-
-            try {
-                con = DBUtils.getConnection();
-                if (con != null) {
-                    String sql = "EXEC GET_ORDER_DETAIL_BY_ID ?";
-                    stmt = con.prepareStatement(sql);
-                    for (Order order : list) {
-                        stmt.setString(1, order.getId());
-                        rs = stmt.executeQuery();
-                        while (rs.next()) {
-                            order.getDetails().add(new OrderDetail(rs.getString("ID"),
-                                    rs.getString("NAME"),
-                                    rs.getString("IMAGE"),
-                                    rs.getDouble("ORIGINAL_PRICE"),
-                                    rs.getDouble("PAID_PRICE"),
-                                    rs.getDouble("WEIGHT"),
-                                    rs.getInt("SALE_OFF")));
+        try {
+            con = DBUtils.getConnection();
+            if (con != null) {
+                String sql = "EXEC GET_ORDER_DETAIL_BY_ID ?";
+                stmt = con.prepareStatement(sql);
+                for (Order order : listOrders) {
+                    stmt.setString(1, order.getId());
+                    rs = stmt.executeQuery();
+                    List<OrderDetail> listDetails = order.getDetails();
+                    while (rs.next()) {
+                        if (listDetails == null) {
+                            listDetails = new ArrayList<>();
                         }
+                        listDetails.add(new OrderDetail(rs.getString("ID"),
+                                rs.getString("NAME"),
+                                rs.getString("IMAGE"),
+                                rs.getDouble("ORIGINAL_PRICE"),
+                                rs.getDouble("PAID_PRICE"),
+                                rs.getDouble("WEIGHT"),
+                                rs.getInt("SALE_OFF")));
                     }
-                }
-            } finally {
-                if (rs != null) {
-                    rs.close();
-                }
-                if (stmt != null) {
-                    stmt.close();
-                }
-                if (con != null) {
-                    con.close();
+                    order.setDetails(listDetails);
                 }
             }
-            return null;
+        } finally {
+            if (rs != null) {
+                rs.close();
+            }
+            if (stmt != null) {
+                stmt.close();
+            }
+            if (con != null) {
+                con.close();
+            }
         }
     }
 }

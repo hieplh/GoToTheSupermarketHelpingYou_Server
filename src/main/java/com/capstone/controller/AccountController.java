@@ -20,11 +20,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 public class AccountController {
 
+    AccountService service = new AccountService();
+    
     @GetMapping("/account/{username}/{password}")
     public ResponseEntity<?> getApiAccountByUsername(@PathVariable("username") String username, @PathVariable("password") String password) {
         Account account = null;
         try {
-            account = new AccountService().getAccountByUsername(username, password);
+            account = service.getAccountByUsername(username, password);
         } catch (SQLException | ClassNotFoundException e) {
             Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, e.getMessage());
             return new ResponseEntity<>(new ErrorMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);

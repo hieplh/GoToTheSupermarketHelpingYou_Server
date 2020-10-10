@@ -1,8 +1,8 @@
 package com.capstone.schedule;
 
 import com.capstone.controller.OrderController;
-import com.capstone.firebase.Firebase;
-import com.capstone.helper.DateTimeHelper;
+import com.capstone.google.Firebase;
+import com.capstone.iface.IOrder;
 import com.capstone.order.Order;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import java.io.IOException;
@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
 public class Notify {
 
     static Map<String, Integer> mapTimeDelivery = new HashMap<>();
-    static Map<String, String> mapData = new HashMap();
+    static Map<String, String> mapData = new HashMap(); //ID Order - Precondition minimum distance for shipper
 
     static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("HH:mm:ss");
     static boolean INFINITE_PUSH_ORDER_FLAG = false;
@@ -35,6 +35,8 @@ public class Notify {
     final String RADIUS_LARGE = "7km";
     
     final String TOPIC_SHIPEPR = "SHIPPER";
+    
+    Firebase firebase = new Firebase();
 
     @Scheduled(cron = "0 0 8 ? * *")
     public void pushOrder() throws InterruptedException {
@@ -60,7 +62,7 @@ public class Notify {
 
             try {
                 if (!mapData.isEmpty()) {
-                    new Firebase().pushNotifyOrdedrToShipper(TOPIC_SHIPEPR, mapData);
+                    firebase.pushNotifyOrdedrToShipper(TOPIC_SHIPEPR, mapData);
                 }
             } catch (FirebaseMessagingException | IOException ex) {
                 Logger.getLogger(Notify.class.getName()).log(Level.SEVERE, null, ex);
@@ -78,13 +80,8 @@ public class Notify {
         INFINITE_CHECK_ORDER_FLAG = true;
         do {
             try {
-                DateTimeHelper helper = new DateTimeHelper();
-                for (Map.Entry<Order, Integer> order : OrderController.mapOrderInQueue.entrySet()) {
-                    int totalMinuteCurrent = helper.parseTimeToMinute(LocalTime.now(ZoneId.of("GMT+7")));
-                    if (totalMinuteCurrent + 15 >= order.getValue()) {
-                        OrderController.listOrderInProcess.add(order.getKey());
-                    }
-                }
+                    IOrder orderListener = new OrderController().getOrderListener();
+                    orderListener.checkOrderInqueue();
                 if (LocalTime.of(20, 30, 0).compareTo(getCurrentTime()) <= -1) {
                     INFINITE_CHECK_ORDER_FLAG = false;
                 } else {

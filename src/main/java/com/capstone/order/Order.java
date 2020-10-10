@@ -1,14 +1,11 @@
 package com.capstone.order;
 
-import com.capstone.mall.Mall;
-import com.google.gson.annotations.SerializedName;
 import java.sql.Date;
 import java.sql.Time;
 import java.util.List;
 
 public class Order {
 
-    @SerializedName("id")
     private String id;              //server
 
     private Date createDate;        //server
@@ -21,28 +18,21 @@ public class Order {
 
     private String market;
 
-    @SerializedName("cust")
     private String cust;            //cust
 
-    @SerializedName("mall")
-    private Mall mall;            //cust
+//    @SerializedName("mall")
+//    private Mall mall;            //cust
 
-    @SerializedName("note")
     private String note;            //cust
 
-    @SerializedName("costShipping")
     private double costShopping;    //cust
 
-    @SerializedName("costDelivery")
     private double costDelivery;    //cust
 
-    @SerializedName("totalCost")
     private double totalCost;       //cust
 
-    @SerializedName("dateDelivery")
     private Date dateDelivery;      //cust
 
-    @SerializedName("timeDelivery")
     private Time timeDelivery;      //cust
 
     private TimeTravel timeTravel;  //cust
@@ -51,17 +41,16 @@ public class Order {
 
     private Evidence evidence;      //shipper
 
-    @SerializedName("details")
     private List<OrderDetail> details;
 
     public Order() {
     }
 
-    public Order(String id, String cust, Mall mall, String note, double costShopping, double costDelivery,
+    public Order(String id, String cust, String market, String note, double costShopping, double costDelivery,
             double totalCost, Date dateDelivery, Time timeDelivery, TimeTravel timeTravel) {
         this.id = id;
         this.cust = cust;
-        this.mall = mall;
+        this.market = market;
         this.note = note;
         this.costShopping = costShopping;
         this.costDelivery = costDelivery;
@@ -212,11 +201,6 @@ public class Order {
 
     public void setStatus(String status) {
         this.status = status;
-    }
-
-    @Override
-    public String toString() {
-        return "Order{" + "id=" + id + ", createDate=" + createDate + ", createTime=" + createTime + ", lastUpdate=" + lastUpdate + ", status=" + status + ", market=" + market + ", cust=" + cust + ", mall=" + mall + ", note=" + note + ", costShopping=" + costShopping + ", costDelivery=" + costDelivery + ", totalCost=" + totalCost + ", dateDelivery=" + dateDelivery + ", timeDelivery=" + timeDelivery + ", timeTravel=" + timeTravel + ", shipper=" + shipper + ", evidence=" + evidence + ", details=" + details + '}';
     }
 
 }

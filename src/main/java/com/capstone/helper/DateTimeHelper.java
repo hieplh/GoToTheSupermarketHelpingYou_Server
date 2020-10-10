@@ -6,7 +6,7 @@ import java.time.LocalTime;
 
 public class DateTimeHelper {
 
-    public int parseTimeToMinute(LocalTime localTime) {
+    public static int parseTimeToMinute(LocalTime localTime) {
         return localTime.getHour() * 60 + localTime.getMinute();
     }
 
