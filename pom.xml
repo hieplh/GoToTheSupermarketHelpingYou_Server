@@ -154,10 +154,10 @@
                 <version>1.11.0</version>
                 <configuration>
                     <schemaVersion>v2</schemaVersion>
-                    <resourceGroup>${RESOURCEGROUP_NAME}</resourceGroup>
+                    <resourceGroup>Student</resourceGroup>
                     <appServicePlanName>${WEBAPP_PLAN_NAME}</appServicePlanName>
                     <appName>smhu</appName>
-                    <region>${REGION}</region>
+                    <region>southeastasia</region>
                     <runtime>
                         <os>linux</os>
                         <javaVersion>jre8</javaVersion>
