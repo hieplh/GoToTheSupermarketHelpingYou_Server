@@ -8,40 +8,88 @@
         <version>2.3.4.RELEASE</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>com.capstone</groupId>
-    <artifactId>Capstone</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+
+    <groupId>com.smhu</groupId>
+    <artifactId>smhu</artifactId>
+    <version>1</version>
     <packaging>war</packaging>
-    <name>GoToTheSupermarketHelpingYou</name>
+    <name>GototheSupermarketHelpingYou</name>
     <description>Capstone Project</description>
 
     <properties>
         <java.version>1.8</java.version>
     </properties>
+    
+<!--    <configuration>
+        <authentication>
+            <serverId>azure-auth</serverId>
+        </authentication>
+        <appName>smhu</appName>
+        <resourceGroup>Student</resourceGroup>
+        <javaVersion>1.8</javaVersion>
+ 
+        <deploymentType>ftp</deploymentType>
+        <resources>
+            <resource>
+                <directory>${project.basedir}/target</directory>
+                <targetPath>webapps</targetPath>
+                <includes>
+                    <include>*.war</include>
+                </includes>
+            </resource>
+        </resources>
+    </configuration>-->
+
     <dependencies>
+        <!--        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-rest</artifactId>
+        </dependency>-->
+        
+        <!--        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>-->
+        
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+        
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web-services</artifactId>
+        </dependency>
+        
+        <!--        <dependency>
+            <groupId>org.springframework.session</groupId>
+            <artifactId>spring-session-jdbc</artifactId>
+        </dependency>-->
 
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <scope>runtime</scope>
+            <optional>true</optional>
+        </dependency>
+        
         <!-- https://mvnrepository.com/artifact/com.microsoft.sqlserver/mssql-jdbc -->
         <dependency>
             <groupId>com.microsoft.sqlserver</groupId>
             <artifactId>mssql-jdbc</artifactId>
             <version>8.4.1.jre8</version>
         </dependency>
-
+        
+        <!--        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>-->
         
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.junit.vintage</groupId>
-                    <artifactId>junit-vintage-engine</artifactId>
-                </exclusion>
-            </exclusions>
+            <artifactId>spring-boot-starter-tomcat</artifactId>
+            <scope>provided</scope>
         </dependency>
         
         <!-- https://mvnrepository.com/artifact/io.springfox/springfox-swagger2 -->
@@ -72,12 +120,6 @@
         </dependency>
         
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-tomcat</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        
-        <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
             <version>1.7.25</version>
@@ -89,15 +131,49 @@
             <artifactId>google-maps-services</artifactId>
             <version>0.15.0</version>
         </dependency>
-
+        
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.junit.vintage</groupId>
+                    <artifactId>junit-vintage-engine</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
     </dependencies>
 
     <build>
         <finalName>${artifactId}</finalName>
         <plugins>
             <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
+                <groupId>com.microsoft.azure</groupId>
+                <artifactId>azure-webapp-maven-plugin</artifactId>
+                <version>1.11.0</version>
+                <configuration>
+                    <schemaVersion>v2</schemaVersion>
+                    <resourceGroup>${RESOURCEGROUP_NAME}</resourceGroup>
+                    <appServicePlanName>${WEBAPP_PLAN_NAME}</appServicePlanName>
+                    <appName>${WEBAPP_NAME}</appName>
+                    <region>${REGION}</region>
+                    <runtime>
+                        <os>linux</os>
+                        <javaVersion>jre8</javaVersion>
+                        <webContainer>TOMCAT 9.0</webContainer>
+                    </runtime>
+                    <deployment>
+                        <resources>
+                            <resource>
+                                <directory>${project.basedir}/target</directory>
+                                <includes>
+                                    <include>*.war</include>
+                                </includes>
+                            </resource>
+                        </resources>
+                    </deployment>
+                </configuration>
             </plugin>
         </plugins>
     </build>
