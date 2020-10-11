@@ -156,7 +156,7 @@
                     <schemaVersion>v2</schemaVersion>
                     <resourceGroup>${RESOURCEGROUP_NAME}</resourceGroup>
                     <appServicePlanName>${WEBAPP_PLAN_NAME}</appServicePlanName>
-                    <appName>${WEBAPP_NAME}</appName>
+                    <appName>smhu</appName>
                     <region>${REGION}</region>
                     <runtime>
                         <os>linux</os>
