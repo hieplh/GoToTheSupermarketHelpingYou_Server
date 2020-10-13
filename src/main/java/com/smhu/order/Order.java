@@ -3,6 +3,7 @@ package com.smhu.order;
 import java.sql.Date;
 import java.sql.Time;
 import java.util.List;
+import java.util.Objects;
 
 public class Order {
 
@@ -22,7 +23,6 @@ public class Order {
 
 //    @SerializedName("mall")
 //    private Mall mall;            //cust
-
     private String note;            //cust
 
     private double costShopping;    //cust
@@ -43,25 +43,16 @@ public class Order {
 
     private List<OrderDetail> details;
 
+    private String lat;
+
+    private String lng;
+
     public Order() {
     }
 
-    public Order(String id, String cust, String market, String note, double costShopping, double costDelivery,
-            double totalCost, Date dateDelivery, Time timeDelivery, TimeTravel timeTravel) {
-        this.id = id;
-        this.cust = cust;
-        this.market = market;
-        this.note = note;
-        this.costShopping = costShopping;
-        this.costDelivery = costDelivery;
-        this.totalCost = totalCost;
-        this.dateDelivery = dateDelivery;
-        this.timeDelivery = timeDelivery;
-        this.timeTravel = timeTravel;
-    }
-
     public Order(String id, String cust, String market, Date createDate, Time createTime, Time lastUpdate, String status, String note,
-            double costShopping, double costDelivery, double totalCost, Date dateDelivery, Time timeDelivery, TimeTravel timeTravel, List<OrderDetail> detail) {
+            double costShopping, double costDelivery, double totalCost, Date dateDelivery, Time timeDelivery, TimeTravel timeTravel,
+            String lat, String lng, List<OrderDetail> detail) {
         this.id = id;
         this.cust = cust;
         this.market = market;
@@ -77,6 +68,8 @@ public class Order {
         this.timeDelivery = timeDelivery;
         this.timeTravel = timeTravel;
         this.details = detail;
+        this.lat = lat;
+        this.lng = lng;
     }
 
     public String getId() {
@@ -147,6 +140,14 @@ public class Order {
         return lastUpdate;
     }
 
+    public String getLat() {
+        return lat;
+    }
+
+    public String getLng() {
+        return lng;
+    }
+
     public void setId(String id) {
         this.id = id;
     }
@@ -201,6 +202,32 @@ public class Order {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public void setLat(String lat) {
+        this.lat = lat;
+    }
+
+    public void setLng(String lng) {
+        this.lng = lng;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final Order other = (Order) obj;
+        if (!Objects.equals(this.id, other.id)) {
+            return false;
+        }
+        return true;
     }
 
 }

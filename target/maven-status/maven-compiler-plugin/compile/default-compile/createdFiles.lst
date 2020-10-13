@@ -17,6 +17,7 @@ com\smhu\helper\DateTimeHelper.class
 com\smhu\account\Shipper.class
 com\smhu\controller\MarketController.class
 com\smhu\ServletInitializer.class
+com\smhu\controller\StatusController.class
 com\smhu\google\matrixobj\DistanceMatrixObject.class
 com\smhu\controller\FoodController$FoodService.class
 com\smhu\listener\ContextListener.class
@@ -29,6 +30,7 @@ com\smhu\order\OrderDelivery$Order.class
 com\smhu\SwaggerConfig.class
 com\smhu\url\UrlConnection.class
 com\smhu\iface\IOrder.class
+com\smhu\status\Status.class
 com\smhu\SwaggerConfig$1.class
 com\smhu\msg\LogMsg.class
 com\smhu\schedule\Notify.class

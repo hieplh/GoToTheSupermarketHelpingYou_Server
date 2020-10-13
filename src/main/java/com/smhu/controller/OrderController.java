@@ -1,5 +1,7 @@
 package com.smhu.controller;
 
+import com.google.firebase.messaging.FirebaseMessagingException;
+import com.smhu.google.Firebase;
 import com.smhu.helper.DateTimeHelper;
 import com.smhu.helper.GsonHelper;
 import com.smhu.iface.IOrder;
@@ -7,6 +9,7 @@ import com.smhu.msg.ErrorMsg;
 import com.smhu.order.Order;
 import com.smhu.order.OrderDetail;
 import com.smhu.utils.DBUtils;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -26,6 +29,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -47,8 +51,8 @@ public class OrderController {
         service.checkOrderInqueue();
         return new ResponseEntity(GsonHelper.gson.toJson(listOrderInProcess), HttpStatus.OK);
     }
-    
-    @PostMapping("/orders")
+
+    @PostMapping("/order")
     public ResponseEntity newOrder(@RequestBody Order obj) {
         try {
             Order order = new Order(new OrderService().generateId(obj),
@@ -65,6 +69,8 @@ public class OrderController {
                     obj.getDateDelivery(),
                     obj.getTimeDelivery(),
                     obj.getTimeTravel(),
+                    obj.getLat(),
+                    obj.getLng(),
                     obj.getDetails());
 
             String result = service.insertOrder(order);
@@ -76,7 +82,7 @@ public class OrderController {
             if (service.insertOrderDetail(result, order.getDetails()) == null) {
                 return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
             }
-            
+
             service.addOrderInqueue(obj);
             service.checkOrderInqueue();
         } catch (SQLException | ClassNotFoundException e) {
@@ -86,19 +92,64 @@ public class OrderController {
         return new ResponseEntity(HttpStatus.OK);
     }
 
-    @GetMapping("/order/{orderId}/shipper/{shipperId}")
-    public ResponseEntity updatetOrder(@PathVariable("orderId") String orderId, @PathVariable("shipperId") String shipperId) {
-        Order order = mapOrders.get(orderId);
-        order.setShipper(shipperId);
-        order.setStatus("21");
-        mapOrders.put(orderId, order);
+    @PutMapping("/orders/update")
+    public ResponseEntity updatetOrder(@RequestBody String[] orderId, @PathVariable("shipperId") String shipperId) {
+        for (String id : orderId) {
+            try {
+                Order order = mapOrders.get(id);
 
-        try {
-            service.updatetOrder(order);
-        } catch (SQLException | ClassNotFoundException e) {
-            Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
-            return new ResponseEntity<>(new ErrorMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+                if (order.getShipper() != null && !order.getShipper().equals(shipperId)) {
+                    return new ResponseEntity(HttpStatus.NOT_ACCEPTABLE);
+                } else if (order.getShipper() == null || order.getShipper().isEmpty()) {
+                    order.setShipper(shipperId);
+                    String[] location = ShipperController.mapLocationAvailableShipper.remove(shipperId);
+                    ShipperController.mapLocationInProgressShipper.put(shipperId, location);
+
+                    try {
+                        new Firebase().pushNotifyLocationOfShipperToCustomer(order.getId(), location[0], location[1]);
+                    } catch (FirebaseMessagingException | IOException e) {
+                        Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
+                    }
+                }
+
+                if (!order.getStatus().matches("2\\d")) {
+                    int status = StatusController.mapStatus.keySet().stream().filter((t) -> {
+                        return String.valueOf(t).matches("2\\d");
+                    }).sorted().findFirst().orElse(0);
+                    order.setStatus(String.valueOf(status));
+                } else {
+                    int status = Integer.parseInt(order.getStatus()) + 1;
+                    order.setStatus(String.valueOf(status));
+                }
+
+                mapOrders.put(id, order);
+                listOrderInProcess.set(listOrderInProcess.indexOf(order), order);
+                service.updatetOrder(order);
+            } catch (SQLException | ClassNotFoundException e) {
+                Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
+                return new ResponseEntity<>(new ErrorMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+            }
         }
+        return new ResponseEntity(HttpStatus.OK);
+    }
+
+    @GetMapping("/tracking/shipper/{shipperId}/lat/{lat}/lng/{lng}")
+    public ResponseEntity trackingOrder(@PathVariable("shipperId") String shipperId,
+            @PathVariable("lat") String lat, @PathVariable("lng") String lng) {
+        Firebase firebase = new Firebase();
+
+        listOrderInProcess.stream()
+                .filter((t) -> {
+                    return shipperId.equals(t.getShipper());
+                })
+                .forEach((t) -> {
+                    try {
+                        firebase.pushNotifyLocationOfShipperToCustomer(t.getId(), lat, lng);
+                    } catch (FirebaseMessagingException | IOException e) {
+                        Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
+                    }
+                });
+
         return new ResponseEntity(HttpStatus.OK);
     }
 
@@ -149,8 +200,9 @@ public class OrderController {
                 con = DBUtils.getConnection();
                 if (con != null) {
                     String sql = "INSERT INTO ORDERS (ID, CUST, MALL, CREATED_DATE, CREATED_TIME, LAST_UPDATE, STATUS, NOTE, \n"
-                            + "COST_SHOPPING, COST_DELIVERY, TOTAL_COST, DATE_DELIVERY, TIME_DELIVERY)\n"
-                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                            + "COST_SHOPPING, COST_DELIVERY, TOTAL_COST, DATE_DELIVERY, TIME_DELIVERY, \n"
+                            + "LAT, LNG)\n"
+                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                     stmt = con.prepareStatement(sql);
                     stmt.setString(1, order.getId());
                     stmt.setString(2, order.getCust());
@@ -158,13 +210,15 @@ public class OrderController {
                     stmt.setDate(4, order.getCreateDate());
                     stmt.setTime(5, order.getCreateTime());
                     stmt.setTime(6, order.getLastUpdate());
-                    stmt.setInt(7, 10);
+                    stmt.setInt(7, 12); //status
                     stmt.setString(8, order.getNote());
                     stmt.setDouble(9, order.getCostShopping());
                     stmt.setDouble(10, order.getCostDelivery());
                     stmt.setDouble(11, order.getTotalCost());
                     stmt.setDate(12, order.getDateDelivery());
                     stmt.setTime(13, order.getTimeDelivery());
+                    stmt.setString(14, order.getLat());
+                    stmt.setString(15, order.getLng());
                     return stmt.executeUpdate() > 0 ? order.getId() : null;
                 }
             } finally {

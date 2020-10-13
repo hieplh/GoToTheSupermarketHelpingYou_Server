@@ -2,11 +2,13 @@ package com.smhu;
 
 import com.smhu.controller.MarketController;
 import com.smhu.controller.OrderController;
+import com.smhu.controller.StatusController;
 import com.smhu.helper.DateTimeHelper;
 import com.smhu.market.Market;
 import com.smhu.order.Order;
 import com.smhu.order.OrderDetail;
 import com.smhu.order.TimeTravel;
+import com.smhu.status.Status;
 import com.smhu.utils.DBUtils;
 import java.sql.Connection;
 import java.sql.Date;
@@ -46,6 +48,13 @@ public class GototheSupermarketHelpingYouApplication {
             List<Order> totalOrders = loadOrder(date, "%");
             List<Order> inqueueOrders = loadOrder(date, "12");
             List<Market> markets = loadMarket();
+            List<Status> listStatus = loadStatus();
+
+            if (listStatus != null) {
+                for (Status status : listStatus) {
+                    StatusController.mapStatus.put(status.getCode(), status.getDescription());
+                }
+            }
 
             if (markets != null) {
                 for (Market market : markets) {
@@ -70,6 +79,41 @@ public class GototheSupermarketHelpingYouApplication {
             Logger.getLogger(GototheSupermarketHelpingYouApplication.class.getName()).log(Level.SEVERE, e.getMessage());
         }
 
+    }
+
+    public List<Status> loadStatus() throws SQLException, ClassNotFoundException {
+        Connection con = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+        List<Status> list = null;
+
+        try {
+            con = DBUtils.getConnection();
+            if (con != null) {
+                String sql = "SELECT CODE, DESCRIPTION\n"
+                        + "FROM STATUS\n"
+                        + "ORDER BY CODE ASC";
+                stmt = con.prepareStatement(sql);
+                rs = stmt.executeQuery();
+                while (rs.next()) {
+                    if (list == null) {
+                        list = new ArrayList<>();
+                    }
+                    list.add(new Status(rs.getInt("CODE"), rs.getString("DESCRIPTION")));
+                }
+            }
+        } finally {
+            if (rs != null) {
+                rs.close();
+            }
+            if (stmt != null) {
+                stmt.close();
+            }
+            if (con != null) {
+                con.close();
+            }
+        }
+        return list;
     }
 
     private List<Market> loadMarket() throws SQLException, ClassNotFoundException {
@@ -135,6 +179,10 @@ public class GototheSupermarketHelpingYouApplication {
                     listOrders.add(new Order(rs.getString("ID"),
                             rs.getString("CUST"),
                             rs.getString("MALL"),
+                            null,
+                            null,
+                            null,
+                            null,
                             rs.getString("NOTE"),
                             rs.getDouble("COST_SHOPPING"),
                             rs.getDouble("COST_DELIVERY"),
@@ -144,7 +192,10 @@ public class GototheSupermarketHelpingYouApplication {
                             new TimeTravel(rs.getTime("GOING"),
                                     rs.getTime("SHOPPING"),
                                     rs.getTime("DELIVERY"),
-                                    rs.getTime("TRAFFIC"))));
+                                    rs.getTime("TRAFFIC")),
+                            rs.getString("LAT"),
+                            rs.getString("LNG"),
+                            null));
                 }
             }
         } finally {

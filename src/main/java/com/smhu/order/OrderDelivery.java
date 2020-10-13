@@ -10,16 +10,20 @@ import java.util.List;
 public class OrderDelivery {
 
     @SerializedName("distance")
-    private String distance;
+    private String distance; // string 14.3 dam
+
+    @SerializedName("value")
+    private int value; // int 14300
 
     @SerializedName("order")
-    private Order order;
+    private Order order; 
 
     public OrderDelivery() {
     }
 
-    public OrderDelivery(String distance, com.smhu.order.Order order) {
+    public OrderDelivery(String distance, int value, com.smhu.order.Order order) {
         this.distance = distance;
+        this.value = value;
         this.order = new Order(order.getId(),
                 order.getCust(),
                 MarketController.mapMarket.get(order.getMarket()),
@@ -29,11 +33,17 @@ public class OrderDelivery {
                 order.getTotalCost(),
                 order.getDateDelivery(),
                 order.getTimeDelivery(),
-                order.getDetails());
+                order.getDetails(),
+                order.getLat(),
+                order.getLng());
     }
 
     public String getDistance() {
         return distance;
+    }
+
+    public int getValue() {
+        return value;
     }
 
     public Order getOrder() {
@@ -72,10 +82,17 @@ public class OrderDelivery {
         @SerializedName("details")
         private List<OrderDetail> details;
 
+        @SerializedName("lat")
+        private String lat;
+
+        @SerializedName("lng")
+        private String lng;
+
         public Order() {
         }
 
-        public Order(String id, String cust, Market market, String note, double costShopping, double costDelivery, double totalCost, Date dateDelivery, Time timeDelivery, List<OrderDetail> details) {
+        public Order(String id, String cust, Market market, String note, double costShopping, double costDelivery, double totalCost,
+                Date dateDelivery, Time timeDelivery, List<OrderDetail> details, String lat, String lng) {
             this.id = id;
             this.cust = cust;
             this.market = market;
@@ -86,6 +103,8 @@ public class OrderDelivery {
             this.dateDelivery = dateDelivery;
             this.timeDelivery = timeDelivery;
             this.details = details;
+            this.lat = lat;
+            this.lng = lng;
         }
 
         public String getId() {
@@ -126,6 +145,14 @@ public class OrderDelivery {
 
         public List<OrderDetail> getDetails() {
             return details;
+        }
+
+        public String getLat() {
+            return lat;
+        }
+
+        public String getLng() {
+            return lng;
         }
 
     }

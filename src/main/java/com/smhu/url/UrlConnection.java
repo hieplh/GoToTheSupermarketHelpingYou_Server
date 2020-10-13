@@ -1,15 +1,18 @@
 package com.smhu.url;
 
+import com.smhu.order.Order;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.List;
+import java.util.Map;
 
 public class UrlConnection {
 
     private static final String API_KEY = "AIzaSyCvlIOQUZEmyNxvrwKtXACB_QqycPTnAmE";
     private static final String URL = "https://maps.googleapis.com/maps/api/distancematrix/json?units=imperial";
 
-    public InputStream openConnection(String[] locationShipper, String[]... locationOrder) throws IOException {
+    public InputStream openConnection(String[] locationShipper, Map<String[][], List<Order>> locationOrder) throws IOException {
         StringBuilder sb = new StringBuilder();
         sb.append(URL);
         sb.append("&origins=");
@@ -20,16 +23,16 @@ public class UrlConnection {
 
         boolean flag = false;
         sb.append("&destinations=");
-        for (String[] order : locationOrder) {
+        for (String[][] destLocation : locationOrder.keySet()) {
             if (flag) {
                 sb.append("|");
             } else {
                 flag = true;
             }
             
-            sb.append(order[0]);
+            sb.append(destLocation[0]);
             sb.append(",");
-            sb.append(order[1]);
+            sb.append(destLocation[1]);
         }
         
         sb.append("&language=vi");

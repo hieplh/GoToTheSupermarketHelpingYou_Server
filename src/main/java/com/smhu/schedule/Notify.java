@@ -5,6 +5,7 @@ import com.smhu.google.Firebase;
 import com.smhu.iface.IOrder;
 import com.smhu.order.Order;
 import com.google.firebase.messaging.FirebaseMessagingException;
+import com.smhu.controller.ShipperController;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.time.LocalTime;
@@ -33,12 +34,12 @@ public class Notify {
     final String RADIUS_SMALL = "3km";
     final String RADIUS_MEDIUM = "5km";
     final String RADIUS_LARGE = "7km";
-    
+
     final String TOPIC_SHIPEPR = "SHIPPER";
-    
+
     Firebase firebase = new Firebase();
 
-    @Scheduled(cron = "0 0 8 ? * *")
+    //@Scheduled(cron = "0 0 8 ? * *")
     public void pushOrder() throws InterruptedException {
         INFINITE_PUSH_ORDER_FLAG = true;
         do {
@@ -69,21 +70,23 @@ public class Notify {
             }
             if (LocalTime.of(20, 30, 0).compareTo(getCurrentTime()) <= -1) {
                 INFINITE_PUSH_ORDER_FLAG = false;
+                clear();
             } else {
                 Thread.sleep(5 * 60 * 1000);
             }
         } while (INFINITE_PUSH_ORDER_FLAG);
     }
 
-    @Scheduled(cron = "0 0 7 ? * *")
+    //@Scheduled(cron = "0 0 7 ? * *")
     public void checkOrderInQueue() {
         INFINITE_CHECK_ORDER_FLAG = true;
         do {
             try {
-                    IOrder orderListener = new OrderController().getOrderListener();
-                    orderListener.checkOrderInqueue();
+                IOrder orderListener = new OrderController().getOrderListener();
+                orderListener.checkOrderInqueue();
                 if (LocalTime.of(20, 30, 0).compareTo(getCurrentTime()) <= -1) {
                     INFINITE_CHECK_ORDER_FLAG = false;
+                    clear();
                 } else {
                     Thread.sleep(4 * 60 * 1000);
                 }
@@ -95,5 +98,27 @@ public class Notify {
 
     private LocalTime getCurrentTime() {
         return LocalTime.now(ZoneId.of("GMT+7"));
+    }
+
+    private void clear() {
+        if (!OrderController.mapOrders.isEmpty()) {
+            OrderController.mapOrders.clear();
+        }
+
+        if (!OrderController.mapOrderInQueue.isEmpty()) {
+            OrderController.mapOrderInQueue.clear();
+        }
+
+        if (!OrderController.listOrderInProcess.isEmpty()) {
+            OrderController.listOrderInProcess.clear();
+        }
+
+        if (!ShipperController.mapLocationAvailableShipper.isEmpty()) {
+            ShipperController.mapLocationAvailableShipper.clear();
+        }
+
+        if (!ShipperController.mapLocationAvailableShipper.isEmpty()) {
+            ShipperController.mapLocationInProgressShipper.clear();
+        }
     }
 }
