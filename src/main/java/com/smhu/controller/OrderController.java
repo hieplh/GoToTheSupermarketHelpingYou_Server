@@ -4,7 +4,7 @@ import com.google.firebase.messaging.FirebaseMessagingException;
 import com.smhu.google.Firebase;
 import com.smhu.helper.DateTimeHelper;
 import com.smhu.iface.IOrder;
-import com.smhu.msg.ErrorMsg;
+import com.smhu.msg.ResponseMsg;
 import com.smhu.order.Order;
 import com.smhu.order.OrderDetail;
 import com.smhu.utils.DBUtils;
@@ -50,6 +50,7 @@ public class OrderController {
 
     @PostMapping("/order")
     public ResponseEntity newOrder(@RequestBody Order obj) {
+        String result = "";
         try {
             int status = StatusController.mapStatus.keySet()
                     .stream()
@@ -78,25 +79,29 @@ public class OrderController {
                     obj.getLng(),
                     obj.getDetails());
 
-            String result = service.insertOrder(order);
+            result = service.insertOrder(order);
 
             if (result == null) {
-                return new ResponseEntity<>(new ErrorMsg("Insert new order failed"), HttpStatus.INTERNAL_SERVER_ERROR);
+                return new ResponseEntity<>(new ResponseMsg("Insert new order failed"), HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
             if (service.insertOrderDetail(result, order.getDetails()) == null) {
-                return new ResponseEntity<>(new ErrorMsg("Insert new order detail failed"), HttpStatus.INTERNAL_SERVER_ERROR);
+                return new ResponseEntity<>(new ResponseMsg("Insert new order detail failed"), HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
             service.addOrderInqueue(obj);
             service.checkOrderInqueue();
-            new Firebase().pushNotifyOrderIsAccepted(result);
-        } catch (SQLException | ClassNotFoundException
-                | FirebaseMessagingException | IOException e) {
+            
+//            try {
+//                new Firebase().pushNotifyOrderIsAccepted(result);
+//            } catch (FirebaseMessagingException | IOException e) {
+//                Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
+//            }
+        } catch (SQLException | ClassNotFoundException e) {
             Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
-            return new ResponseEntity<>(new ErrorMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        return new ResponseEntity(HttpStatus.OK);
+        return new ResponseEntity(new ResponseMsg(result), HttpStatus.OK);
     }
 
     @PutMapping("/orders/update")
@@ -134,7 +139,7 @@ public class OrderController {
                 service.updatetOrder(order);
             } catch (SQLException | ClassNotFoundException e) {
                 Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
-                return new ResponseEntity<>(new ErrorMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+                return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
             }
         }
         return new ResponseEntity(HttpStatus.OK);
@@ -176,7 +181,7 @@ public class OrderController {
                     tmp.add(order.getKey());
                 }
             }
-            
+
             for (Order order : tmp) {
                 OrderController.mapOrderInQueue.remove(order);
             }

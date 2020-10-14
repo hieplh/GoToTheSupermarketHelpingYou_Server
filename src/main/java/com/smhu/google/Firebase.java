@@ -16,7 +16,7 @@ import org.springframework.core.io.ClassPathResource;
 
 public class Firebase {
 
-    @Value("${app.firebase-configuration-fil}")
+    @Value("${app.firebase-configuration-file}")
     private String pathFirebaseConfig;
 
     private void initOptions() throws IOException {

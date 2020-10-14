@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import com.smhu.food.Food;
 import com.smhu.food.SaleOff;
-import com.smhu.msg.ErrorMsg;
+import com.smhu.msg.ResponseMsg;
 
 import com.smhu.utils.DBUtils;
 import java.sql.Connection;
@@ -35,7 +35,7 @@ public class FoodController {
             listFoods = service.getAllFoodsAtMall(mall);
         } catch (SQLException | ClassNotFoundException e) {
             Logger.getLogger(FoodController.class.getName()).log(Level.SEVERE, e.getMessage());
-            return new ResponseEntity<>(new ErrorMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return new ResponseEntity<>(listFoods, HttpStatus.OK);
     }

@@ -1,10 +1,10 @@
 package com.smhu.msg;
 
-public class ErrorMsg {
+public class ResponseMsg {
 
     private String msg;
 
-    public ErrorMsg(String msg) {
+    public ResponseMsg(String msg) {
         this.msg = msg;
     }
 

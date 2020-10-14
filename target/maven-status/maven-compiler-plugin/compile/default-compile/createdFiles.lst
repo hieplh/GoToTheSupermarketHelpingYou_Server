@@ -23,7 +23,6 @@ com\smhu\controller\FoodController$FoodService.class
 com\smhu\listener\ContextListener.class
 com\smhu\food\SaleOff.class
 com\smhu\google\DistanceMatrixApi.class
-com\smhu\msg\ErrorMsg.class
 com\smhu\order\OrderDetail.class
 com\smhu\controller\OrderController.class
 com\smhu\order\OrderDelivery$Order.class

@@ -1,7 +1,7 @@
 package com.smhu.controller;
 
 import com.smhu.account.Account;
-import com.smhu.msg.ErrorMsg;
+import com.smhu.msg.ResponseMsg;
 import com.smhu.utils.DBUtils;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -29,7 +29,7 @@ public class AccountController {
             account = service.getAccountByUsername(username, password);
         } catch (SQLException | ClassNotFoundException e) {
             Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, e.getMessage());
-            return new ResponseEntity<>(new ErrorMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return new ResponseEntity<>(account, HttpStatus.OK);
     }

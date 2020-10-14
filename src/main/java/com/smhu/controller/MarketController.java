@@ -1,7 +1,7 @@
 package com.smhu.controller;
 
 import com.smhu.market.Market;
-import com.smhu.msg.ErrorMsg;
+import com.smhu.msg.ResponseMsg;
 import com.smhu.utils.DBUtils;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -40,7 +40,7 @@ public class MarketController {
             return new ResponseEntity<>(mapMarket.values(), HttpStatus.OK);
         } catch (ClassNotFoundException | SQLException e) {
             Logger.getLogger(MarketController.class.getName()).log(Level.SEVERE, e.getMessage());
-            return new ResponseEntity<>(new ErrorMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
