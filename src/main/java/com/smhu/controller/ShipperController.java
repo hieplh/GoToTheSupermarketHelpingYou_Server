@@ -48,13 +48,10 @@ public class ShipperController {
                     url.openConnection(shipperLocation, ordersLocation), "utf-8"), DistanceMatrixObject.class);
 
             List<ElementObject> listElments = getListElements(distanceObj);
-            
-            OrderDelivery[] arrOrders = new OrderDelivery[OrderController.listOrderInProcess.size()];
-            for (int i = 0; i < arrOrders.length; i++) {
-                arrOrders[i] = new OrderDelivery(listElments.get(i).getDistance().get("text"),
-                        Integer.parseInt(listElments.get(i).getDistance().get("value")),
-                        OrderController.listOrderInProcess.get(i));
-            }
+            List<String> listDistanceString = getListDistance(listElments, "text");
+            List<String> listDistanceValue = getListDistance(listElments, "value");
+
+            OrderDelivery[] arrOrders = filterOrderNearShipper(listDistanceString, listDistanceValue, ordersLocation);
 
             return new ResponseEntity<>(arrOrders, HttpStatus.OK);
         } catch (JsonIOException | JsonSyntaxException | IOException e) {
@@ -85,7 +82,48 @@ public class ShipperController {
     }
 
     private String splitLocation(String location) {
-        return location.split(".")[0];
+        return location.split("\\.")[0];
+    }
+
+    private List<String> getListDistance(List<ElementObject> list, String type) {
+        List<String> listDistanceValues = new ArrayList<>();
+        for (ElementObject element : list) {
+            listDistanceValues.add(element.getDistance().get(type));
+        }
+        return listDistanceValues;
+    }
+
+    private OrderDelivery[] filterOrderNearShipper(List<String> listDistanceString, List<String> listDistanceValue,
+            Map<String[][], List<Order>> ordersLocation) {
+        OrderDelivery[] orders = null;
+        int index = 0;
+
+        boolean flag = false;
+        int tmp = -1;
+        for (int i = 0; i < listDistanceValue.size(); i++) {
+            if (!flag) {
+                tmp = Integer.parseInt(listDistanceValue.get(i));
+            } else {
+                flag = true;
+            }
+
+            if (tmp >= Integer.parseInt(listDistanceValue.get(i))) {
+                index = i;
+            }
+        }
+
+        int count = -1;
+        for (Map.Entry<String[][], List<Order>> entry : ordersLocation.entrySet()) {
+            if (++count == index) {
+                orders = new OrderDelivery[entry.getValue().size()];
+                for (int i = 0; i < entry.getValue().size(); i++) {
+                    orders[i] = new OrderDelivery(listDistanceString.get(index),
+                            Integer.parseInt(listDistanceValue.get(index)),
+                            entry.getValue().get(i));
+                }
+            }
+        }
+        return orders;
     }
 
     private List<ElementObject> getListElements(DistanceMatrixObject obj) {

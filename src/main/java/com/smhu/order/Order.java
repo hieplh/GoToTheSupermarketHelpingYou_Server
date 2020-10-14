@@ -230,4 +230,9 @@ public class Order {
         return true;
     }
 
+    @Override
+    public String toString() {
+        return "Order{" + "id=" + id + ", createDate=" + createDate + ", createTime=" + createTime + ", lastUpdate=" + lastUpdate + ", status=" + status + ", market=" + market + ", cust=" + cust + ", note=" + note + ", costShopping=" + costShopping + ", costDelivery=" + costDelivery + ", totalCost=" + totalCost + ", dateDelivery=" + dateDelivery + ", timeDelivery=" + timeDelivery + ", timeTravel=" + timeTravel + ", shipper=" + shipper + ", evidence=" + evidence + ", details=" + details + ", lat=" + lat + ", lng=" + lng + '}';
+    }
+
 }

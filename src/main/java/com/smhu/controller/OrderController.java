@@ -17,10 +17,13 @@ import java.sql.Time;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.springframework.http.HttpStatus;
@@ -46,22 +49,25 @@ public class OrderController {
 
     OrderService service = new OrderService();
 
-    @GetMapping("/testorder")
-    public ResponseEntity test() {
-        service.checkOrderInqueue();
-        return new ResponseEntity(GsonHelper.gson.toJson(listOrderInProcess), HttpStatus.OK);
-    }
-
     @PostMapping("/order")
     public ResponseEntity newOrder(@RequestBody Order obj) {
         try {
+            int status = StatusController.mapStatus.keySet()
+                    .stream()
+                    .filter((s) -> {
+                        return s.toString().matches("1\\d");
+                    })
+                    .mapToInt((value) -> {
+                        return value;
+                    }).max().getAsInt();
+
             Order order = new Order(new OrderService().generateId(obj),
                     obj.getCust(),
                     obj.getMarket(),
                     new java.sql.Date(new Date().getTime()),
                     new Time(new Date().getTime()),
                     new Time(new Date().getTime()),
-                    "12",
+                    String.valueOf(status),
                     obj.getNote(),
                     obj.getCostShopping(),
                     obj.getCostDelivery(),
@@ -76,16 +82,18 @@ public class OrderController {
             String result = service.insertOrder(order);
 
             if (result == null) {
-                return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+                return new ResponseEntity<>(new ErrorMsg("Insert new order failed"), HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
             if (service.insertOrderDetail(result, order.getDetails()) == null) {
-                return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+                return new ResponseEntity<>(new ErrorMsg("Insert new order detail failed"), HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
             service.addOrderInqueue(obj);
             service.checkOrderInqueue();
-        } catch (SQLException | ClassNotFoundException e) {
+            new Firebase().pushNotifyOrderIsAccepted(result);
+        } catch (SQLException | ClassNotFoundException
+                | FirebaseMessagingException | IOException e) {
             Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
             return new ResponseEntity<>(new ErrorMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -162,19 +170,32 @@ public class OrderController {
         @Override
         public void checkOrderInqueue() {
             for (Map.Entry<Order, Integer> order : OrderController.mapOrderInQueue.entrySet()) {
+                System.out.println(order.getKey());
                 System.out.println("Local Time: " + LocalTime.now(ZoneId.of("GMT+7")).toString());
+
                 int totalMinuteCurrent = DateTimeHelper.parseTimeToMinute(LocalTime.now(ZoneId.of("GMT+7")));
-                if (totalMinuteCurrent >= order.getValue() - 15 && totalMinuteCurrent <= order.getValue()) {
+
+                System.out.println("Total  Minute Current: " + totalMinuteCurrent);
+                System.out.println("Order Value: " + order.getValue());
+                System.out.println("");
+
+                if (totalMinuteCurrent >= order.getValue() - 180 && totalMinuteCurrent <= order.getValue()) {
                     OrderController.listOrderInProcess.add(order.getKey());
+                    OrderController.mapOrderInQueue.remove(order.getKey());
                 }
             }
         }
 
         String generateId(Order obj) {
+            LocalTime time = LocalTime.now(ZoneId.of("GMT+7"));
+            Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"), new Locale("vi", "vn"));
             return obj.getCust()
-                    + String.valueOf(LocalTime.now(ZoneId.of("GMT+7")).getHour())
-                    + String.valueOf(LocalTime.now(ZoneId.of("GMT+7")).getMinute())
-                    + String.valueOf(LocalTime.now(ZoneId.of("GMT+7")).getSecond());
+                    + String.valueOf(cal.get(Calendar.YEAR))
+                    + String.valueOf(cal.get(Calendar.MONTH) + 1)
+                    + String.valueOf(cal.get(Calendar.DAY_OF_MONTH))
+                    + String.valueOf(time.getHour())
+                    + String.valueOf(time.getMinute())
+                    + String.valueOf(time.getSecond());
         }
 
         void addOrderInMapOrders(Order order) {
@@ -210,7 +231,7 @@ public class OrderController {
                     stmt.setDate(4, order.getCreateDate());
                     stmt.setTime(5, order.getCreateTime());
                     stmt.setTime(6, order.getLastUpdate());
-                    stmt.setInt(7, 12); //status
+                    stmt.setInt(7, Integer.parseInt(order.getStatus())); //status
                     stmt.setString(8, order.getNote());
                     stmt.setDouble(9, order.getCostShopping());
                     stmt.setDouble(10, order.getCostDelivery());

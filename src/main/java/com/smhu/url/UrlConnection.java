@@ -29,12 +29,14 @@ public class UrlConnection {
             } else {
                 flag = true;
             }
-            
-            sb.append(destLocation[0]);
-            sb.append(",");
-            sb.append(destLocation[1]);
+
+            for (String[] location : destLocation) {
+                sb.append(location[0]);
+                sb.append(",");
+                sb.append(location[1]);
+            }
         }
-        
+
         sb.append("&language=vi");
         sb.append("&mode=driving");
         sb.append("&key=");

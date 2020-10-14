@@ -4,6 +4,7 @@ import com.smhu.controller.MarketController;
 import com.smhu.controller.OrderController;
 import com.smhu.controller.StatusController;
 import com.smhu.helper.DateTimeHelper;
+import com.smhu.iface.IOrder;
 import com.smhu.market.Market;
 import com.smhu.order.Order;
 import com.smhu.order.OrderDetail;
@@ -15,6 +16,7 @@ import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -74,6 +76,7 @@ public class GototheSupermarketHelpingYouApplication {
                     OrderController.mapOrderInQueue.put(order, new DateTimeHelper().calculateTimeForShipper(order, order.getTimeTravel()));
                     order.setTimeTravel(null);
                 }
+                loadOrderInProcess();
             }
         } catch (ClassNotFoundException | SQLException e) {
             Logger.getLogger(GototheSupermarketHelpingYouApplication.class.getName()).log(Level.SEVERE, e.getMessage());
@@ -81,7 +84,7 @@ public class GototheSupermarketHelpingYouApplication {
 
     }
 
-    public List<Status> loadStatus() throws SQLException, ClassNotFoundException {
+    private List<Status> loadStatus() throws SQLException, ClassNotFoundException {
         Connection con = null;
         PreparedStatement stmt = null;
         ResultSet rs = null;
@@ -114,6 +117,11 @@ public class GototheSupermarketHelpingYouApplication {
             }
         }
         return list;
+    }
+    
+    private void loadOrderInProcess() {
+        IOrder orderListener = new OrderController().getOrderListener();
+        orderListener.checkOrderInqueue();
     }
 
     private List<Market> loadMarket() throws SQLException, ClassNotFoundException {
@@ -176,6 +184,11 @@ public class GototheSupermarketHelpingYouApplication {
                     if (listOrders == null) {
                         listOrders = new ArrayList<>();
                     }
+                    String id = rs.getString("ID");
+                    System.out.println("ID: " + id);
+                    Time time = rs.getTime("TIME_DELIVERY");
+                    System.out.println("TIME: " + time);
+                    
                     listOrders.add(new Order(rs.getString("ID"),
                             rs.getString("CUST"),
                             rs.getString("MALL"),
@@ -188,6 +201,9 @@ public class GototheSupermarketHelpingYouApplication {
                             rs.getDouble("COST_DELIVERY"),
                             rs.getDouble("TOTAL_COST"),
                             rs.getDate("DATE_DELIVERY"),
+//                            rs.getTime("TIME_DELIVERY",
+//                                    Calendar.getInstance(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"),
+//                                            Locale.forLanguageTag("vi-vn"))),
                             rs.getTime("TIME_DELIVERY"),
                             new TimeTravel(rs.getTime("GOING"),
                                     rs.getTime("SHOPPING"),
