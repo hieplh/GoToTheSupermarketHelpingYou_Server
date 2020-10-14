@@ -3,7 +3,6 @@ package com.smhu.controller;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.smhu.google.Firebase;
 import com.smhu.helper.DateTimeHelper;
-import com.smhu.helper.GsonHelper;
 import com.smhu.iface.IOrder;
 import com.smhu.msg.ErrorMsg;
 import com.smhu.order.Order;
@@ -169,20 +168,17 @@ public class OrderController {
 
         @Override
         public void checkOrderInqueue() {
+            List<Order> tmp = new ArrayList<>();
             for (Map.Entry<Order, Integer> order : OrderController.mapOrderInQueue.entrySet()) {
-                System.out.println(order.getKey());
-                System.out.println("Local Time: " + LocalTime.now(ZoneId.of("GMT+7")).toString());
-
                 int totalMinuteCurrent = DateTimeHelper.parseTimeToMinute(LocalTime.now(ZoneId.of("GMT+7")));
-
-                System.out.println("Total  Minute Current: " + totalMinuteCurrent);
-                System.out.println("Order Value: " + order.getValue());
-                System.out.println("");
-
                 if (totalMinuteCurrent >= order.getValue() - 180 && totalMinuteCurrent <= order.getValue()) {
                     OrderController.listOrderInProcess.add(order.getKey());
-                    OrderController.mapOrderInQueue.remove(order.getKey());
+                    tmp.add(order.getKey());
                 }
+            }
+            
+            for (Order order : tmp) {
+                OrderController.mapOrderInQueue.remove(order);
             }
         }
 

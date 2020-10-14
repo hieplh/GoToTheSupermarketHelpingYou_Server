@@ -121,7 +121,12 @@ public class GototheSupermarketHelpingYouApplication {
     
     private void loadOrderInProcess() {
         IOrder orderListener = new OrderController().getOrderListener();
-        orderListener.checkOrderInqueue();
+        try {
+            orderListener.checkOrderInqueue();
+        } catch (Exception e) {
+            Logger.getLogger(GototheSupermarketHelpingYouApplication.class.getName()).log(Level.SEVERE, e.getMessage());
+        }
+        
     }
 
     private List<Market> loadMarket() throws SQLException, ClassNotFoundException {

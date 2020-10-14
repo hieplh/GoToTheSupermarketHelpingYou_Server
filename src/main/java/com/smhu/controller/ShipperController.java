@@ -68,13 +68,25 @@ public class ShipperController {
 
             if (splitLocation(shipperLocation[0]).equals(splitLocation(lat))) {
                 if (splitLocation(shipperLocation[1]).equals(splitLocation(lng))) {
-                    String[][] array = {{lat, lng}};
-                    List<Order> tmp = map.get(array);
-                    if (tmp == null) {
-                        tmp = new ArrayList<>();
+                    String[][] tmp = null;
+                    for (String[][] arr : map.keySet()) {
+                        if (arr[0][0].equals(lat)) {
+                            if (arr[0][1].equals(lng)) {
+                                tmp = arr;
+                            }
+                        }
                     }
-                    tmp.add(order);
-                    map.put(array, tmp);
+                    List<Order> listTmp = null;
+                    if (tmp == null) {
+                        tmp = new String[1][2];
+                        tmp[0][0] = lat;
+                        tmp[0][1] = lng;
+                        listTmp = new ArrayList<>();
+                    } else {
+                        listTmp = map.get(tmp);
+                    }
+                    listTmp.add(order);
+                    map.put(tmp, listTmp);
                 }
             }
         }
