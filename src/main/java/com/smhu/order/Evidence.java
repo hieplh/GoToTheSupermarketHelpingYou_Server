@@ -1,20 +1,23 @@
 package com.smhu.order;
 
-import java.sql.Timestamp;
+import java.sql.Date;
+import java.sql.Time;
 
 public class Evidence {
 
     private String id;
     private String image;
-    private Timestamp timestamp;
+    private Date createDate;
+    private Time createTime;
 
     public Evidence() {
     }
 
-    public Evidence(String id, String image, Timestamp timestamp) {
+    public Evidence(String id, String image, Date createDate, Time createTime) {
         this.id = id;
         this.image = image;
-        this.timestamp = timestamp;
+        this.createDate = createDate;
+        this.createTime = createTime;
     }
 
     public String getId() {
@@ -33,12 +36,19 @@ public class Evidence {
         this.image = image;
     }
 
-    public Timestamp getTimestamp() {
-        return timestamp;
+    public Date getCreateDate() {
+        return createDate;
     }
 
-    public void setTimestamp(Timestamp timestamp) {
-        this.timestamp = timestamp;
+    public void setCreateDate(Date createDate) {
+        this.createDate = createDate;
     }
 
+    public Time getCreateTime() {
+        return createTime;
+    }
+
+    public void setCreateTime(Time createTime) {
+        this.createTime = createTime;
+    }
 }

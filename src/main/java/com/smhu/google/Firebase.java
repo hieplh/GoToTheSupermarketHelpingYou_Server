@@ -11,13 +11,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 
 public class Firebase {
 
-    @Value("${app.firebase-configuration-file}")
-    private String pathFirebaseConfig;
+    String pathFirebaseConfig = "gothetosupermarkethelpingyou-firebase-adminsdk-hxbba-c08e13d162.json";
 
     private void initOptions() throws IOException {
         FirebaseOptions options = FirebaseOptions.builder()
@@ -25,7 +23,6 @@ public class Firebase {
                         new ClassPathResource(pathFirebaseConfig)
                                 .getInputStream()))
                 .build();
-
         if (FirebaseApp.getApps().isEmpty()) {
             FirebaseApp.initializeApp(options);
         }

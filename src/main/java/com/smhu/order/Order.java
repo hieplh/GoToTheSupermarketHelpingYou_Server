@@ -160,6 +160,10 @@ public class Order {
         this.cust = cust;
     }
 
+    public void setShipper(String shipper) {
+        this.shipper = shipper;
+    }
+
     public void setNote(String note) {
         this.note = note;
     }
@@ -190,10 +194,6 @@ public class Order {
 
     public void setDetails(List<OrderDetail> details) {
         this.details = details;
-    }
-
-    public void setShipper(String shipper) {
-        this.shipper = shipper;
     }
 
     public void setEvidence(Evidence evidence) {

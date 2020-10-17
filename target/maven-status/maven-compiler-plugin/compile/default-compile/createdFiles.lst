@@ -1,3 +1,4 @@
+com\smhu\msg\ResponseMsg.class
 com\smhu\food\Food.class
 com\smhu\utils\DBUtils.class
 com\smhu\controller\ShipperController.class

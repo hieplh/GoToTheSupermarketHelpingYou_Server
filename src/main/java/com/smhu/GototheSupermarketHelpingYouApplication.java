@@ -47,7 +47,6 @@ public class GototheSupermarketHelpingYouApplication {
                     TimeZone.getTimeZone("Asia/Ho_Chi_Minh"), Locale.forLanguageTag("vi-vn"))
                     .getTimeInMillis());
 
-            List<Order> totalOrders = loadOrder(date, "%");
             List<Order> inqueueOrders = loadOrder(date, "12");
             List<Market> markets = loadMarket();
             List<Status> listStatus = loadStatus();
@@ -64,12 +63,12 @@ public class GototheSupermarketHelpingYouApplication {
                 }
             }
 
-            if (totalOrders != null) {
-                for (Order order : totalOrders) {
-                    OrderController.mapOrders.put(order.getId(), order);
-                }
-            }
-
+//            List<Order> totalOrders = loadOrder(date, "%");
+//            if (totalOrders != null) {
+//                for (Order order : totalOrders) {
+//                    OrderController.mapOrders.put(order.getId(), order);
+//                }
+//            }
             if (inqueueOrders != null) {
                 loadOrderDetail(inqueueOrders);
                 for (Order order : inqueueOrders) {
@@ -118,7 +117,7 @@ public class GototheSupermarketHelpingYouApplication {
         }
         return list;
     }
-    
+
     private void loadOrderInProcess() {
         IOrder orderListener = new OrderController().getOrderListener();
         try {
@@ -126,7 +125,7 @@ public class GototheSupermarketHelpingYouApplication {
         } catch (Exception e) {
             Logger.getLogger(GototheSupermarketHelpingYouApplication.class.getName()).log(Level.SEVERE, e.getMessage());
         }
-        
+
     }
 
     private List<Market> loadMarket() throws SQLException, ClassNotFoundException {
@@ -193,22 +192,22 @@ public class GototheSupermarketHelpingYouApplication {
                     System.out.println("ID: " + id);
                     Time time = rs.getTime("TIME_DELIVERY");
                     System.out.println("TIME: " + time);
-                    
+
                     listOrders.add(new Order(rs.getString("ID"),
                             rs.getString("CUST"),
                             rs.getString("MALL"),
                             null,
                             null,
                             null,
-                            null,
+                            status,
                             rs.getString("NOTE"),
                             rs.getDouble("COST_SHOPPING"),
                             rs.getDouble("COST_DELIVERY"),
                             rs.getDouble("TOTAL_COST"),
                             rs.getDate("DATE_DELIVERY"),
-//                            rs.getTime("TIME_DELIVERY",
-//                                    Calendar.getInstance(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"),
-//                                            Locale.forLanguageTag("vi-vn"))),
+                            //                            rs.getTime("TIME_DELIVERY",
+                            //                                    Calendar.getInstance(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"),
+                            //                                            Locale.forLanguageTag("vi-vn"))),
                             rs.getTime("TIME_DELIVERY"),
                             new TimeTravel(rs.getTime("GOING"),
                                     rs.getTime("SHOPPING"),

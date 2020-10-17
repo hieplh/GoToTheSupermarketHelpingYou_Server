@@ -60,9 +60,9 @@ public class ShipperController {
         }
     }
 
-    private Map<String[][], List<Order>> getOrderLocation(List<Order> orders, String[] shipperLocation) {
+    private Map<String[][], List<Order>> getOrderLocation(Map<String, Order> mapOrders, String[] shipperLocation) {
         Map<String[][], List<Order>> map = new HashMap<>();
-        for (Order order : orders) {
+        for (Order order : mapOrders.values()) {
             String lat = MarketController.mapMarket.get(order.getMarket()).getLat();
             String lng = MarketController.mapMarket.get(order.getMarket()).getLng();
 

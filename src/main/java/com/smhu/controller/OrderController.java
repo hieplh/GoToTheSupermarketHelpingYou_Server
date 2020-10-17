@@ -40,16 +40,27 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 public class OrderController {
 
-    public static Map<String, Order> mapOrders = new HashMap<>();
     public static Map<Order, Integer> mapOrderInQueue = new HashMap<>();
-    public static List<Order> listOrderInProcess = new ArrayList<>();
+    public static Map<String, Order> listOrderInProcess = new HashMap<>();
 
     IOrder orderListener = new OrderService();
 
     OrderService service = new OrderService();
 
+    @GetMapping("/test")
+    public ResponseEntity<?> test() {
+        Firebase firebase = new Firebase();
+        String result = null;
+        try {
+            result = firebase.pushNotifyOrderIsAccepted("abc");
+        } catch (FirebaseMessagingException | IOException e) {
+            Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
+        }
+        return new ResponseEntity<>(new ResponseMsg(result), HttpStatus.OK);
+    }
+
     @PostMapping("/order")
-    public ResponseEntity newOrder(@RequestBody Order obj) {
+    public ResponseEntity<?> newOrder(@RequestBody Order obj) {
         String result = "";
         try {
             int status = StatusController.mapStatus.keySet()
@@ -91,58 +102,65 @@ public class OrderController {
 
             service.addOrderInqueue(obj);
             service.checkOrderInqueue();
-            
-//            try {
-//                new Firebase().pushNotifyOrderIsAccepted(result);
-//            } catch (FirebaseMessagingException | IOException e) {
-//                Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
-//            }
+
+            try {
+                new Firebase().pushNotifyOrderIsAccepted(result);
+            } catch (FirebaseMessagingException | IOException e) {
+                Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
+            }
         } catch (SQLException | ClassNotFoundException e) {
             Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
-            return new ResponseEntity(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        return new ResponseEntity(new ResponseMsg(result), HttpStatus.OK);
+        return new ResponseEntity<>(new ResponseMsg(result), HttpStatus.OK);
     }
 
     @PutMapping("/orders/update")
-    public ResponseEntity updatetOrder(@RequestBody String[] orderId, @PathVariable("shipperId") String shipperId) {
-        for (String id : orderId) {
+    public ResponseEntity<?> updatetOrder(@RequestBody List<Order> listOrder) {
+        for (Order orderInProcess : listOrder) {
+            Order order = OrderController.listOrderInProcess.get(orderInProcess.getId());
+            if (order != null) {
+                return new ResponseEntity<>(new ResponseMsg("Đơn hàng của bạn đã hoàn thành"), HttpStatus.NO_CONTENT);
+            }
+
             try {
-                Order order = mapOrders.get(id);
-
-                if (order.getShipper() != null && !order.getShipper().equals(shipperId)) {
-                    return new ResponseEntity(HttpStatus.NOT_ACCEPTABLE);
-                } else if (order.getShipper() == null || order.getShipper().isEmpty()) {
-                    order.setShipper(shipperId);
-                    String[] location = ShipperController.mapLocationAvailableShipper.remove(shipperId);
-                    ShipperController.mapLocationInProgressShipper.put(shipperId, location);
-
-                    try {
-                        new Firebase().pushNotifyLocationOfShipperToCustomer(order.getId(), location[0], location[1]);
-                    } catch (FirebaseMessagingException | IOException e) {
-                        Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
-                    }
+                if (order.getShipper() == null || order.getShipper().isEmpty()) {
+                    order.setShipper(orderInProcess.getShipper());
                 }
 
+                String[] location = ShipperController.mapLocationAvailableShipper.remove(order.getShipper());
+                ShipperController.mapLocationInProgressShipper.put(order.getShipper(), location);
+
+                int status;
                 if (!order.getStatus().matches("2\\d")) {
-                    int status = StatusController.mapStatus.keySet().stream().filter((t) -> {
-                        return String.valueOf(t).matches("2\\d");
-                    }).sorted().findFirst().orElse(0);
-                    order.setStatus(String.valueOf(status));
+                    status = StatusController.mapStatus.keySet()
+                            .stream()
+                            .filter(t -> String.valueOf(t).matches("2\\d"))
+                            .sorted()
+                            .findFirst()
+                            .orElse(21);
                 } else {
-                    int status = Integer.parseInt(order.getStatus()) + 1;
-                    order.setStatus(String.valueOf(status));
+                    status = Integer.parseInt(order.getStatus()) + 1;
                 }
+                order.setStatus(String.valueOf(status));
 
-                mapOrders.put(id, order);
-                listOrderInProcess.set(listOrderInProcess.indexOf(order), order);
                 service.updatetOrder(order);
+
+                int tmp = StatusController.mapStatus.keySet()
+                        .stream()
+                        .filter(t -> String.valueOf(t).matches("2\\d"))
+                        .mapToInt(value -> value)
+                        .max()
+                        .getAsInt();
+                if (status == tmp) {
+                    OrderController.listOrderInProcess.remove(order.getId());
+                }
             } catch (SQLException | ClassNotFoundException e) {
                 Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
                 return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
             }
         }
-        return new ResponseEntity(HttpStatus.OK);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @GetMapping("/tracking/shipper/{shipperId}/lat/{lat}/lng/{lng}")
@@ -150,7 +168,7 @@ public class OrderController {
             @PathVariable("lat") String lat, @PathVariable("lng") String lng) {
         Firebase firebase = new Firebase();
 
-        listOrderInProcess.stream()
+        listOrderInProcess.values().stream()
                 .filter((t) -> {
                     return shipperId.equals(t.getShipper());
                 })
@@ -177,7 +195,7 @@ public class OrderController {
             for (Map.Entry<Order, Integer> order : OrderController.mapOrderInQueue.entrySet()) {
                 int totalMinuteCurrent = DateTimeHelper.parseTimeToMinute(LocalTime.now(ZoneId.of("GMT+7")));
                 if (totalMinuteCurrent >= order.getValue() - 180 && totalMinuteCurrent <= order.getValue()) {
-                    OrderController.listOrderInProcess.add(order.getKey());
+                    OrderController.listOrderInProcess.put(order.getKey().getId(), order.getKey());
                     tmp.add(order.getKey());
                 }
             }
@@ -197,10 +215,6 @@ public class OrderController {
                     + String.valueOf(time.getHour())
                     + String.valueOf(time.getMinute())
                     + String.valueOf(time.getSecond());
-        }
-
-        void addOrderInMapOrders(Order order) {
-            mapOrders.put(order.getId(), order);
         }
 
         void addOrderInqueue(Order order) {
