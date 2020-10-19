@@ -1,7 +1,7 @@
 package com.smhu.controller;
 
 import com.smhu.market.Market;
-import com.smhu.msg.ResponseMsg;
+import com.smhu.response.ResponseMsg;
 import com.smhu.utils.DBUtils;
 import java.sql.Connection;
 import java.sql.PreparedStatement;

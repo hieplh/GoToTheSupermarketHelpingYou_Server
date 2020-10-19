@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import com.smhu.food.Food;
 import com.smhu.food.SaleOff;
-import com.smhu.msg.ResponseMsg;
+import com.smhu.response.ResponseMsg;
 
 import com.smhu.utils.DBUtils;
 import java.sql.Connection;

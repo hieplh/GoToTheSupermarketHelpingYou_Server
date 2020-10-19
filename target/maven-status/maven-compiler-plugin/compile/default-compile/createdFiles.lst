@@ -1,4 +1,3 @@
-com\smhu\msg\ResponseMsg.class
 com\smhu\food\Food.class
 com\smhu\utils\DBUtils.class
 com\smhu\controller\ShipperController.class
@@ -10,7 +9,6 @@ com\smhu\controller\OrderController$OrderService.class
 com\smhu\order\Order.class
 com\smhu\market\Market.class
 com\smhu\account\Account.class
-com\smhu\order\OrderDelivery.class
 com\smhu\controller\MarketController$MarketService.class
 com\smhu\order\Evidence.class
 com\smhu\google\Firebase.class
@@ -26,13 +24,11 @@ com\smhu\food\SaleOff.class
 com\smhu\google\DistanceMatrixApi.class
 com\smhu\order\OrderDetail.class
 com\smhu\controller\OrderController.class
-com\smhu\order\OrderDelivery$Order.class
 com\smhu\SwaggerConfig.class
 com\smhu\url\UrlConnection.class
 com\smhu\iface\IOrder.class
 com\smhu\status\Status.class
 com\smhu\SwaggerConfig$1.class
-com\smhu\msg\LogMsg.class
 com\smhu\schedule\Notify.class
 com\smhu\GototheSupermarketHelpingYouApplication.class
 com\smhu\controller\AccountController$AccountService.class

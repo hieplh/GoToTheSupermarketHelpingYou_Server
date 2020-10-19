@@ -11,7 +11,6 @@ public class DateTimeHelper {
     }
 
     public int calculateTimeForShipper(Order order, TimeTravel timeTravel) {
-        System.out.println("Time Delivery: " + order.getTimeDelivery().toString());
         int totalMinuteDeliveryDeadline = parseTimeToMinute(order.getTimeDelivery().toLocalTime());
 
         int totalMinuteGoing = parseTimeToMinute(timeTravel.getGoing().toLocalTime());

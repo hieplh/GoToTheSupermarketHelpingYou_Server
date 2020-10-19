@@ -4,7 +4,7 @@ import com.smhu.google.matrixobj.DistanceMatrixObject;
 import com.smhu.google.matrixobj.ElementObject;
 import com.smhu.helper.GsonHelper;
 import com.smhu.order.Order;
-import com.smhu.order.OrderDelivery;
+import com.smhu.response.OrderDelivery;
 import com.smhu.url.UrlConnection;
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
@@ -36,13 +36,13 @@ public class ShipperController {
     public ResponseEntity<?> getNewOrders(@PathVariable("shipperId") String id,
             @PathVariable("lat") String lat, @PathVariable("lng") String lng) {
         try {
-            if (OrderController.listOrderInProcess.isEmpty()) {
+            if (OrderController.mapOrderInProcess.isEmpty()) {
                 return new ResponseEntity<>(null, HttpStatus.OK);
             }
 
             String[] shipperLocation = {lat, lng};
             mapLocationAvailableShipper.put(id, shipperLocation);
-            Map<String[][], List<Order>> ordersLocation = getOrderLocation(OrderController.listOrderInProcess, shipperLocation);
+            Map<String[][], List<Order>> ordersLocation = getOrderLocation(OrderController.mapOrderInProcess, shipperLocation);
 
             DistanceMatrixObject distanceObj = GsonHelper.gson.fromJson(new InputStreamReader(
                     url.openConnection(shipperLocation, ordersLocation), "utf-8"), DistanceMatrixObject.class);

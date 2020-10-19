@@ -43,7 +43,7 @@ public class Notify {
     public void pushOrder() throws InterruptedException {
         INFINITE_PUSH_ORDER_FLAG = true;
         do {
-            for (Order order : OrderController.listOrderInProcess.values()) {
+            for (Order order : OrderController.mapOrderInProcess.values()) {
                 if (mapData.containsKey(order.getId())) {
                     switch (Integer.parseInt(order.getId()) + 1) {
                         case RANGE_MEDIUM:
@@ -105,8 +105,8 @@ public class Notify {
             OrderController.mapOrderInQueue.clear();
         }
 
-        if (!OrderController.listOrderInProcess.isEmpty()) {
-            OrderController.listOrderInProcess.clear();
+        if (!OrderController.mapOrderInProcess.isEmpty()) {
+            OrderController.mapOrderInProcess.clear();
         }
 
         if (!ShipperController.mapLocationAvailableShipper.isEmpty()) {

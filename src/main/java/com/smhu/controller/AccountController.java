@@ -2,7 +2,7 @@ package com.smhu.controller;
 
 import com.smhu.account.Account;
 import com.smhu.account.AccountLogin;
-import com.smhu.msg.ResponseMsg;
+import com.smhu.response.ResponseMsg;
 import com.smhu.utils.DBUtils;
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
@@ -26,8 +26,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 public class AccountController {
 
-    final int EMAIL = 1;
-    final int PHONE = 2;
+    final int END_USER = 1;
+    final int SHIPPER = 2;
+
+    final String EMAIL = "EMAIL";
+    final String PHONE = "PHONE";
 
     AccountService service = new AccountService();
 
@@ -55,33 +58,63 @@ public class AccountController {
         return new ResponseEntity<>(account, HttpStatus.OK);
     }
 
-    @GetMapping("/account/phone/{phone}")
-    public ResponseEntity<?> getAccountByPhone(@PathVariable("phone") String phone) {
+    @GetMapping("/account/phone/{phone}/type/{type}")
+    public ResponseEntity<?> getAccountByPhone(@PathVariable("phone") String phone, @PathVariable("type") String type) {
         Account account = null;
 
         try {
-            account = service.getAccountByEmailOrPhone(phone, PHONE);
+            int tmpType = 0;
+            try {
+                tmpType = Integer.parseInt(type);
+            } catch (NumberFormatException e) {
+                tmpType = 0;
+            }
+
+            switch (tmpType) {
+                case END_USER:
+                    account = service.getAccountByEmailOrPhone(phone.toUpperCase(), PHONE);
+                    break;
+                case SHIPPER:
+                    break;
+                default:
+                    return new ResponseEntity<>(new ResponseMsg("Wrong param"), HttpStatus.METHOD_NOT_ALLOWED);
+            }
+
             if (account == null) {
                 return new ResponseEntity<>(new ResponseMsg("Phone number is not correct"), HttpStatus.NOT_FOUND);
             }
-
         } catch (SQLException | ClassNotFoundException e) {
             Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, e.getMessage());
             return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return new ResponseEntity<>(account, HttpStatus.OK);
     }
-    
-    @GetMapping("/account/email/{email}")
-    public ResponseEntity<?> getAccountByEmail(@PathVariable("email") String email) {
+
+    @GetMapping("/account/email/{email}/type/{type}")
+    public ResponseEntity<?> getAccountByEmail(@PathVariable("email") String email, @PathVariable("type") String type) {
         Account account = null;
 
         try {
-            account = service.getAccountByEmailOrPhone(email, EMAIL);
+            int tmpType = 0;
+            try {
+                tmpType = Integer.parseInt(type);
+            } catch (NumberFormatException e) {
+                tmpType = 0;
+            }
+
+            switch (tmpType) {
+                case END_USER:
+                    account = service.getAccountByEmailOrPhone(email.toUpperCase(), EMAIL);
+                    break;
+                case SHIPPER:
+                    break;
+                default:
+                    return new ResponseEntity<>(new ResponseMsg("Wrong param"), HttpStatus.METHOD_NOT_ALLOWED);
+            }
+
             if (account == null) {
                 return new ResponseEntity<>(new ResponseMsg("Email is not correct"), HttpStatus.NOT_FOUND);
             }
-
         } catch (SQLException | ClassNotFoundException e) {
             Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, e.getMessage());
             return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -184,7 +217,7 @@ public class AccountController {
             return account;
         }
 
-        Account getAccountByEmailOrPhone(String param, int type) throws SQLException, ClassNotFoundException {
+        Account getAccountByEmailOrPhone(String param, String type) throws SQLException, ClassNotFoundException {
             Connection con = null;
             PreparedStatement stmt = null;
             ResultSet rs = null;

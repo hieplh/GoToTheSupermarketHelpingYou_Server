@@ -1,8 +1,9 @@
-package com.smhu.order;
+package com.smhu.response;
 
 import com.smhu.controller.MarketController;
 import com.smhu.market.Market;
 import com.google.gson.annotations.SerializedName;
+import com.smhu.order.OrderDetail;
 import java.sql.Date;
 import java.sql.Time;
 import java.util.List;

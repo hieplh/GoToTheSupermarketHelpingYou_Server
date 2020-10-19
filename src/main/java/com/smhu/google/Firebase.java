@@ -44,13 +44,13 @@ public class Firebase {
 
         return FirebaseMessaging.getInstance().sendAll(list);
     }
-
-    public String pushNotifyOrderIsAccepted(String topic) throws FirebaseMessagingException, IOException {
+    
+    public String pushNotifyByToken(Map<String, String> token, Map<String, String> values) throws FirebaseMessagingException, IOException {
         initOptions();
         return FirebaseMessaging.getInstance().send(Message.builder()
-                .setTopic(topic)
-                .putData("order_id", topic)
-                .putData("text", "Đơn hàng của bạn đã có người nhận giao hàng")
+                .setToken(token.values().stream().findFirst().get())
+                .putAllData(token)
+                .putAllData(values)
                 .build());
     }
 

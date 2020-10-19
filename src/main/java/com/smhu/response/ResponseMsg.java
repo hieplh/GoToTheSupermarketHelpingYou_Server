@@ -1,4 +1,4 @@
-package com.smhu.msg;
+package com.smhu.response;
 
 public class ResponseMsg {
 

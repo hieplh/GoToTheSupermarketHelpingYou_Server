@@ -47,6 +47,8 @@ public class Order {
 
     private String lng;
 
+    private String author;
+
     public Order() {
     }
 
@@ -210,6 +212,14 @@ public class Order {
 
     public void setLng(String lng) {
         this.lng = lng;
+    }
+
+    public String getAuthor() {
+        return author;
+    }
+
+    public void setAuthor(String author) {
+        this.author = author;
     }
 
     @Override
