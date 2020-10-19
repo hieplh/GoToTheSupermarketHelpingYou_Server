@@ -26,8 +26,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 public class AccountController {
 
-    final int END_USER = 1;
-    final int SHIPPER = 2;
+    final String CUSTOMER = "CUSTOMER";
+    final String STAFF = "STAFF";
+    final String SHIPPER = "SHIPPER";
 
     final String EMAIL = "EMAIL";
     final String PHONE = "PHONE";
@@ -39,7 +40,7 @@ public class AccountController {
         Account account = null;
 
         try {
-            String encrypt = service.getEncryptionPassword(accountObj.getUsername());
+            String encrypt = service.getEncryptionPassword(accountObj.getUsername(), accountObj.getRole().toUpperCase());
             if (encrypt == null) {
                 return new ResponseEntity<>(new ResponseMsg("Account is not exist"), HttpStatus.NOT_FOUND);
             }
@@ -63,16 +64,11 @@ public class AccountController {
         Account account = null;
 
         try {
-            int tmpType = 0;
-            try {
-                tmpType = Integer.parseInt(type);
-            } catch (NumberFormatException e) {
-                tmpType = 0;
-            }
-
-            switch (tmpType) {
-                case END_USER:
+            switch (type) {
+                case CUSTOMER:
                     account = service.getAccountByEmailOrPhone(phone.toUpperCase(), PHONE);
+                    break;
+                case STAFF:
                     break;
                 case SHIPPER:
                     break;
@@ -95,16 +91,12 @@ public class AccountController {
         Account account = null;
 
         try {
-            int tmpType = 0;
-            try {
-                tmpType = Integer.parseInt(type);
-            } catch (NumberFormatException e) {
-                tmpType = 0;
-            }
 
-            switch (tmpType) {
-                case END_USER:
+            switch (type) {
+                case CUSTOMER:
                     account = service.getAccountByEmailOrPhone(email.toUpperCase(), EMAIL);
+                    break;
+                case STAFF:
                     break;
                 case SHIPPER:
                     break;
@@ -124,7 +116,7 @@ public class AccountController {
 
     class AccountService {
 
-        String getEncryptionPassword(String username) throws SQLException, ClassNotFoundException {
+        String getEncryptionPassword(String username, String type) throws SQLException, ClassNotFoundException {
             Connection con = null;
             PreparedStatement stmt = null;
             ResultSet rs = null;
@@ -132,10 +124,17 @@ public class AccountController {
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
-                    String sql = "SELECT SALT\n"
-                            + "FROM ACCOUNT\n"
-                            + "WHERE USERNAME = ? AND IS_ACTIVE = 1";
-                    stmt = con.prepareStatement(sql);
+                    StringBuilder sql = new StringBuilder();
+                    sql.append("SELECT SALT");
+                    sql.append("\n");
+                    if (SHIPPER.equals(type)) {
+                        sql.append("FROM SHIPPER");
+                    } else {
+                        sql.append("FROM ACCOUNT");
+                    }
+                    sql.append("\n");
+                    sql.append("WHERE USERNAME = ? AND IS_ACTIVE = 1");
+                    stmt = con.prepareStatement(sql.toString());
                     stmt.setString(1, username);
                     rs = stmt.executeQuery();
                     if (rs.next()) {

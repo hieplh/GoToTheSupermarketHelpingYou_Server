@@ -16,7 +16,6 @@ import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -63,12 +62,6 @@ public class GototheSupermarketHelpingYouApplication {
                 }
             }
 
-//            List<Order> totalOrders = loadOrder(date, "%");
-//            if (totalOrders != null) {
-//                for (Order order : totalOrders) {
-//                    OrderController.mapOrders.put(order.getId(), order);
-//                }
-//            }
             if (inqueueOrders != null) {
                 loadOrderDetail(inqueueOrders);
                 for (Order order : inqueueOrders) {
@@ -137,8 +130,8 @@ public class GototheSupermarketHelpingYouApplication {
         try {
             con = DBUtils.getConnection();
             if (con != null) {
-                String sql = "SELECT ID, NAME, ADDR_1, ADDR_2, ADDR_3, ADDR_4, LAT, LNG\n"
-                        + "FROM MALL";
+                String sql = "SELECT *\n"
+                        + "FROM GET_ALL_MARKETS";
                 stmt = con.prepareStatement(sql);
                 rs = stmt.executeQuery();
                 while (rs.next()) {
@@ -188,14 +181,9 @@ public class GototheSupermarketHelpingYouApplication {
                     if (listOrders == null) {
                         listOrders = new ArrayList<>();
                     }
-                    String id = rs.getString("ID");
-                    System.out.println("ID: " + id);
-                    Time time = rs.getTime("TIME_DELIVERY");
-                    System.out.println("TIME: " + time);
-
                     listOrders.add(new Order(rs.getString("ID"),
                             rs.getString("CUST"),
-                            rs.getString("MALL"),
+                            rs.getString("MARKET"),
                             null,
                             null,
                             null,
@@ -205,9 +193,6 @@ public class GototheSupermarketHelpingYouApplication {
                             rs.getDouble("COST_DELIVERY"),
                             rs.getDouble("TOTAL_COST"),
                             rs.getDate("DATE_DELIVERY"),
-                            //                            rs.getTime("TIME_DELIVERY",
-                            //                                    Calendar.getInstance(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"),
-                            //                                            Locale.forLanguageTag("vi-vn"))),
                             rs.getTime("TIME_DELIVERY"),
                             new TimeTravel(rs.getTime("GOING"),
                                     rs.getTime("SHOPPING"),

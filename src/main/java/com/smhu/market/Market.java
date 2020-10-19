@@ -80,4 +80,9 @@ public class Market {
     public void setLng(String lng) {
         this.lng = lng;
     }
+
+    @Override
+    public String toString() {
+        return "Market{" + "id=" + id + ", name=" + name + ", addr1=" + addr1 + ", addr2=" + addr2 + ", addr3=" + addr3 + ", addr4=" + addr4 + ", lat=" + lat + ", lng=" + lng + '}';
+    }
 }

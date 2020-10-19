@@ -7,7 +7,7 @@ import java.time.LocalTime;
 public class DateTimeHelper {
 
     public static int parseTimeToMinute(LocalTime localTime) {
-        return localTime.getHour() * 60 + localTime.getMinute();
+        return localTime != null ? localTime.getHour() * 60 + localTime.getMinute() : 5;
     }
 
     public int calculateTimeForShipper(Order order, TimeTravel timeTravel) {

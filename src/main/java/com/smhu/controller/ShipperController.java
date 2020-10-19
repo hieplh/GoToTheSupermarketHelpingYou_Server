@@ -8,6 +8,7 @@ import com.smhu.response.OrderDelivery;
 import com.smhu.url.UrlConnection;
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
+import com.smhu.market.Market;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
@@ -110,17 +111,11 @@ public class ShipperController {
         OrderDelivery[] orders = null;
         int index = 0;
 
-        boolean flag = false;
-        int tmp = -1;
-        for (int i = 0; i < listDistanceValue.size(); i++) {
-            if (!flag) {
-                tmp = Integer.parseInt(listDistanceValue.get(i));
-            } else {
-                flag = true;
-            }
-
-            if (tmp >= Integer.parseInt(listDistanceValue.get(i))) {
+        int tmp = Integer.parseInt(listDistanceValue.get(0));
+        for (int i = 1; i < listDistanceValue.size(); i++) {
+            if (tmp > Integer.parseInt(listDistanceValue.get(i))) {
                 index = i;
+                tmp = Integer.parseInt(listDistanceValue.get(i));
             }
         }
 

@@ -22,21 +22,20 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api")
 public class MarketController {
-//asfasf
+
     public static Map<String, Market> mapMarket = new HashMap<>();
 
     MarketService service = new MarketService();
 
-    @GetMapping("/malls")
-    public ResponseEntity<?> getApiMarkets() {
+    @GetMapping("/markets")
+    public ResponseEntity<?> getMarkets() {
         try {
             if (mapMarket.isEmpty()) {
-                List<Market> markets = service.getMalls();
+                List<Market> markets = service.getMarkets();
                 for (Market market : markets) {
                     MarketController.mapMarket.put(market.getId(), market);
                 }
             }
-
             return new ResponseEntity<>(mapMarket.values(), HttpStatus.OK);
         } catch (ClassNotFoundException | SQLException e) {
             Logger.getLogger(MarketController.class.getName()).log(Level.SEVERE, e.getMessage());
@@ -46,24 +45,24 @@ public class MarketController {
 
     class MarketService {
 
-        List<Market> getMalls() throws SQLException, ClassNotFoundException {
+        List<Market> getMarkets() throws SQLException, ClassNotFoundException {
             Connection con = null;
             PreparedStatement stmt = null;
             ResultSet rs = null;
-            List<Market> listMalls = null;
+            List<Market> listMarkets = null;
 
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
-                    String sql = "SELECT ID, NAME, ADDR_1, ADDR_2, ADDR_3, ADDR_4, LAT, LNG\n"
-                            + "FROM MALL";
+                    String sql = "SELECT *\n"
+                            + "FROM GET_ALL_MARKETS";
                     stmt = con.prepareStatement(sql);
                     rs = stmt.executeQuery();
                     while (rs.next()) {
-                        if (listMalls == null) {
-                            listMalls = new ArrayList<>();
+                        if (listMarkets == null) {
+                            listMarkets = new ArrayList<>();
                         }
-                        listMalls.add(new Market(rs.getString("ID"),
+                        listMarkets.add(new Market(rs.getString("ID"),
                                 rs.getString("NAME"),
                                 rs.getString("ADDR_1"),
                                 rs.getString("ADDR_2"),
@@ -84,7 +83,7 @@ public class MarketController {
                     con.close();
                 }
             }
-            return listMalls;
+            return listMarkets;
         }
     }
 }

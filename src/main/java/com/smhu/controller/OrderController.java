@@ -7,6 +7,8 @@ import com.smhu.iface.IOrder;
 import com.smhu.response.ResponseMsg;
 import com.smhu.order.Order;
 import com.smhu.order.OrderDetail;
+import com.smhu.order.TimeTravel;
+import com.smhu.response.OrderObj;
 import com.smhu.utils.DBUtils;
 import java.io.IOException;
 import java.sql.Connection;
@@ -40,15 +42,21 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api")
 public class OrderController {
-
+    
     public static Map<Order, Integer> mapOrderInQueue = new HashMap<>();
     public static Map<String, Order> mapOrderInProcess = new HashMap<>();
     public static Map<String, Order> mapOrderInCancel = new HashMap<>();
-
+    
     IOrder orderListener = new OrderService();
-
+    
     OrderService service = new OrderService();
-
+    
+    @GetMapping("/test/loadOrder")
+    public ResponseEntity testLoadOrderInProcess() {
+        service.checkOrderInqueue();
+        return new ResponseEntity(HttpStatus.OK);
+    }
+    
     @PostMapping("/order")
     public ResponseEntity<?> newOrder(@RequestBody Order obj) {
         String result = "";
@@ -61,7 +69,7 @@ public class OrderController {
                     .mapToInt((value) -> {
                         return value;
                     }).max().getAsInt();
-
+            
             Order order = new Order(new OrderService().generateId(obj),
                     obj.getCust(),
                     obj.getMarket(),
@@ -79,45 +87,52 @@ public class OrderController {
                     obj.getLat(),
                     obj.getLng(),
                     obj.getDetails());
-
+            
             result = service.insertOrder(order);
-
+            
             if (result == null) {
                 return new ResponseEntity<>(new ResponseMsg("Insert new order failed"), HttpStatus.INTERNAL_SERVER_ERROR);
             }
-
             if (service.insertOrderDetail(result, order.getDetails()) == null) {
                 return new ResponseEntity<>(new ResponseMsg("Insert new order detail failed"), HttpStatus.INTERNAL_SERVER_ERROR);
+            } else {
+                int count = 0;
+                for (OrderDetail detail : order.getDetails()) {
+                    detail.setId(result + String.valueOf(++count));
+                }
             }
-
-            service.addOrderInqueue(obj);
+            if (service.insertOrderTimeTravel(result, order.getTimeTravel()) == 0) {
+                return new ResponseEntity<>(new ResponseMsg("Insert new order time travel failed"), HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+            
+            service.addOrderInqueue(order);
             service.checkOrderInqueue();
-
+            
         } catch (SQLException | ClassNotFoundException e) {
             Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
             return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return new ResponseEntity<>(new ResponseMsg(result), HttpStatus.OK);
     }
-
+    
     @PutMapping("/orders/update")
-    public ResponseEntity<?> updatetOrder(@RequestBody List<Order> listOrder) {
-        List<Order> listResult = new ArrayList<>();
-        for (Order orderInProcess : listOrder) {
+    public ResponseEntity<?> updatetOrder(@RequestBody List<OrderObj> listOrders) {
+        List<OrderObj> listResult = new ArrayList<>();
+        for (OrderObj orderInProcess : listOrders) {
             Order order = mapOrderInProcess.get(orderInProcess.getId());
-            if (order != null) {
-                return new ResponseEntity<>(new ResponseMsg("Đơn hàng của bạn đã hoàn thành"), HttpStatus.NOT_FOUND);
+            if (order == null) {
+                return new ResponseEntity<>(new ResponseMsg("Đơn hàng của bạn đã hoàn thành hoặc bị hủy"), HttpStatus.NOT_FOUND);
             }
-
+            
             int status;
             try {
                 if (order.getShipper() == null || order.getShipper().isEmpty()) {
                     order.setShipper(orderInProcess.getShipper());
                 }
-
+                
                 String[] location = ShipperController.mapLocationAvailableShipper.remove(order.getShipper());
                 ShipperController.mapLocationInProgressShipper.put(order.getShipper(), location);
-
+                
                 if (!order.getStatus().matches("2\\d")) {
                     status = StatusController.mapStatus.keySet()
                             .stream()
@@ -129,10 +144,11 @@ public class OrderController {
                     status = Integer.parseInt(order.getStatus()) + 1;
                 }
                 order.setStatus(String.valueOf(status));
-
+                
                 service.updatetOrder(order);
-                listResult.add(order);
-
+                service.syncOrderSystemAndOrderDelivery(order, orderInProcess);
+                listResult.add(orderInProcess);
+                
                 int tmp = StatusController.mapStatus.keySet()
                         .stream()
                         .filter(t -> String.valueOf(t).matches("2\\d"))
@@ -161,12 +177,12 @@ public class OrderController {
         }
         return new ResponseEntity<>(listResult, HttpStatus.OK);
     }
-
+    
     @GetMapping("/tracking/shipper/{shipperId}/lat/{lat}/lng/{lng}")
     public ResponseEntity trackingOrder(@PathVariable("shipperId") String shipperId,
             @PathVariable("lat") String lat, @PathVariable("lng") String lng) {
         Firebase firebase = new Firebase();
-
+        
         mapOrderInProcess.values().stream()
                 .filter((t) -> {
                     return shipperId.equals(t.getShipper());
@@ -178,25 +194,25 @@ public class OrderController {
                         Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
                     }
                 });
-
+        
         return new ResponseEntity(HttpStatus.OK);
     }
-
+    
     private final String STAFF = "STAFF";
     private final String SHIPPER = "SHIPPER";
-
+    
     @DeleteMapping("order/delete/{orderId}/{type}/{personId}")
     public ResponseEntity<?> cancelOrder(@PathVariable("orderId") String orderId, @PathVariable("type") String type,
             @PathVariable("personId") String personId) {
         Order order = null;
-
+        
         switch (type.toUpperCase()) {
             case STAFF:
                 order = mapOrderInCancel.remove(orderId);
                 if (order == null) {
                     order = mapOrderInProcess.remove(orderId);
                 }
-
+                
                 String result = null;
                 try {
                     order.setAuthor(personId);
@@ -207,7 +223,7 @@ public class OrderController {
                 if (result == null) {
                     return new ResponseEntity<>(new ResponseMsg("Error while cancel order. Please try again!"), HttpStatus.INTERNAL_SERVER_ERROR);
                 }
-
+                
                 Map<String, String> token = new HashMap<>();
                 token.put("shipper_id", order.getShipper());
                 Map<String, String> values = new HashMap<>();
@@ -217,7 +233,7 @@ public class OrderController {
                 } catch (FirebaseMessagingException | IOException e) {
                     Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
                 }
-
+                
                 return new ResponseEntity<>(new ResponseMsg("Order_id: " + result + ", is canceled"), HttpStatus.OK);
             case SHIPPER:
                 order = mapOrderInProcess.remove(orderId);
@@ -229,13 +245,13 @@ public class OrderController {
                 return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
         }
     }
-
+    
     public IOrder getOrderListener() {
         return orderListener;
     }
-
+    
     class OrderService implements IOrder {
-
+        
         @Override
         public void checkOrderInqueue() {
             List<Order> tmp = new ArrayList<>();
@@ -246,12 +262,12 @@ public class OrderController {
                     tmp.add(order.getKey());
                 }
             }
-
+            
             for (Order order : tmp) {
                 OrderController.mapOrderInQueue.remove(order);
             }
         }
-
+        
         String generateId(Order obj) {
             LocalTime time = LocalTime.now(ZoneId.of("GMT+7"));
             Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"), new Locale("vi", "vn"));
@@ -263,26 +279,23 @@ public class OrderController {
                     + String.valueOf(time.getMinute())
                     + String.valueOf(time.getSecond());
         }
-
+        
         void addOrderInqueue(Order order) {
-            if (mapOrderInQueue == null) {
-                mapOrderInQueue = new HashMap<>();
-            }
             mapOrderInQueue.put(order, getTimeForShipper(order));
         }
-
+        
         int getTimeForShipper(Order order) {
             return new DateTimeHelper().calculateTimeForShipper(order, order.getTimeTravel());
         }
-
+        
         String insertOrder(Order order) throws SQLException, ClassNotFoundException {
             Connection con = null;
             PreparedStatement stmt = null;
-
+            
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
-                    String sql = "INSERT INTO ORDERS (ID, CUST, MALL, CREATED_DATE, CREATED_TIME, LAST_UPDATE, STATUS, NOTE, \n"
+                    String sql = "INSERT INTO ORDERS (ID, CUST, MARKET, CREATED_DATE, CREATED_TIME, LAST_UPDATE, STATUS, NOTE, \n"
                             + "COST_SHOPPING, COST_DELIVERY, TOTAL_COST, DATE_DELIVERY, TIME_DELIVERY, \n"
                             + "LAT, LNG)\n"
                             + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -314,18 +327,18 @@ public class OrderController {
             }
             return null;
         }
-
+        
         int[] insertOrderDetail(String idOrder, List<OrderDetail> details) throws SQLException, ClassNotFoundException {
             Connection con = null;
             PreparedStatement stmt = null;
-
+            
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
                     String sql = "INSERT INTO ORDER_DETAIL (ID, FOOD, ORIGINAL_PRICE, SALE_OFF, PAID_PRICE, WEIGHT, DH)\n"
                             + "VALUES (?, ?, ?, ?, ?, ?, ?)";
                     stmt = con.prepareStatement(sql);
-
+                    
                     int count = 0;
                     for (OrderDetail detail : details) {
                         stmt.setString(1, idOrder + String.valueOf(++count));
@@ -351,16 +364,45 @@ public class OrderController {
             }
             return null;
         }
-
-        String updatetOrder(Order order) throws SQLException, ClassNotFoundException {
+        
+        int insertOrderTimeTravel(String idOrder, TimeTravel time) throws SQLException, ClassNotFoundException {
             Connection con = null;
             PreparedStatement stmt = null;
-
+            
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
-
-                    String sql = "UPDATE ORDERS SET SHIPEPR = ?, STATUS = ?\n"
+                    String sql = "INSERT INTO TIME_TRAVEL (ID, GOING, SHOPPING, DELIVERY, TRAFFIC, DH)\n"
+                            + "VALUES (?, ?, ?, ?, ?, ?)";
+                    stmt = con.prepareStatement(sql);
+                    stmt.setString(1, "TIME" + idOrder);
+                    stmt.setTime(2, getTimeIfNull(time.getGoing()));
+                    stmt.setTime(3, getTimeIfNull(time.getShopping()));
+                    stmt.setTime(4, getTimeIfNull(time.getDelivery()));
+                    stmt.setTime(5, getTimeIfNull(time.getTraffic()));
+                    stmt.setString(6, idOrder);
+                    return stmt.executeUpdate();
+                }
+            } finally {
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (con != null) {
+                    con.close();
+                }
+            }
+            return 0;
+        }
+        
+        String updatetOrder(Order order) throws SQLException, ClassNotFoundException {
+            Connection con = null;
+            PreparedStatement stmt = null;
+            
+            try {
+                con = DBUtils.getConnection();
+                if (con != null) {
+                    
+                    String sql = "UPDATE ORDERS SET SHIPPER = ?, STATUS = ?\n"
                             + "WHERE ID = ?";
                     stmt = con.prepareStatement(sql);
                     stmt.setString(1, order.getShipper());
@@ -378,15 +420,15 @@ public class OrderController {
             }
             return null;
         }
-
+        
         String CancelOrder(Order order) throws SQLException, ClassNotFoundException {
             Connection con = null;
             PreparedStatement stmt = null;
-
+            
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
-
+                    
                     String sql = "UPDATE ORDERS SET STATUS = ?, AUTHOR = ?\n"
                             + "WHERE ID = ?";
                     stmt = con.prepareStatement(sql);
@@ -404,6 +446,15 @@ public class OrderController {
                 }
             }
             return null;
+        }
+        
+        private Time getTimeIfNull(Time time) {
+            return time != null ? time : new Time(0, 5, 0);
+        }
+        
+        private void syncOrderSystemAndOrderDelivery(Order sys, OrderObj delivery) {
+            delivery.setShipper(sys.getShipper());
+            delivery.setStatus(Integer.parseInt(sys.getStatus()));
         }
     }
 }
