@@ -2,6 +2,7 @@ package com.smhu.controller;
 
 import com.smhu.account.Account;
 import com.smhu.account.AccountLogin;
+import com.smhu.iface.IAccount;
 import com.smhu.response.ResponseMsg;
 import com.smhu.utils.DBUtils;
 import java.io.UnsupportedEncodingException;
@@ -11,6 +12,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.springframework.http.HttpStatus;
@@ -26,9 +29,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 public class AccountController {
 
-    final String CUSTOMER = "CUSTOMER";
-    final String STAFF = "STAFF";
-    final String SHIPPER = "SHIPPER";
+    public static Map<String, String> mapRoles = new HashMap<>();
+    IAccount accountListener = new AccountService();
 
     final String EMAIL = "EMAIL";
     final String PHONE = "PHONE";
@@ -40,13 +42,17 @@ public class AccountController {
         Account account = null;
 
         try {
-            String encrypt = service.getEncryptionPassword(accountObj.getUsername(), accountObj.getRole().toUpperCase());
+            if (!mapRoles.containsKey(accountObj.getRole().toLowerCase())) {
+                return new ResponseEntity<>(new ResponseMsg(HttpStatus.METHOD_NOT_ALLOWED.toString()), HttpStatus.METHOD_NOT_ALLOWED);
+            }
+            
+            String encrypt = service.getEncryptionPassword(accountObj.getUsername(), accountObj.getRole().toLowerCase());
             if (encrypt == null) {
-                return new ResponseEntity<>(new ResponseMsg("Account is not exist"), HttpStatus.NOT_FOUND);
+                return new ResponseEntity<>(new ResponseMsg("Username or Password is not correct"), HttpStatus.NOT_FOUND);
             }
 
             String encodePassword = service.encryptSHA(accountObj.getPassword() + encrypt);
-            account = service.getAccountByUsername(accountObj.getUsername(), encodePassword);
+            account = service.getAccountByUsername(accountObj.getUsername(), encodePassword, accountObj.getRole());
             if (account == null) {
                 return new ResponseEntity<>(new ResponseMsg("Username or Password is not correct"), HttpStatus.NOT_FOUND);
             }
@@ -64,16 +70,10 @@ public class AccountController {
         Account account = null;
 
         try {
-            switch (type) {
-                case CUSTOMER:
-                    account = service.getAccountByEmailOrPhone(phone.toUpperCase(), PHONE);
-                    break;
-                case STAFF:
-                    break;
-                case SHIPPER:
-                    break;
-                default:
-                    return new ResponseEntity<>(new ResponseMsg("Wrong param"), HttpStatus.METHOD_NOT_ALLOWED);
+            if (mapRoles.containsKey(type)) {
+                account = service.getAccountByEmailOrPhone(phone.toLowerCase(), PHONE);
+            } else {
+                return new ResponseEntity<>(new ResponseMsg(HttpStatus.METHOD_NOT_ALLOWED.toString()), HttpStatus.METHOD_NOT_ALLOWED);
             }
 
             if (account == null) {
@@ -91,17 +91,10 @@ public class AccountController {
         Account account = null;
 
         try {
-
-            switch (type) {
-                case CUSTOMER:
-                    account = service.getAccountByEmailOrPhone(email.toUpperCase(), EMAIL);
-                    break;
-                case STAFF:
-                    break;
-                case SHIPPER:
-                    break;
-                default:
-                    return new ResponseEntity<>(new ResponseMsg("Wrong param"), HttpStatus.METHOD_NOT_ALLOWED);
+            if (mapRoles.containsKey(type)) {
+                account = service.getAccountByEmailOrPhone(email.toLowerCase(), EMAIL);
+            } else {
+                return new ResponseEntity<>(new ResponseMsg(HttpStatus.METHOD_NOT_ALLOWED.toString()), HttpStatus.METHOD_NOT_ALLOWED);
             }
 
             if (account == null) {
@@ -114,7 +107,43 @@ public class AccountController {
         return new ResponseEntity<>(account, HttpStatus.OK);
     }
 
-    class AccountService {
+    public IAccount getAccountListener() {
+        return accountListener;
+    }
+
+    class AccountService implements IAccount {
+
+        @Override
+        public Map<String, String> getRoles() throws SQLException, ClassNotFoundException {
+            Connection con = null;
+            PreparedStatement stmt = null;
+            ResultSet rs = null;
+            Map<String, String> map = new HashMap<>();
+
+            try {
+                con = DBUtils.getConnection();
+                if (con != null) {
+                    String sql = "SELECT *\n"
+                            + "FROM GET_ALL_ROLES";
+                    stmt = con.prepareStatement(sql);
+                    rs = stmt.executeQuery();
+                    while (rs.next()) {
+                        map.put(rs.getString("ID"), rs.getString("DESCRIPTION"));
+                    }
+                }
+            } finally {
+                if (rs != null) {
+                    rs.close();
+                }
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (con != null) {
+                    con.close();
+                }
+            }
+            return map;
+        }
 
         String getEncryptionPassword(String username, String type) throws SQLException, ClassNotFoundException {
             Connection con = null;
@@ -127,13 +156,16 @@ public class AccountController {
                     StringBuilder sql = new StringBuilder();
                     sql.append("SELECT SALT");
                     sql.append("\n");
-                    if (SHIPPER.equals(type)) {
-                        sql.append("FROM SHIPPER");
-                    } else {
-                        sql.append("FROM ACCOUNT");
-                    }
+                    sql.append("FROM ACCOUNT");
                     sql.append("\n");
                     sql.append("WHERE USERNAME = ? AND IS_ACTIVE = 1");
+                    sql.append("\n");
+                    if (AccountController.mapRoles.containsKey(type)) {
+                        sql.append("AND ROLE = ").append(type);
+                    } else {
+                        return null;
+                    }
+
                     stmt = con.prepareStatement(sql.toString());
                     stmt.setString(1, username);
                     rs = stmt.executeQuery();
@@ -155,7 +187,7 @@ public class AccountController {
             return null;
         }
 
-        public String encryptSHA(String source) throws NoSuchAlgorithmException, UnsupportedEncodingException {
+        String encryptSHA(String source) throws NoSuchAlgorithmException, UnsupportedEncodingException {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(source.getBytes("UTF-8"));
             StringBuilder hexString = new StringBuilder();
@@ -170,25 +202,26 @@ public class AccountController {
             return hexString.toString();
         }
 
-        Account getAccountByUsername(String username, String password) throws SQLException, ClassNotFoundException {
+        Account getAccountByUsername(String username, String password, String type) throws SQLException, ClassNotFoundException {
             Connection con = null;
             PreparedStatement stmt = null;
             ResultSet rs = null;
-            Account account = null;
 
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
                     String sql = "SELECT *\n"
                             + "FROM GET_ACCOUNT\n"
-                            + "WHERE USERNAME = ? AND PASSWORD = ?";
+                            + "WHERE USERNAME = ? AND PASSWORD = ? "
+                            + "AND ROLE = ? AND IS_ACTIVE = 1";
                     stmt = con.prepareStatement(sql);
                     stmt.setString(1, username);
                     stmt.setString(2, password);
+                    stmt.setString(3, type);
                     rs = stmt.executeQuery();
                     if (rs.next()) {
-                        account = new Account(rs.getString("ID"),
-                                username,
+                        return new Account(rs.getString("ID"),
+                                rs.getString("USERNAME"),
                                 rs.getString("FIRST_NAME"),
                                 rs.getString("MID_NAME"),
                                 rs.getString("LAST_NAME"),
@@ -196,10 +229,9 @@ public class AccountController {
                                 rs.getString("PHONE"),
                                 rs.getDate("DOB"),
                                 rs.getInt("ROLE"),
-                                rs.getInt("NUM_ORDERED"),
+                                rs.getInt("NUM_SUCCESS"),
                                 rs.getInt("NUM_CANCEL"),
-                                rs.getDouble("WALLET"),
-                                rs.getInt("STATUS"));
+                                rs.getDouble("WALLET"));
                     }
                 }
             } finally {
@@ -213,14 +245,13 @@ public class AccountController {
                     con.close();
                 }
             }
-            return account;
+            return null;
         }
 
         Account getAccountByEmailOrPhone(String param, String type) throws SQLException, ClassNotFoundException {
             Connection con = null;
             PreparedStatement stmt = null;
             ResultSet rs = null;
-            Account account = null;
             StringBuilder sql = new StringBuilder();
 
             try {
@@ -230,24 +261,16 @@ public class AccountController {
                     sql.append("\n");
                     sql.append("FROM GET_ACCOUNT");
                     sql.append("\n");
-
-                    switch (type) {
-                        case EMAIL:
-                            sql.append("WHERE EMAIL = ?");
-                            break;
-                        case PHONE:
-                            sql.append("WHERE PHONE = ?");
-                            break;
-                        default:
-                            return null;
-                    }
+                    sql.append("WHERE IS_ACTIVE = 1");
+                    sql.append("\n");
+                    sql.append("AND ROLE = ").append(type);
 
                     stmt = con.prepareStatement(sql.toString());
                     stmt.setString(1, param);
                     rs = stmt.executeQuery();
                     if (rs.next()) {
-                        account = new Account(rs.getString("ID"),
-                                null,
+                        return new Account(rs.getString("ID"),
+                                rs.getString("USERNAME"),
                                 rs.getString("FIRST_NAME"),
                                 rs.getString("MID_NAME"),
                                 rs.getString("LAST_NAME"),
@@ -255,10 +278,9 @@ public class AccountController {
                                 rs.getString("PHONE"),
                                 rs.getDate("DOB"),
                                 rs.getInt("ROLE"),
-                                rs.getInt("NUM_ORDERED"),
+                                rs.getInt("NUM_SUCCESS"),
                                 rs.getInt("NUM_CANCEL"),
-                                rs.getDouble("WALLET"),
-                                rs.getInt("STATUS"));
+                                rs.getDouble("WALLET"));
                     }
                 }
             } finally {
@@ -272,7 +294,7 @@ public class AccountController {
                     con.close();
                 }
             }
-            return account;
+            return null;
         }
     }
 }

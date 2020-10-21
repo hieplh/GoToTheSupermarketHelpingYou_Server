@@ -4,11 +4,12 @@ import com.google.firebase.messaging.FirebaseMessagingException;
 import com.smhu.google.Firebase;
 import com.smhu.helper.DateTimeHelper;
 import com.smhu.iface.IOrder;
-import com.smhu.response.ResponseMsg;
 import com.smhu.order.Order;
+import com.smhu.response.ResponseMsg;
+import com.smhu.response.customer.OrderCustomer;
 import com.smhu.order.OrderDetail;
 import com.smhu.order.TimeTravel;
-import com.smhu.response.OrderObj;
+import com.smhu.response.shipper.OrderShipper;
 import com.smhu.utils.DBUtils;
 import java.io.IOException;
 import java.sql.Connection;
@@ -42,23 +43,23 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api")
 public class OrderController {
-    
+
     public static Map<Order, Integer> mapOrderInQueue = new HashMap<>();
     public static Map<String, Order> mapOrderInProcess = new HashMap<>();
     public static Map<String, Order> mapOrderInCancel = new HashMap<>();
-    
+
     IOrder orderListener = new OrderService();
-    
+
     OrderService service = new OrderService();
-    
+
     @GetMapping("/test/loadOrder")
     public ResponseEntity testLoadOrderInProcess() {
         service.checkOrderInqueue();
         return new ResponseEntity(HttpStatus.OK);
     }
-    
+
     @PostMapping("/order")
-    public ResponseEntity<?> newOrder(@RequestBody Order obj) {
+    public ResponseEntity<?> newOrder(@RequestBody OrderCustomer orderReceive) {
         String result = "";
         try {
             int status = StatusController.mapStatus.keySet()
@@ -69,27 +70,27 @@ public class OrderController {
                     .mapToInt((value) -> {
                         return value;
                     }).max().getAsInt();
-            
-            Order order = new Order(new OrderService().generateId(obj),
-                    obj.getCust(),
-                    obj.getMarket(),
-                    new java.sql.Date(new Date().getTime()),
-                    new Time(new Date().getTime()),
-                    new Time(new Date().getTime()),
-                    String.valueOf(status),
-                    obj.getNote(),
-                    obj.getCostShopping(),
-                    obj.getCostDelivery(),
-                    obj.getTotalCost(),
-                    obj.getDateDelivery(),
-                    obj.getTimeDelivery(),
-                    obj.getTimeTravel(),
-                    obj.getLat(),
-                    obj.getLng(),
-                    obj.getDetails());
-            
+
+            Order order = new Order();
+            order.setId(new OrderService().generateId(orderReceive));
+            order.setCust(orderReceive.getCust());
+            order.setAddressDelivery(orderReceive.getAddressDelivery());
+            order.setNote(orderReceive.getNote());
+            order.setMarket(orderReceive.getMarket());
+            order.setCreateDate(new java.sql.Date(new Date().getTime()));
+            order.setCreateTime(new Time(new Date().getTime()));
+            order.setLastUpdate(null);
+            order.setStatus(status);
+            order.setCostShopping(orderReceive.getCostShopping());
+            order.setCostDelivery(orderReceive.getCostDelivery());
+            order.setTotalCost(orderReceive.getTotalCost());
+            order.setDateDelivery(orderReceive.getDateDelivery());
+            order.setTimeDelivery(orderReceive.getTimeDelivery());
+            order.setTimeTravel(orderReceive.getTimeTravel());
+            order.setDetails(orderReceive.getDetails());
+
             result = service.insertOrder(order);
-            
+
             if (result == null) {
                 return new ResponseEntity<>(new ResponseMsg("Insert new order failed"), HttpStatus.INTERNAL_SERVER_ERROR);
             }
@@ -104,36 +105,36 @@ public class OrderController {
             if (service.insertOrderTimeTravel(result, order.getTimeTravel()) == 0) {
                 return new ResponseEntity<>(new ResponseMsg("Insert new order time travel failed"), HttpStatus.INTERNAL_SERVER_ERROR);
             }
-            
+
             service.addOrderInqueue(order);
             service.checkOrderInqueue();
-            
+
         } catch (SQLException | ClassNotFoundException e) {
             Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
             return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return new ResponseEntity<>(new ResponseMsg(result), HttpStatus.OK);
     }
-    
+
     @PutMapping("/orders/update")
-    public ResponseEntity<?> updatetOrder(@RequestBody List<OrderObj> listOrders) {
-        List<OrderObj> listResult = new ArrayList<>();
-        for (OrderObj orderInProcess : listOrders) {
+    public ResponseEntity<?> updatetOrder(@RequestBody List<OrderShipper> listOrders) {
+        List<OrderShipper> listResults = new ArrayList<>();
+        for (OrderShipper orderInProcess : listOrders) {
             Order order = mapOrderInProcess.get(orderInProcess.getId());
             if (order == null) {
                 return new ResponseEntity<>(new ResponseMsg("Đơn hàng của bạn đã hoàn thành hoặc bị hủy"), HttpStatus.NOT_FOUND);
             }
-            
+
             int status;
             try {
                 if (order.getShipper() == null || order.getShipper().isEmpty()) {
                     order.setShipper(orderInProcess.getShipper());
                 }
-                
+
                 String[] location = ShipperController.mapLocationAvailableShipper.remove(order.getShipper());
                 ShipperController.mapLocationInProgressShipper.put(order.getShipper(), location);
-                
-                if (!order.getStatus().matches("2\\d")) {
+
+                if (!String.valueOf(order.getStatus()).matches("2\\d")) {
                     status = StatusController.mapStatus.keySet()
                             .stream()
                             .filter(t -> String.valueOf(t).matches("2\\d"))
@@ -141,14 +142,14 @@ public class OrderController {
                             .findFirst()
                             .orElse(21);
                 } else {
-                    status = Integer.parseInt(order.getStatus()) + 1;
+                    status = order.getStatus() + 1;
                 }
-                order.setStatus(String.valueOf(status));
-                
+                order.setStatus(status);
+
                 service.updatetOrder(order);
-                service.syncOrderSystemAndOrderDelivery(order, orderInProcess);
-                listResult.add(orderInProcess);
                 
+                listResults.add(service.syncOrderSystemToOrderShipper(order));
+
                 int tmp = StatusController.mapStatus.keySet()
                         .stream()
                         .filter(t -> String.valueOf(t).matches("2\\d"))
@@ -175,14 +176,14 @@ public class OrderController {
                 }
             }
         }
-        return new ResponseEntity<>(listResult, HttpStatus.OK);
+        return new ResponseEntity<>(listResults, HttpStatus.OK);
     }
-    
+
     @GetMapping("/tracking/shipper/{shipperId}/lat/{lat}/lng/{lng}")
     public ResponseEntity trackingOrder(@PathVariable("shipperId") String shipperId,
             @PathVariable("lat") String lat, @PathVariable("lng") String lng) {
         Firebase firebase = new Firebase();
-        
+
         mapOrderInProcess.values().stream()
                 .filter((t) -> {
                     return shipperId.equals(t.getShipper());
@@ -194,25 +195,25 @@ public class OrderController {
                         Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
                     }
                 });
-        
+
         return new ResponseEntity(HttpStatus.OK);
     }
-    
+
     private final String STAFF = "STAFF";
     private final String SHIPPER = "SHIPPER";
-    
+
     @DeleteMapping("order/delete/{orderId}/{type}/{personId}")
     public ResponseEntity<?> cancelOrder(@PathVariable("orderId") String orderId, @PathVariable("type") String type,
             @PathVariable("personId") String personId) {
         Order order = null;
-        
+
         switch (type.toUpperCase()) {
             case STAFF:
                 order = mapOrderInCancel.remove(orderId);
                 if (order == null) {
                     order = mapOrderInProcess.remove(orderId);
                 }
-                
+
                 String result = null;
                 try {
                     order.setAuthor(personId);
@@ -223,7 +224,7 @@ public class OrderController {
                 if (result == null) {
                     return new ResponseEntity<>(new ResponseMsg("Error while cancel order. Please try again!"), HttpStatus.INTERNAL_SERVER_ERROR);
                 }
-                
+
                 Map<String, String> token = new HashMap<>();
                 token.put("shipper_id", order.getShipper());
                 Map<String, String> values = new HashMap<>();
@@ -233,11 +234,12 @@ public class OrderController {
                 } catch (FirebaseMessagingException | IOException e) {
                     Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
                 }
-                
+
                 return new ResponseEntity<>(new ResponseMsg("Order_id: " + result + ", is canceled"), HttpStatus.OK);
             case SHIPPER:
                 order = mapOrderInProcess.remove(orderId);
-                order.setStatus("-" + order.getStatus());
+
+                order.setStatus(order.getStatus() * -1);
                 mapOrderInCancel.put(order.getId(), order);
                 return new ResponseEntity<>(new ResponseMsg("Your cancel request, order_id: " + order.getId()
                         + ", is processing"), HttpStatus.OK);
@@ -245,13 +247,13 @@ public class OrderController {
                 return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
         }
     }
-    
+
     public IOrder getOrderListener() {
         return orderListener;
     }
-    
+
     class OrderService implements IOrder {
-        
+
         @Override
         public void checkOrderInqueue() {
             List<Order> tmp = new ArrayList<>();
@@ -262,13 +264,13 @@ public class OrderController {
                     tmp.add(order.getKey());
                 }
             }
-            
+
             for (Order order : tmp) {
                 OrderController.mapOrderInQueue.remove(order);
             }
         }
-        
-        String generateId(Order obj) {
+
+        String generateId(OrderCustomer obj) {
             LocalTime time = LocalTime.now(ZoneId.of("GMT+7"));
             Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"), new Locale("vi", "vn"));
             return obj.getCust()
@@ -279,42 +281,45 @@ public class OrderController {
                     + String.valueOf(time.getMinute())
                     + String.valueOf(time.getSecond());
         }
-        
+
         void addOrderInqueue(Order order) {
             mapOrderInQueue.put(order, getTimeForShipper(order));
         }
-        
+
         int getTimeForShipper(Order order) {
             return new DateTimeHelper().calculateTimeForShipper(order, order.getTimeTravel());
         }
-        
+
         String insertOrder(Order order) throws SQLException, ClassNotFoundException {
             Connection con = null;
             PreparedStatement stmt = null;
-            
+
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
-                    String sql = "INSERT INTO ORDERS (ID, CUST, MARKET, CREATED_DATE, CREATED_TIME, LAST_UPDATE, STATUS, NOTE, \n"
-                            + "COST_SHOPPING, COST_DELIVERY, TOTAL_COST, DATE_DELIVERY, TIME_DELIVERY, \n"
-                            + "LAT, LNG)\n"
-                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    String sql = "INSERT INTO ORDERS (ID, CUST, ADDRESS_DELIVERY, MARKET, NOTE, \n"
+                            + "COST_SHOPPING, COST_DELIVERY, TOTAL_COST, \n"
+                            + "CREATED_DATE, CREATED_TIME, LAST_UPDATE, STATUS,  \n"
+                            + "DATE_DELIVERY, TIME_DELIVERY)\n"
+                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                     stmt = con.prepareStatement(sql);
                     stmt.setString(1, order.getId());
                     stmt.setString(2, order.getCust());
-                    stmt.setString(3, order.getMarket());
-                    stmt.setDate(4, order.getCreateDate());
-                    stmt.setTime(5, order.getCreateTime());
-                    stmt.setTime(6, order.getLastUpdate());
-                    stmt.setInt(7, Integer.parseInt(order.getStatus())); //status
-                    stmt.setString(8, order.getNote());
-                    stmt.setDouble(9, order.getCostShopping());
-                    stmt.setDouble(10, order.getCostDelivery());
-                    stmt.setDouble(11, order.getTotalCost());
-                    stmt.setDate(12, order.getDateDelivery());
-                    stmt.setTime(13, order.getTimeDelivery());
-                    stmt.setString(14, order.getLat());
-                    stmt.setString(15, order.getLng());
+                    stmt.setString(3, order.getAddressDelivery());
+                    stmt.setString(4, order.getMarket());
+                    stmt.setString(5, order.getNote());
+
+                    stmt.setDouble(6, order.getCostShopping());
+                    stmt.setDouble(7, order.getCostDelivery());
+                    stmt.setDouble(8, order.getTotalCost());
+
+                    stmt.setDate(9, order.getCreateDate());
+                    stmt.setTime(10, order.getCreateTime());
+                    stmt.setTime(11, order.getLastUpdate());
+                    stmt.setInt(12, order.getStatus());
+
+                    stmt.setDate(13, order.getDateDelivery());
+                    stmt.setTime(14, order.getTimeDelivery());
                     return stmt.executeUpdate() > 0 ? order.getId() : null;
                 }
             } finally {
@@ -327,18 +332,18 @@ public class OrderController {
             }
             return null;
         }
-        
+
         int[] insertOrderDetail(String idOrder, List<OrderDetail> details) throws SQLException, ClassNotFoundException {
             Connection con = null;
             PreparedStatement stmt = null;
-            
+
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
                     String sql = "INSERT INTO ORDER_DETAIL (ID, FOOD, ORIGINAL_PRICE, SALE_OFF, PAID_PRICE, WEIGHT, DH)\n"
                             + "VALUES (?, ?, ?, ?, ?, ?, ?)";
                     stmt = con.prepareStatement(sql);
-                    
+
                     int count = 0;
                     for (OrderDetail detail : details) {
                         stmt.setString(1, idOrder + String.valueOf(++count));
@@ -364,11 +369,11 @@ public class OrderController {
             }
             return null;
         }
-        
+
         int insertOrderTimeTravel(String idOrder, TimeTravel time) throws SQLException, ClassNotFoundException {
             Connection con = null;
             PreparedStatement stmt = null;
-            
+
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
@@ -393,21 +398,23 @@ public class OrderController {
             }
             return 0;
         }
-        
+
         String updatetOrder(Order order) throws SQLException, ClassNotFoundException {
             Connection con = null;
             PreparedStatement stmt = null;
-            
+
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
-                    
-                    String sql = "UPDATE ORDERS SET SHIPPER = ?, STATUS = ?\n"
+
+                    String sql = "UPDATE ORDERS SET SHIPPER = ?, STATUS = ?, LAT = ?, LNG = ?\n"
                             + "WHERE ID = ?";
                     stmt = con.prepareStatement(sql);
                     stmt.setString(1, order.getShipper());
-                    stmt.setInt(2, Integer.parseInt(order.getStatus()));
-                    stmt.setString(3, order.getId());
+                    stmt.setInt(2, order.getStatus());
+                    stmt.setString(3, order.getLat());
+                    stmt.setString(4, order.getLng());
+                    stmt.setString(5, order.getId());
                     return stmt.executeUpdate() > 0 ? order.getId() : null;
                 }
             } finally {
@@ -420,21 +427,22 @@ public class OrderController {
             }
             return null;
         }
-        
+
         String CancelOrder(Order order) throws SQLException, ClassNotFoundException {
             Connection con = null;
             PreparedStatement stmt = null;
-            
+
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
-                    
-                    String sql = "UPDATE ORDERS SET STATUS = ?, AUTHOR = ?\n"
+
+                    String sql = "UPDATE ORDERS SET STATUS = ?, AUTHOR = ?, REASON_CANCEL = ?\n"
                             + "WHERE ID = ?";
                     stmt = con.prepareStatement(sql);
-                    stmt.setInt(1, Integer.parseInt(order.getStatus()));
+                    stmt.setInt(1, order.getStatus());
                     stmt.setString(2, order.getAuthor());
-                    stmt.setString(3, order.getId());
+                    stmt.setString(3, order.getReasonCancel());
+                    stmt.setString(4, order.getId());
                     return stmt.executeUpdate() > 0 ? order.getId() : null;
                 }
             } finally {
@@ -447,14 +455,27 @@ public class OrderController {
             }
             return null;
         }
-        
+
         private Time getTimeIfNull(Time time) {
             return time != null ? time : new Time(0, 5, 0);
         }
         
-        private void syncOrderSystemAndOrderDelivery(Order sys, OrderObj delivery) {
-            delivery.setShipper(sys.getShipper());
-            delivery.setStatus(Integer.parseInt(sys.getStatus()));
+        private OrderShipper syncOrderSystemToOrderShipper(Order order) {
+            OrderShipper obj = new OrderShipper();
+            obj.setId(order.getId());
+            obj.setCust(order.getCust());
+            obj.setAddressDelivery(order.getAddressDelivery());
+            obj.setMarket(MarketController.mapMarket.get(order.getMarket()));
+            obj.setNote(order.getNote());
+            obj.setShipper(order.getShipper());
+            obj.setStatus(order.getStatus());
+            obj.setCostShopping(order.getCostShopping());
+            obj.setCostDelivery(order.getCostDelivery());
+            obj.setTotalCost(order.getTotalCost());
+            obj.setDateDelivery(order.getDateDelivery());
+            obj.setTimeDelivery(order.getTimeDelivery());
+            obj.setDetails(order.getDetails());
+            return obj;
         }
     }
 }

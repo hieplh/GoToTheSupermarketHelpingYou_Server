@@ -1,39 +1,40 @@
-package com.smhu.response;
+package com.smhu.response.shipper;
 
 import com.smhu.controller.MarketController;
 import com.google.gson.annotations.SerializedName;
+import com.smhu.order.Order;
 
 public class OrderDelivery {
 
     @SerializedName("distance")
-    private String distance; // string 14.3 dam
+    private String distance; // string 14.3 km
 
     @SerializedName("value")
     private int value; // int 14300
 
     @SerializedName("order")
-    private OrderObj order; 
+    private OrderShipper order;
 
     public OrderDelivery() {
     }
 
-    public OrderDelivery(String distance, int value, com.smhu.order.Order order) {
+    public OrderDelivery(String distance, int value, Order order) {
         this.distance = distance;
         this.value = value;
-        this.order = new OrderObj(order.getId(),
+        this.order = new OrderShipper(order.getId(),
                 order.getCust(),
+                order.getAddressDelivery(),
                 MarketController.mapMarket.get(order.getMarket()),
                 order.getNote(),
                 order.getShipper(),
-                Integer.parseInt(order.getStatus()),
+                order.getStatus(),
                 order.getCostShopping(),
                 order.getCostDelivery(),
                 order.getTotalCost(),
                 order.getDateDelivery(),
                 order.getTimeDelivery(),
                 order.getDetails(),
-                order.getLat(),
-                order.getLng());
+                null, null);
     }
 
     public String getDistance() {
@@ -44,7 +45,7 @@ public class OrderDelivery {
         return value;
     }
 
-    public OrderObj getOrder() {
+    public OrderShipper getOrder() {
         return order;
     }
 }

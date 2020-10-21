@@ -1,9 +1,11 @@
 package com.smhu;
 
+import com.smhu.controller.AccountController;
 import com.smhu.controller.MarketController;
 import com.smhu.controller.OrderController;
 import com.smhu.controller.StatusController;
 import com.smhu.helper.DateTimeHelper;
+import com.smhu.iface.IMain;
 import com.smhu.iface.IOrder;
 import com.smhu.market.Market;
 import com.smhu.order.Order;
@@ -20,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.TimeZone;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -36,6 +39,13 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class GototheSupermarketHelpingYouApplication {
 
+    MainService service = new MainService();
+    IMain mainListener = new MainService();
+
+    public IMain getMainListener() {
+        return mainListener;
+    }
+
     public static void main(String[] args) {
         SpringApplication.run(GototheSupermarketHelpingYouApplication.class, args);
     }
@@ -46,9 +56,14 @@ public class GototheSupermarketHelpingYouApplication {
                     TimeZone.getTimeZone("Asia/Ho_Chi_Minh"), Locale.forLanguageTag("vi-vn"))
                     .getTimeInMillis());
 
-            List<Order> inqueueOrders = loadOrder(date, "12");
-            List<Market> markets = loadMarket();
-            List<Status> listStatus = loadStatus();
+            Map<String, String> roles = service.loadRoles();
+            List<Order> inqueueOrders = service.loadOrder(date, "12");
+            List<Market> markets = service.loadMarket();
+            List<Status> listStatus = service.loadStatus();
+
+            if (!roles.isEmpty()) {
+                AccountController.mapRoles = roles;
+            }
 
             if (listStatus != null) {
                 for (Status status : listStatus) {
@@ -63,12 +78,12 @@ public class GototheSupermarketHelpingYouApplication {
             }
 
             if (inqueueOrders != null) {
-                loadOrderDetail(inqueueOrders);
+                service.loadOrderDetail(inqueueOrders);
                 for (Order order : inqueueOrders) {
                     OrderController.mapOrderInQueue.put(order, new DateTimeHelper().calculateTimeForShipper(order, order.getTimeTravel()));
                     order.setTimeTravel(null);
                 }
-                loadOrderInProcess();
+                service.loadOrderInProcess();
             }
         } catch (ClassNotFoundException | SQLException e) {
             Logger.getLogger(GototheSupermarketHelpingYouApplication.class.getName()).log(Level.SEVERE, e.getMessage());
@@ -76,185 +91,165 @@ public class GototheSupermarketHelpingYouApplication {
 
     }
 
-    private List<Status> loadStatus() throws SQLException, ClassNotFoundException {
-        Connection con = null;
-        PreparedStatement stmt = null;
-        ResultSet rs = null;
-        List<Status> list = null;
+    class MainService implements IMain {
 
-        try {
-            con = DBUtils.getConnection();
-            if (con != null) {
-                String sql = "SELECT CODE, DESCRIPTION\n"
-                        + "FROM STATUS\n"
-                        + "ORDER BY CODE ASC";
-                stmt = con.prepareStatement(sql);
-                rs = stmt.executeQuery();
-                while (rs.next()) {
-                    if (list == null) {
-                        list = new ArrayList<>();
-                    }
-                    list.add(new Status(rs.getInt("CODE"), rs.getString("DESCRIPTION")));
-                }
-            }
-        } finally {
-            if (rs != null) {
-                rs.close();
-            }
-            if (stmt != null) {
-                stmt.close();
-            }
-            if (con != null) {
-                con.close();
-            }
-        }
-        return list;
-    }
-
-    private void loadOrderInProcess() {
-        IOrder orderListener = new OrderController().getOrderListener();
-        try {
-            orderListener.checkOrderInqueue();
-        } catch (Exception e) {
-            Logger.getLogger(GototheSupermarketHelpingYouApplication.class.getName()).log(Level.SEVERE, e.getMessage());
+        @Override
+        public Map<String, String> loadRoles() throws SQLException, ClassNotFoundException {
+            return new AccountController().getAccountListener().getRoles();
         }
 
-    }
+        @Override
+        public List<Status> loadStatus() throws SQLException, ClassNotFoundException {
+            Connection con = null;
+            PreparedStatement stmt = null;
+            ResultSet rs = null;
+            List<Status> list = null;
 
-    private List<Market> loadMarket() throws SQLException, ClassNotFoundException {
-        Connection con = null;
-        PreparedStatement stmt = null;
-        ResultSet rs = null;
-        List<Market> listMarkets = null;
-
-        try {
-            con = DBUtils.getConnection();
-            if (con != null) {
-                String sql = "SELECT *\n"
-                        + "FROM GET_ALL_MARKETS";
-                stmt = con.prepareStatement(sql);
-                rs = stmt.executeQuery();
-                while (rs.next()) {
-                    if (listMarkets == null) {
-                        listMarkets = new ArrayList<>();
-                    }
-                    listMarkets.add(new Market(rs.getString("ID"),
-                            rs.getString("NAME"),
-                            rs.getString("ADDR_1"),
-                            rs.getString("ADDR_2"),
-                            rs.getString("ADDR_3"),
-                            rs.getString("ADDR_4"),
-                            rs.getString("LAT"),
-                            rs.getString("LNG")));
-                }
-            }
-        } finally {
-            if (rs != null) {
-                rs.close();
-            }
-            if (stmt != null) {
-                stmt.close();
-            }
-            if (con != null) {
-                con.close();
-            }
-        }
-        return listMarkets;
-    }
-
-    private List<Order> loadOrder(Date date, String status) throws SQLException, ClassNotFoundException {
-        Connection con = null;
-        PreparedStatement stmt = null;
-        ResultSet rs = null;
-        List<Order> listOrders = null;
-
-        try {
-            con = DBUtils.getConnection();
-            if (con != null) {
-                String sql = "EXEC GET_ORDERS_INQUEUE_BY_DATE ?, ?";
-                stmt = con.prepareStatement(sql);
-                stmt.setDate(1, date);
-                stmt.setString(2, status);
-
-                rs = stmt.executeQuery();
-                while (rs.next()) {
-                    if (listOrders == null) {
-                        listOrders = new ArrayList<>();
-                    }
-                    listOrders.add(new Order(rs.getString("ID"),
-                            rs.getString("CUST"),
-                            rs.getString("MARKET"),
-                            null,
-                            null,
-                            null,
-                            status,
-                            rs.getString("NOTE"),
-                            rs.getDouble("COST_SHOPPING"),
-                            rs.getDouble("COST_DELIVERY"),
-                            rs.getDouble("TOTAL_COST"),
-                            rs.getDate("DATE_DELIVERY"),
-                            rs.getTime("TIME_DELIVERY"),
-                            new TimeTravel(rs.getTime("GOING"),
-                                    rs.getTime("SHOPPING"),
-                                    rs.getTime("DELIVERY"),
-                                    rs.getTime("TRAFFIC")),
-                            rs.getString("LAT"),
-                            rs.getString("LNG"),
-                            null));
-                }
-            }
-        } finally {
-            if (rs != null) {
-                rs.close();
-            }
-            if (stmt != null) {
-                stmt.close();
-            }
-            if (con != null) {
-                con.close();
-            }
-        }
-        return listOrders;
-    }
-
-    private void loadOrderDetail(List<Order> listOrders) throws SQLException, ClassNotFoundException {
-        Connection con = null;
-        PreparedStatement stmt = null;
-        ResultSet rs = null;
-
-        try {
-            con = DBUtils.getConnection();
-            if (con != null) {
-                String sql = "EXEC GET_ORDER_DETAIL_BY_ID ?";
-                stmt = con.prepareStatement(sql);
-                for (Order order : listOrders) {
-                    stmt.setString(1, order.getId());
+            try {
+                con = DBUtils.getConnection();
+                if (con != null) {
+                    String sql = "SELECT CODE, DESCRIPTION\n"
+                            + "FROM STATUS\n"
+                            + "ORDER BY CODE ASC";
+                    stmt = con.prepareStatement(sql);
                     rs = stmt.executeQuery();
-                    List<OrderDetail> listDetails = order.getDetails();
                     while (rs.next()) {
-                        if (listDetails == null) {
-                            listDetails = new ArrayList<>();
+                        if (list == null) {
+                            list = new ArrayList<>();
                         }
-                        listDetails.add(new OrderDetail(rs.getString("ID"),
-                                rs.getString("NAME"),
-                                rs.getString("IMAGE"),
-                                rs.getDouble("ORIGINAL_PRICE"),
-                                rs.getDouble("PAID_PRICE"),
-                                rs.getDouble("WEIGHT"),
-                                rs.getInt("SALE_OFF")));
+                        list.add(new Status(rs.getInt("CODE"), rs.getString("DESCRIPTION")));
                     }
-                    order.setDetails(listDetails);
+                }
+            } finally {
+                if (rs != null) {
+                    rs.close();
+                }
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (con != null) {
+                    con.close();
                 }
             }
-        } finally {
-            if (rs != null) {
-                rs.close();
+            return list;
+        }
+
+        public void loadOrderInProcess() {
+            IOrder orderListener = new OrderController().getOrderListener();
+            try {
+                orderListener.checkOrderInqueue();
+            } catch (Exception e) {
+                Logger.getLogger(GototheSupermarketHelpingYouApplication.class.getName()).log(Level.SEVERE, e.getMessage());
             }
-            if (stmt != null) {
-                stmt.close();
+
+        }
+
+        @Override
+        public List<Market> loadMarket() throws SQLException, ClassNotFoundException {
+            return new MarketController().getMarketListener().getMarkets();
+        }
+
+        @Override
+        public List<Order> loadOrder(Date date, String status) throws SQLException, ClassNotFoundException {
+            Connection con = null;
+            PreparedStatement stmt = null;
+            ResultSet rs = null;
+            List<Order> listOrders = null;
+
+            try {
+                con = DBUtils.getConnection();
+                if (con != null) {
+                    String sql = "EXEC GET_ORDERS_INQUEUE_BY_DATE ?, ?";
+                    stmt = con.prepareStatement(sql);
+                    stmt.setDate(1, date);
+                    stmt.setString(2, status);
+
+                    rs = stmt.executeQuery();
+                    while (rs.next()) {
+                        if (listOrders == null) {
+                            listOrders = new ArrayList<>();
+                        }
+                        listOrders.add(new Order(rs.getString("ID"),
+                                rs.getString("CUST"),
+                                rs.getString("ADDRESS_DELIVERY"),
+                                rs.getString("NOTE"),
+                                rs.getString("MARKET"),
+                                null,
+                                null,
+                                null,
+                                rs.getDate("CREATED_DATE"),
+                                rs.getTime("CREATED_TIME"),
+                                rs.getTime("LAST_UPDATE"),
+                                rs.getInt("status"),
+                                null,
+                                null,
+                                rs.getDouble("COST_SHOPPING"),
+                                rs.getDouble("COST_DELIVERY"),
+                                rs.getDouble("TOTAL_COST"),
+                                rs.getDate("DATE_DELIVERY"),
+                                rs.getTime("TIME_DELIVERY"),
+                                new TimeTravel(rs.getTime("GOING"),
+                                        rs.getTime("SHOPPING"),
+                                        rs.getTime("DELIVERY"),
+                                        rs.getTime("TRAFFIC")),
+                                null,
+                                null));
+                    }
+                }
+            } finally {
+                if (rs != null) {
+                    rs.close();
+                }
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (con != null) {
+                    con.close();
+                }
             }
-            if (con != null) {
-                con.close();
+            return listOrders;
+        }
+
+        @Override
+        public void loadOrderDetail(List<Order> listOrders) throws SQLException, ClassNotFoundException {
+            Connection con = null;
+            PreparedStatement stmt = null;
+            ResultSet rs = null;
+
+            try {
+                con = DBUtils.getConnection();
+                if (con != null) {
+                    String sql = "EXEC GET_ORDER_DETAIL_BY_ID ?";
+                    stmt = con.prepareStatement(sql);
+                    for (Order order : listOrders) {
+                        stmt.setString(1, order.getId());
+                        rs = stmt.executeQuery();
+                        List<OrderDetail> listDetails = order.getDetails();
+                        while (rs.next()) {
+                            if (listDetails == null) {
+                                listDetails = new ArrayList<>();
+                            }
+                            listDetails.add(new OrderDetail(rs.getString("ID"),
+                                    rs.getString("NAME"),
+                                    rs.getString("IMAGE"),
+                                    rs.getDouble("ORIGINAL_PRICE"),
+                                    rs.getDouble("PAID_PRICE"),
+                                    rs.getDouble("WEIGHT"),
+                                    rs.getInt("SALE_OFF")));
+                        }
+                        order.setDetails(listDetails);
+                    }
+                }
+            } finally {
+                if (rs != null) {
+                    rs.close();
+                }
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (con != null) {
+                    con.close();
+                }
             }
         }
     }

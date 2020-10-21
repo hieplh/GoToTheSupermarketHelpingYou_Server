@@ -1,6 +1,5 @@
 package com.smhu.controller;
 
-
 import java.util.ArrayList;
 import java.util.List;
 import com.smhu.food.Food;
@@ -27,17 +26,25 @@ import org.springframework.web.bind.annotation.RestController;
 public class FoodController {
 
     FoodService service = new FoodService();
-    
+
     @GetMapping("/foods/{id_mall}")
-    public ResponseEntity<?> getApiAllFoodsAtMall(@PathVariable("id_mall") String mall) {
-        List<Food> listFoods = null;
+    public ResponseEntity<?> getAllFoodsAtMall(@PathVariable("id_mall") String id) {
         try {
-            listFoods = service.getAllFoodsAtMall(mall);
+            return new ResponseEntity<>(service.getAllFoodsAtMall(id), HttpStatus.OK);
         } catch (SQLException | ClassNotFoundException e) {
             Logger.getLogger(FoodController.class.getName()).log(Level.SEVERE, e.getMessage());
             return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        return new ResponseEntity<>(listFoods, HttpStatus.OK);
+    }
+
+    @GetMapping("/food/{id_food}")
+    public ResponseEntity<?> getFoodById(@PathVariable("id_food") String id) {
+        try {
+            return new ResponseEntity<>(service.getFoodById(id), HttpStatus.OK);
+        } catch (SQLException | ClassNotFoundException e) {
+            Logger.getLogger(FoodController.class.getName()).log(Level.SEVERE, e.getMessage());
+            return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     class FoodService {
@@ -52,8 +59,8 @@ public class FoodController {
                 con = DBUtils.getConnection();
                 if (con != null) {
                     String sql = "SELECT *\n"
-                            + "FROM GET_ALL_FOODS_AT_MALL\n"
-                            + "WHERE MALL_ID = ?";
+                            + "FROM GET_ALL_FOODS_AT_MARKET\n"
+                            + "WHERE MARKET_ID = ?";
                     stmt = con.prepareStatement(sql);
                     stmt.setString(1, mall);
                     rs = stmt.executeQuery();
@@ -85,6 +92,42 @@ public class FoodController {
                 }
             }
             return listFoods;
+        }
+
+        Food getFoodById(String id) throws SQLException, ClassNotFoundException {
+            Connection con = null;
+            PreparedStatement stmt = null;
+            ResultSet rs = null;
+
+            try {
+                con = DBUtils.getConnection();
+                if (con != null) {
+                    String sql = "SELECT *\n"
+                            + "FROM GET_FOOD_BY_ID\n"
+                            + "WHERE ID = ?";
+                    stmt = con.prepareStatement(sql);
+                    stmt.setString(1, id);
+                    rs = stmt.executeQuery();
+                    if (rs.next()) {
+                        return new Food(rs.getString("ID"),
+                                rs.getString("FOOD_NAME"),
+                                rs.getString("IMAGE"),
+                                rs.getString("DESCRIPTION"),
+                                rs.getDouble("PRICE"));
+                    }
+                }
+            } finally {
+                if (rs != null) {
+                    rs.close();
+                }
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (con != null) {
+                    con.close();
+                }
+            }
+            return null;
         }
     }
 }

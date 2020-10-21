@@ -4,25 +4,12 @@ import com.google.gson.annotations.SerializedName;
 
 public class OrderDetail {
 
-    @SerializedName("id")
     private String id;
-
-    @SerializedName("food")
     private String food;
-
-    @SerializedName("image")
     private String image;
-
-    @SerializedName("priceOriginal")
     private double priceOriginal;
-
-    @SerializedName("pricePaid")
     private double pricePaid;
-
-    @SerializedName("weight")
     private double weight;
-
-    @SerializedName("saleOff")
     private int saleOff;
 
     public OrderDetail() {
@@ -89,14 +76,4 @@ public class OrderDetail {
     public void setSaleOff(int saleOff) {
         this.saleOff = saleOff;
     }
-
-    public void setImage(String image) {
-        this.image = image;
-    }
-
-    @Override
-    public String toString() {
-        return "OrderDetail{" + "id=" + id + ", food=" + food + ", image=" + image + ", priceOriginal=" + priceOriginal + ", pricePaid=" + pricePaid + ", weight=" + weight + ", saleOff=" + saleOff + '}';
-    }
-
 }

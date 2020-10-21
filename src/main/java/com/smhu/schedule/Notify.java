@@ -3,7 +3,7 @@ package com.smhu.schedule;
 import com.smhu.controller.OrderController;
 import com.smhu.google.Firebase;
 import com.smhu.iface.IOrder;
-import com.smhu.order.Order;
+import com.smhu.response.customer.OrderCustomer;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.smhu.controller.ShipperController;
 import java.io.IOException;
@@ -40,42 +40,42 @@ public class Notify {
     Firebase firebase = new Firebase();
 
     //@Scheduled(cron = "0 0 8 ? * *")
-    public void pushOrder() throws InterruptedException {
-        INFINITE_PUSH_ORDER_FLAG = true;
-        do {
-            for (Order order : OrderController.mapOrderInProcess.values()) {
-                if (mapData.containsKey(order.getId())) {
-                    switch (Integer.parseInt(order.getId()) + 1) {
-                        case RANGE_MEDIUM:
-                            mapData.put(order.getId(), mapData.get(RADIUS_MEDIUM));
-                            break;
-                        case RANGE_LARGE:
-                            mapData.put(order.getId(), mapData.get(RADIUS_LARGE));
-                            break;
-                        default:
-                            mapData.put(order.getId(), mapData.get(RADIUS_SMALL));
-                            break;
-                    }
-                } else {
-                    mapData.put(order.getId(), RADIUS_SMALL);
-                }
-            }
-
-            try {
-                if (!mapData.isEmpty()) {
-                    firebase.pushNotifyOrdedrToShipper(TOPIC_SHIPEPR, mapData);
-                }
-            } catch (FirebaseMessagingException | IOException ex) {
-                Logger.getLogger(Notify.class.getName()).log(Level.SEVERE, null, ex);
-            }
-            if (LocalTime.of(20, 30, 0).compareTo(getCurrentTime()) <= -1) {
-                INFINITE_PUSH_ORDER_FLAG = false;
-                clear();
-            } else {
-                Thread.sleep(5 * 60 * 1000);
-            }
-        } while (INFINITE_PUSH_ORDER_FLAG);
-    }
+//    public void pushOrder() throws InterruptedException {
+//        INFINITE_PUSH_ORDER_FLAG = true;
+//        do {
+//            for (OrderCustomer order : OrderController.mapOrderInProcess.values()) {
+//                if (mapData.containsKey(order.getId())) {
+//                    switch (Integer.parseInt(order.getId()) + 1) {
+//                        case RANGE_MEDIUM:
+//                            mapData.put(order.getId(), mapData.get(RADIUS_MEDIUM));
+//                            break;
+//                        case RANGE_LARGE:
+//                            mapData.put(order.getId(), mapData.get(RADIUS_LARGE));
+//                            break;
+//                        default:
+//                            mapData.put(order.getId(), mapData.get(RADIUS_SMALL));
+//                            break;
+//                    }
+//                } else {
+//                    mapData.put(order.getId(), RADIUS_SMALL);
+//                }
+//            }
+//
+//            try {
+//                if (!mapData.isEmpty()) {
+//                    firebase.pushNotifyOrdedrToShipper(TOPIC_SHIPEPR, mapData);
+//                }
+//            } catch (FirebaseMessagingException | IOException ex) {
+//                Logger.getLogger(Notify.class.getName()).log(Level.SEVERE, null, ex);
+//            }
+//            if (LocalTime.of(20, 30, 0).compareTo(getCurrentTime()) <= -1) {
+//                INFINITE_PUSH_ORDER_FLAG = false;
+//                clear();
+//            } else {
+//                Thread.sleep(5 * 60 * 1000);
+//            }
+//        } while (INFINITE_PUSH_ORDER_FLAG);
+//    }
 
     //@Scheduled(cron = "0 0 7 ? * *")
     public void checkOrderInQueue() {

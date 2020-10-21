@@ -13,7 +13,7 @@ public class Account {
     private String phone;
     private Date dob;
     private int role;
-    private int numOrder;
+    private int numSuccess;
     private int numCancel;
     private double wallet;
     private int status;
@@ -22,8 +22,8 @@ public class Account {
     }
 
     public Account(String id, String username, String firstName, String middleName, String lastName,
-            String email, String phone, Date dob, int role, int numOrder, int numCancel,
-            double wallet, int status) {
+            String email, String phone, Date dob, int role, int numSuccess, int numCancel,
+            double wallet) {
         this.id = id;
         this.username = username;
         this.firstName = firstName;
@@ -33,10 +33,9 @@ public class Account {
         this.phone = phone;
         this.dob = dob;
         this.role = role;
-        this.numOrder = numOrder;
+        this.numSuccess = numSuccess;
         this.numCancel = numCancel;
         this.wallet = wallet;
-        this.status = status;
     }
 
     public String getId() {
@@ -111,12 +110,12 @@ public class Account {
         this.role = role;
     }
 
-    public int getNumOrder() {
-        return numOrder;
+    public int getNumSuccess() {
+        return numSuccess;
     }
 
-    public void setNumOrder(int numOrder) {
-        this.numOrder = numOrder;
+    public void setNumSuccess(int numSuccess) {
+        this.numSuccess = numSuccess;
     }
 
     public int getNumCancel() {
