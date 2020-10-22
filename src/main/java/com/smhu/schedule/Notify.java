@@ -27,6 +27,8 @@ public class Notify {
     static boolean INFINITE_PUSH_ORDER_FLAG = false;
     static boolean INFINITE_CHECK_ORDER_FLAG = false;
 
+    IOrder orderListener = new OrderController().getOrderListener();
+
     final int RANGE_SMALL = 1;
     final int RANGE_MEDIUM = 2;
     final int RANGE_LARGE = 3;
@@ -76,28 +78,9 @@ public class Notify {
 //            }
 //        } while (INFINITE_PUSH_ORDER_FLAG);
 //    }
-
-    //@Scheduled(cron = "0 0 7 ? * *")
+    @Scheduled(fixedRate = 30 * 1000)
     public void checkOrderInQueue() {
-        INFINITE_CHECK_ORDER_FLAG = true;
-        do {
-            try {
-                IOrder orderListener = new OrderController().getOrderListener();
-                orderListener.checkOrderInqueue();
-                if (LocalTime.of(20, 30, 0).compareTo(getCurrentTime()) <= -1) {
-                    INFINITE_CHECK_ORDER_FLAG = false;
-                    clear();
-                } else {
-                    Thread.sleep(4 * 60 * 1000);
-                }
-            } catch (InterruptedException e) {
-                Logger.getLogger(Notify.class.getName()).log(Level.SEVERE, e.getMessage());
-            }
-        } while (INFINITE_CHECK_ORDER_FLAG);
-    }
-
-    private LocalTime getCurrentTime() {
-        return LocalTime.now(ZoneId.of("GMT+7"));
+        orderListener.checkOrderInqueue();
     }
 
     private void clear() {

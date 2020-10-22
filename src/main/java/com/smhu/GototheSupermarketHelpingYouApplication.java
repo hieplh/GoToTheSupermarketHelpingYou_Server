@@ -154,6 +154,7 @@ public class GototheSupermarketHelpingYouApplication {
             Connection con = null;
             PreparedStatement stmt = null;
             ResultSet rs = null;
+            Order order = null;
             List<Order> listOrders = null;
 
             try {
@@ -169,31 +170,26 @@ public class GototheSupermarketHelpingYouApplication {
                         if (listOrders == null) {
                             listOrders = new ArrayList<>();
                         }
-                        listOrders.add(new Order(rs.getString("ID"),
-                                rs.getString("CUST"),
-                                rs.getString("ADDRESS_DELIVERY"),
-                                rs.getString("NOTE"),
-                                rs.getString("MARKET"),
-                                null,
-                                null,
-                                null,
-                                rs.getDate("CREATED_DATE"),
-                                rs.getTime("CREATED_TIME"),
-                                rs.getTime("LAST_UPDATE"),
-                                rs.getInt("status"),
-                                null,
-                                null,
-                                rs.getDouble("COST_SHOPPING"),
-                                rs.getDouble("COST_DELIVERY"),
-                                rs.getDouble("TOTAL_COST"),
-                                rs.getDate("DATE_DELIVERY"),
-                                rs.getTime("TIME_DELIVERY"),
-                                new TimeTravel(rs.getTime("GOING"),
-                                        rs.getTime("SHOPPING"),
-                                        rs.getTime("DELIVERY"),
-                                        rs.getTime("TRAFFIC")),
-                                null,
-                                null));
+                        order = new Order();
+                        order.setId(rs.getString("ID"));
+                        order.setCust(rs.getString("CUST"));
+                        order.setAddressDelivery(rs.getString("ADDRESS_DELIVERY"));
+                        order.setNote(rs.getString("NOTE"));
+                        order.setMarket(rs.getString("MARKET"));
+                        order.setCreateDate(rs.getDate("CREATED_DATE"));
+                        order.setCreateTime(rs.getTime("CREATED_TIME"));
+                        order.setLastUpdate(rs.getTime("LAST_UPDATE"));
+                        order.setStatus(Integer.parseInt(status));
+                        order.setCostShopping(rs.getDouble("COST_SHOPPING"));
+                        order.setCostDelivery(rs.getDouble("COST_DELIVERY"));
+                        order.setTotalCost(rs.getDouble("TOTAL_COST"));
+                        order.setDateDelivery(rs.getDate("DATE_DELIVERY"));
+                        order.setTimeDelivery(rs.getTime("TIME_DELIVERY"));
+                        order.setTimeTravel(new TimeTravel(rs.getTime("GOING"),
+                                rs.getTime("SHOPPING"),
+                                rs.getTime("DELIVERY"),
+                                rs.getTime("TRAFFIC")));
+                        listOrders.add(order);
                     }
                 }
             } finally {

@@ -10,6 +10,7 @@ import com.smhu.response.customer.OrderCustomer;
 import com.smhu.order.OrderDetail;
 import com.smhu.order.TimeTravel;
 import com.smhu.response.shipper.OrderShipper;
+import com.smhu.schedule.SystemTime;
 import com.smhu.utils.DBUtils;
 import java.io.IOException;
 import java.sql.Connection;
@@ -49,14 +50,7 @@ public class OrderController {
     public static Map<String, Order> mapOrderInCancel = new HashMap<>();
 
     IOrder orderListener = new OrderService();
-
     OrderService service = new OrderService();
-
-    @GetMapping("/test/loadOrder")
-    public ResponseEntity testLoadOrderInProcess() {
-        service.checkOrderInqueue();
-        return new ResponseEntity(HttpStatus.OK);
-    }
 
     @PostMapping("/order")
     public ResponseEntity<?> newOrder(@RequestBody OrderCustomer orderReceive) {
@@ -79,7 +73,7 @@ public class OrderController {
             order.setMarket(orderReceive.getMarket());
             order.setCreateDate(new java.sql.Date(new Date().getTime()));
             order.setCreateTime(new Time(new Date().getTime()));
-            order.setLastUpdate(null);
+            order.setLastUpdate(new Time(new Date().getTime()));
             order.setStatus(status);
             order.setCostShopping(orderReceive.getCostShopping());
             order.setCostDelivery(orderReceive.getCostDelivery());
@@ -145,9 +139,10 @@ public class OrderController {
                     status = order.getStatus() + 1;
                 }
                 order.setStatus(status);
+                order.setLastUpdate(new Time(new Date().getTime()));
 
                 service.updatetOrder(order);
-                
+
                 listResults.add(service.syncOrderSystemToOrderShipper(order));
 
                 int tmp = StatusController.mapStatus.keySet()
@@ -217,6 +212,7 @@ public class OrderController {
                 String result = null;
                 try {
                     order.setAuthor(personId);
+                    order.setLastUpdate(new Time(new Date().getTime()));
                     result = service.CancelOrder(order);
                 } catch (ClassNotFoundException | SQLException e) {
                     Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
@@ -258,9 +254,10 @@ public class OrderController {
         public void checkOrderInqueue() {
             List<Order> tmp = new ArrayList<>();
             for (Map.Entry<Order, Integer> order : OrderController.mapOrderInQueue.entrySet()) {
-                int totalMinuteCurrent = DateTimeHelper.parseTimeToMinute(LocalTime.now(ZoneId.of("GMT+7")));
+                int totalMinuteCurrent = DateTimeHelper.parseTimeToMinute(new Time(SystemTime.SYSTEM_TIME).toLocalTime());
                 if (totalMinuteCurrent >= order.getValue() - 180 && totalMinuteCurrent <= order.getValue()) {
                     mapOrderInProcess.put(order.getKey().getId(), order.getKey());
+                    System.out.println(order);
                     tmp.add(order.getKey());
                 }
             }
@@ -407,14 +404,15 @@ public class OrderController {
                 con = DBUtils.getConnection();
                 if (con != null) {
 
-                    String sql = "UPDATE ORDERS SET SHIPPER = ?, STATUS = ?, LAT = ?, LNG = ?\n"
+                    String sql = "UPDATE ORDERS SET SHIPPER = ?, STATUS = ?, LAT = ?, LNG = ?, LAST_UPDATE = ?\n"
                             + "WHERE ID = ?";
                     stmt = con.prepareStatement(sql);
                     stmt.setString(1, order.getShipper());
                     stmt.setInt(2, order.getStatus());
                     stmt.setString(3, order.getLat());
                     stmt.setString(4, order.getLng());
-                    stmt.setString(5, order.getId());
+                    stmt.setTime(5, order.getLastUpdate());
+                    stmt.setString(6, order.getId());
                     return stmt.executeUpdate() > 0 ? order.getId() : null;
                 }
             } finally {
@@ -436,13 +434,14 @@ public class OrderController {
                 con = DBUtils.getConnection();
                 if (con != null) {
 
-                    String sql = "UPDATE ORDERS SET STATUS = ?, AUTHOR = ?, REASON_CANCEL = ?\n"
+                    String sql = "UPDATE ORDERS SET STATUS = ?, AUTHOR = ?, REASON_CANCEL = ?, LAST_UPDATE = ?\n"
                             + "WHERE ID = ?";
                     stmt = con.prepareStatement(sql);
                     stmt.setInt(1, order.getStatus());
                     stmt.setString(2, order.getAuthor());
                     stmt.setString(3, order.getReasonCancel());
-                    stmt.setString(4, order.getId());
+                    stmt.setTime(4, order.getLastUpdate());
+                    stmt.setString(5, order.getId());
                     return stmt.executeUpdate() > 0 ? order.getId() : null;
                 }
             } finally {
@@ -459,7 +458,7 @@ public class OrderController {
         private Time getTimeIfNull(Time time) {
             return time != null ? time : new Time(0, 5, 0);
         }
-        
+
         private OrderShipper syncOrderSystemToOrderShipper(Order order) {
             OrderShipper obj = new OrderShipper();
             obj.setId(order.getId());

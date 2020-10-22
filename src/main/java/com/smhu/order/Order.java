@@ -33,10 +33,10 @@ public class Order {
     public Order() {
     }
 
-    public Order(String id, String cust, String addressDelivery, String note, String market, 
-            String shipper, String lat, String lng, 
-            Date createDate, Time createTime, Time lastUpdate, 
-            int status, String author, String reasonCancel, double costShopping, double costDelivery, double totalCost, 
+    public Order(String id, String cust, String addressDelivery, String note, String market,
+            String shipper, String lat, String lng,
+            Date createDate, Time createTime, Time lastUpdate,
+            int status, String author, String reasonCancel, double costShopping, double costDelivery, double totalCost,
             Date dateDelivery, Time timeDelivery, TimeTravel timeTravel, List<OrderDetail> details, List<Evidence> evidences) {
         this.id = id;
         this.cust = cust;
@@ -236,6 +236,11 @@ public class Order {
 
     public void setEvidences(List<Evidence> evidences) {
         this.evidences = evidences;
+    }
+
+    @Override
+    public String toString() {
+        return "Order{" + "id=" + id + ", cust=" + cust + ", addressDelivery=" + addressDelivery + ", note=" + note + ", market=" + market + ", shipper=" + shipper + ", lat=" + lat + ", lng=" + lng + ", createDate=" + createDate + ", createTime=" + createTime + ", lastUpdate=" + lastUpdate + ", status=" + status + ", author=" + author + ", reasonCancel=" + reasonCancel + ", costShopping=" + costShopping + ", costDelivery=" + costDelivery + ", totalCost=" + totalCost + ", dateDelivery=" + dateDelivery + ", timeDelivery=" + timeDelivery + ", timeTravel=" + timeTravel + ", details=" + details + ", evidences=" + evidences + '}';
     }
 
     @Override
