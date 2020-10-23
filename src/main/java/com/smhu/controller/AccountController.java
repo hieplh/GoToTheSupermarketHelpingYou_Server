@@ -45,7 +45,7 @@ public class AccountController {
             if (!mapRoles.containsKey(accountObj.getRole().toLowerCase())) {
                 return new ResponseEntity<>(new ResponseMsg(HttpStatus.METHOD_NOT_ALLOWED.toString()), HttpStatus.METHOD_NOT_ALLOWED);
             }
-            
+
             String encrypt = service.getEncryptionPassword(accountObj.getUsername(), accountObj.getRole().toLowerCase());
             if (encrypt == null) {
                 return new ResponseEntity<>(new ResponseMsg("Username or Password is not correct"), HttpStatus.NOT_FOUND);

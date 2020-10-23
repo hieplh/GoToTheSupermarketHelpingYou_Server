@@ -4,6 +4,7 @@ import com.google.firebase.messaging.FirebaseMessagingException;
 import com.smhu.google.Firebase;
 import com.smhu.helper.DateTimeHelper;
 import com.smhu.iface.IOrder;
+import com.smhu.iface.IStatus;
 import com.smhu.order.Order;
 import com.smhu.response.ResponseMsg;
 import com.smhu.response.customer.OrderCustomer;
@@ -47,23 +48,21 @@ public class OrderController {
 
     public static Map<Order, Integer> mapOrderInQueue = new HashMap<>();
     public static Map<String, Order> mapOrderInProcess = new HashMap<>();
-    public static Map<String, Order> mapOrderInCancel = new HashMap<>();
+    public static Map<String, Order> mapOrderIsDone = new HashMap<>();
+    
+    public static Map<String, Order> mapOrderInCancelQueue = new HashMap<>();
+    public static Map<String, Order> mapOrderIsCancel = new HashMap<>();
 
     IOrder orderListener = new OrderService();
     OrderService service = new OrderService();
+    IStatus statusListener;
 
     @PostMapping("/order")
     public ResponseEntity<?> newOrder(@RequestBody OrderCustomer orderReceive) {
         String result = "";
+        statusListener = new StatusController().getStatusListener();
         try {
-            int status = StatusController.mapStatus.keySet()
-                    .stream()
-                    .filter((s) -> {
-                        return s.toString().matches("1\\d");
-                    })
-                    .mapToInt((value) -> {
-                        return value;
-                    }).max().getAsInt();
+            int status = statusListener.getStatusIsPaidOrder();
 
             Order order = new Order();
             order.setId(new OrderService().generateId(orderReceive));
@@ -112,6 +111,7 @@ public class OrderController {
 
     @PutMapping("/orders/update")
     public ResponseEntity<?> updatetOrder(@RequestBody List<OrderShipper> listOrders) {
+        statusListener = new StatusController().getStatusListener();
         List<OrderShipper> listResults = new ArrayList<>();
         for (OrderShipper orderInProcess : listOrders) {
             Order order = mapOrderInProcess.get(orderInProcess.getId());
@@ -121,7 +121,7 @@ public class OrderController {
 
             int status;
             try {
-                if (order.getShipper() == null || order.getShipper().isEmpty()) {
+                if (order.getShipper() == null || order.getShipper().isEmpty() || order.getShipper().equalsIgnoreCase("null")) {
                     order.setShipper(orderInProcess.getShipper());
                 }
 
@@ -129,12 +129,7 @@ public class OrderController {
                 ShipperController.mapLocationInProgressShipper.put(order.getShipper(), location);
 
                 if (!String.valueOf(order.getStatus()).matches("2\\d")) {
-                    status = StatusController.mapStatus.keySet()
-                            .stream()
-                            .filter(t -> String.valueOf(t).matches("2\\d"))
-                            .sorted()
-                            .findFirst()
-                            .orElse(21);
+                    status = statusListener.getStatusIsAccept();
                 } else {
                     status = order.getStatus() + 1;
                 }
@@ -145,14 +140,10 @@ public class OrderController {
 
                 listResults.add(service.syncOrderSystemToOrderShipper(order));
 
-                int tmp = StatusController.mapStatus.keySet()
-                        .stream()
-                        .filter(t -> String.valueOf(t).matches("2\\d"))
-                        .mapToInt(value -> value)
-                        .max()
-                        .getAsInt();
-                if (status == tmp) {
-                    mapOrderInProcess.remove(order.getId());
+                int tmpStatus = statusListener.getStatusIsDoneOrder();
+                if (status == tmpStatus) {
+                    Order orderClone = mapOrderInProcess.remove(order.getId());
+                    mapOrderIsDone.put(orderClone.getId(), orderClone);
                 }
             } catch (SQLException | ClassNotFoundException e) {
                 Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
@@ -197,17 +188,18 @@ public class OrderController {
     private final String STAFF = "STAFF";
     private final String SHIPPER = "SHIPPER";
 
-    @DeleteMapping("order/delete/{orderId}/{type}/{personId}")
+    @DeleteMapping("delete/{orderId}/{type}/{personId}")
     public ResponseEntity<?> cancelOrder(@PathVariable("orderId") String orderId, @PathVariable("type") String type,
             @PathVariable("personId") String personId) {
         Order order = null;
 
         switch (type.toUpperCase()) {
             case STAFF:
-                order = mapOrderInCancel.remove(orderId);
+                order = mapOrderInCancelQueue.remove(orderId);
                 if (order == null) {
                     order = mapOrderInProcess.remove(orderId);
                 }
+                mapOrderIsCancel.put(order.getId(), order);
 
                 String result = null;
                 try {
@@ -236,12 +228,22 @@ public class OrderController {
                 order = mapOrderInProcess.remove(orderId);
 
                 order.setStatus(order.getStatus() * -1);
-                mapOrderInCancel.put(order.getId(), order);
+                mapOrderInCancelQueue.put(order.getId(), order);
                 return new ResponseEntity<>(new ResponseMsg("Your cancel request, order_id: " + order.getId()
                         + ", is processing"), HttpStatus.OK);
             default:
                 return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
         }
+    }
+    
+    @GetMapping("orders/all")
+    public ResponseEntity<?>getAllOrders() {
+        List<Order> list = new ArrayList<>();
+        list.addAll(mapOrderInQueue.keySet());
+        list.addAll(mapOrderInProcess.values());
+        list.addAll(mapOrderIsDone.values());
+        list.addAll(mapOrderIsCancel.values());
+        return new ResponseEntity<>(list, HttpStatus.OK);
     }
 
     public IOrder getOrderListener() {

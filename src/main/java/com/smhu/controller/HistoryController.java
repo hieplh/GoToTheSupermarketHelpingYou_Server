@@ -1,8 +1,7 @@
 package com.smhu.controller;
 
-import com.smhu.GototheSupermarketHelpingYouApplication;
 import com.smhu.history.History;
-import com.smhu.order.Order;
+import com.smhu.iface.IStatus;
 import com.smhu.order.OrderDetail;
 import com.smhu.response.ResponseMsg;
 import com.smhu.utils.DBUtils;
@@ -25,14 +24,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 public class HistoryController {
 
-    final int ROWS = 20;
+    HistoryService service;
 
-    HistoryService service = new HistoryService();
-
-    @GetMapping("/histories/cust/{id}/page/{page}")
-    public ResponseEntity<?> getHistoryByCustId(@PathVariable("id") String custId, @PathVariable("page") String page) {
+    @GetMapping("/histories/{type}/{id}/page/{page}")
+    public ResponseEntity<?> getHistoriesById(@PathVariable("id") String id, @PathVariable("type") String type,
+            @PathVariable("page") String page) {
         try {
-            return new ResponseEntity<>(service.getHistoriesOrderByCustId(custId, service.convertPageToIndex(page)), HttpStatus.OK);
+            service = new HistoryService();
+            IStatus statusListener = new StatusController().getStatusListener();
+            return new ResponseEntity<>(service.getOrderHistoriesById(id, type,
+                    statusListener.getStatusIsDoneOrder(), service.convertPageToIndex(page)),
+                    HttpStatus.OK);
         } catch (ClassNotFoundException | SQLException e) {
             Logger.getLogger(HistoryController.class.getName()).log(Level.SEVERE, e.getMessage());
             return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.OK);
@@ -40,9 +42,10 @@ public class HistoryController {
     }
 
     @GetMapping("/history/{orderId}")
-    public ResponseEntity<?> getHistoryDetails(@PathVariable("orderId") String orderId) {
+    public ResponseEntity<?> getHistoryDetailsById(@PathVariable("orderId") String orderId) {
         try {
-            return new ResponseEntity<>(service.getHistoryOrderDetailByCustId(orderId), HttpStatus.OK);
+            service = new HistoryService();
+            return new ResponseEntity<>(service.getOrderDetailsHistoryById(orderId), HttpStatus.OK);
         } catch (ClassNotFoundException | SQLException e) {
             Logger.getLogger(HistoryController.class.getName()).log(Level.SEVERE, e.getMessage());
             return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.OK);
@@ -51,12 +54,17 @@ public class HistoryController {
 
     class HistoryService {
 
+        final String CUSTOMER = "CUSTOMER";
+        final String SHIPPER = "SHIPPER";
+
+        final int ROWS = 20;
+
         private int convertPageToIndex(String page) {
             int tmp = Integer.parseInt(page);
             return tmp > 0 ? (tmp - 1) * ROWS : 0;
         }
 
-        List<History> getHistoriesOrderByCustId(String custId, int page) throws SQLException, ClassNotFoundException {
+        List<History> getOrderHistoriesById(String id, String type, int status, int page) throws SQLException, ClassNotFoundException {
             Connection con = null;
             PreparedStatement stmt = null;
             ResultSet rs = null;
@@ -66,17 +74,39 @@ public class HistoryController {
                 con = DBUtils.getConnection();
                 if (con != null) {
 
-                    String sql = "SELECT O.ID, O.CREATED_DATE, O.CREATED_TIME, O.ADDRESS_DELIVERY, O.SHIPPER, \n"
-                            + "M.NAME, O.NOTE, O.COST_DELIVERY, O.COST_SHOPPING, O.TOTAL_COST\n"
-                            + "FROM ORDERS O\n"
+                    StringBuilder sql = new StringBuilder();
+                    sql.append("SELECT O.ID, O.CREATED_DATE, O.CREATED_TIME, O.ADDRESS_DELIVERY, O.SHIPPER, \n"
+                            + "M.NAME, O.NOTE, O.COST_DELIVERY, O.COST_SHOPPING, O.TOTAL_COST")
+                            .append("\n");
+                    sql.append("FROM ORDERS O\n"
                             + "JOIN MARKET M\n"
-                            + "ON O.MARKET = M.ID\n"
-                            + "WHERE CUST = ?\n"
-                            + "ORDER BY CREATED_DATE DESC, CREATED_TIME DESC\n"
-                            + "OFFSET " + page + " ROWS\n"
-                            + "FETCH NEXT " + ROWS + " ROWS ONLY";
-                    stmt = con.prepareStatement(sql);
-                    stmt.setString(1, custId);
+                            + "ON O.MARKET = M.ID")
+                            .append("\n");
+                    switch (type.toUpperCase()) {
+                        case CUSTOMER:
+                            sql.append("WHERE CUST = ?")
+                                    .append("\n");
+                            break;
+                        case SHIPPER:
+                            sql.append("WHERE SHIPPER = ?")
+                                    .append("\n");
+                            break;
+                        default:
+                            return null;
+                    }
+                    sql.append("AND STATUS = ?")
+                            .append("\n");
+
+                    sql.append("ORDER BY CREATED_DATE DESC, CREATED_TIME DESC")
+                            .append("\n");
+                    sql.append("OFFSET ? ROWS")
+                            .append("\n");
+                    sql.append("FETCH NEXT " + ROWS + " ROWS ONLY")
+                            .append("\n");
+                    stmt = con.prepareStatement(sql.toString());
+                    stmt.setString(1, id);
+                    stmt.setInt(2, status);
+                    stmt.setInt(3, page);
                     rs = stmt.executeQuery();
                     while (rs.next()) {
                         if (list == null) {
@@ -110,7 +140,7 @@ public class HistoryController {
             return list;
         }
 
-        List<OrderDetail> getHistoryOrderDetailByCustId(String orderId) throws SQLException, ClassNotFoundException {
+        List<OrderDetail> getOrderDetailsHistoryById(String orderId) throws SQLException, ClassNotFoundException {
             Connection con = null;
             PreparedStatement stmt = null;
             ResultSet rs = null;

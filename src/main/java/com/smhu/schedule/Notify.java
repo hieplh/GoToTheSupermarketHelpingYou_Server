@@ -78,6 +78,7 @@ public class Notify {
 //            }
 //        } while (INFINITE_PUSH_ORDER_FLAG);
 //    }
+    
     @Scheduled(fixedRate = 30 * 1000)
     public void checkOrderInQueue() {
         orderListener.checkOrderInqueue();
@@ -92,6 +93,18 @@ public class Notify {
             OrderController.mapOrderInProcess.clear();
         }
 
+        if (!OrderController.mapOrderIsDone.isEmpty()) {
+            OrderController.mapOrderIsDone.clear();
+        }
+        
+        if (!OrderController.mapOrderInCancelQueue.isEmpty()) {
+            OrderController.mapOrderInCancelQueue.clear();
+        }
+        
+        if (!OrderController.mapOrderIsCancel.isEmpty()) {
+            OrderController.mapOrderIsCancel.clear();
+        }
+        
         if (!ShipperController.mapLocationAvailableShipper.isEmpty()) {
             ShipperController.mapLocationAvailableShipper.clear();
         }

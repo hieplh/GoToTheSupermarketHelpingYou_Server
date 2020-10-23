@@ -6,7 +6,7 @@ import java.sql.SQLException;
 
 public class DBUtils {
 
-    private static final String URL = "jdbc:sqlserver://localhost:1433;databaseName=GoToTheSupermarketHelpingYou";
+    private static final String URL = "jdbc:sqlserver://127.0.0.1:1433;databaseName=GoToTheSupermarketHelpingYou";
 //    private static final String URL = "jdbc:sqlserver://smhu.database.windows.net:1433;database=GoToTheSupermarketHelpingYou;"
 //            + "user=sqlserver@smhu;password=@sql123456;encrypt=true;trustServerCertificate=false;"
 //            + "hostNameInCertificate=*.database.windows.net;loginTimeout=30;";

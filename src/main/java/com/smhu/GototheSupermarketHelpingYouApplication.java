@@ -7,6 +7,7 @@ import com.smhu.controller.StatusController;
 import com.smhu.helper.DateTimeHelper;
 import com.smhu.iface.IMain;
 import com.smhu.iface.IOrder;
+import com.smhu.iface.IStatus;
 import com.smhu.market.Market;
 import com.smhu.order.Order;
 import com.smhu.order.OrderDetail;
@@ -39,8 +40,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class GototheSupermarketHelpingYouApplication {
 
-    MainService service = new MainService();
+    MainService service;
     IMain mainListener = new MainService();
+    IStatus statusListener = new StatusController().getStatusListener();
 
     public IMain getMainListener() {
         return mainListener;
@@ -51,39 +53,45 @@ public class GototheSupermarketHelpingYouApplication {
     }
 
     public void init() {
+        service = new MainService();
         try {
             Date date = new Date(Calendar.getInstance(
                     TimeZone.getTimeZone("Asia/Ho_Chi_Minh"), Locale.forLanguageTag("vi-vn"))
                     .getTimeInMillis());
 
             Map<String, String> roles = service.loadRoles();
-            List<Order> inqueueOrders = service.loadOrder(date, "12");
-            List<Market> markets = service.loadMarket();
-            List<Status> listStatus = service.loadStatus();
-
             if (!roles.isEmpty()) {
                 AccountController.mapRoles = roles;
             }
 
+            List<Status> listStatus = service.loadStatus();
             if (listStatus != null) {
-                for (Status status : listStatus) {
+                listStatus.forEach((status) -> {
                     StatusController.mapStatus.put(status.getCode(), status.getDescription());
-                }
+                });
             }
 
+            List<Market> markets = service.loadMarket();
             if (markets != null) {
-                for (Market market : markets) {
+                markets.forEach((market) -> {
                     MarketController.mapMarket.put(market.getId(), market);
-                }
+                });
             }
 
-            if (inqueueOrders != null) {
-                service.loadOrderDetail(inqueueOrders);
-                for (Order order : inqueueOrders) {
-                    OrderController.mapOrderInQueue.put(order, new DateTimeHelper().calculateTimeForShipper(order, order.getTimeTravel()));
-                    order.setTimeTravel(null);
-                }
+            List<Order> listOrdersInQueue = service.loadOrder(date, String.valueOf(statusListener.getStatusIsPaidOrder()));
+            if (listOrdersInQueue != null) {
+                service.loadOrderDetail(listOrdersInQueue);
+                listOrdersInQueue.forEach(order
+                        -> OrderController.mapOrderInQueue.put(order, new DateTimeHelper()
+                                .calculateTimeForShipper(order, order.getTimeTravel()))
+                );
                 service.loadOrderInProcess();
+            }
+
+            List<Order> listOrderIsDone = service.loadOrder(date, String.valueOf(statusListener.getStatusIsDoneOrder()));
+            if (listOrderIsDone != null) {
+                service.loadOrderDetail(listOrderIsDone);
+                listOrderIsDone.forEach(order -> OrderController.mapOrderIsDone.put(order.getId(), order));
             }
         } catch (ClassNotFoundException | SQLException e) {
             Logger.getLogger(GototheSupermarketHelpingYouApplication.class.getName()).log(Level.SEVERE, e.getMessage());
@@ -176,6 +184,7 @@ public class GototheSupermarketHelpingYouApplication {
                         order.setAddressDelivery(rs.getString("ADDRESS_DELIVERY"));
                         order.setNote(rs.getString("NOTE"));
                         order.setMarket(rs.getString("MARKET"));
+                        order.setShipper(rs.getString("SHIPPER"));
                         order.setCreateDate(rs.getDate("CREATED_DATE"));
                         order.setCreateTime(rs.getTime("CREATED_TIME"));
                         order.setLastUpdate(rs.getTime("LAST_UPDATE"));
