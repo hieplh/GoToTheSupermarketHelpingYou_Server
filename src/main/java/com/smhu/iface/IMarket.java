@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface IMarket {
 
-    public List<Market> getMarkets() throws SQLException, ClassNotFoundException;
+    public List<Market> getBranchMarkets() throws SQLException, ClassNotFoundException;
 
     public Market getMarketById(String id) throws SQLException, ClassNotFoundException;
 }

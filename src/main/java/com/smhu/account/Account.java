@@ -12,17 +12,16 @@ public class Account {
     private String email;
     private String phone;
     private Date dob;
-    private int role;
+    private String role;
     private int numSuccess;
     private int numCancel;
     private double wallet;
-    private int status;
 
     public Account() {
     }
 
     public Account(String id, String username, String firstName, String middleName, String lastName,
-            String email, String phone, Date dob, int role, int numSuccess, int numCancel,
+            String email, String phone, Date dob, String role, int numSuccess, int numCancel,
             double wallet) {
         this.id = id;
         this.username = username;
@@ -102,11 +101,11 @@ public class Account {
         this.dob = dob;
     }
 
-    public int getRole() {
+    public String getRole() {
         return role;
     }
 
-    public void setRole(int role) {
+    public void setRole(String role) {
         this.role = role;
     }
 
@@ -133,13 +132,4 @@ public class Account {
     public void setWallet(double wallet) {
         this.wallet = wallet;
     }
-
-    public int getStatus() {
-        return status;
-    }
-
-    public void setStatus(int status) {
-        this.status = status;
-    }
-
 }

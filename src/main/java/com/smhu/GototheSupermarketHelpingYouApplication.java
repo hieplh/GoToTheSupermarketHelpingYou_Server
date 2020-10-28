@@ -37,12 +37,17 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableAutoConfiguration
 @ComponentScan("com.smhu.controller")
 @ComponentScan("com.smhu.schedule")
+@ComponentScan("com.smhu.system")
 @EnableScheduling
 public class GototheSupermarketHelpingYouApplication {
 
     MainService service;
-    IMain mainListener = new MainService();
-    IStatus statusListener = new StatusController().getStatusListener();
+    IMain mainListener;
+    IStatus statusListener;
+
+    public GototheSupermarketHelpingYouApplication() {
+        mainListener = new MainService();
+    }
 
     public IMain getMainListener() {
         return mainListener;
@@ -54,6 +59,7 @@ public class GototheSupermarketHelpingYouApplication {
 
     public void init() {
         service = new MainService();
+        statusListener = new StatusController().getStatusListener();
         try {
             Date date = new Date(Calendar.getInstance(
                     TimeZone.getTimeZone("Asia/Ho_Chi_Minh"), Locale.forLanguageTag("vi-vn"))
@@ -154,7 +160,7 @@ public class GototheSupermarketHelpingYouApplication {
 
         @Override
         public List<Market> loadMarket() throws SQLException, ClassNotFoundException {
-            return new MarketController().getMarketListener().getMarkets();
+            return new MarketController().getMarketListener().getBranchMarkets();
         }
 
         @Override
@@ -213,6 +219,47 @@ public class GototheSupermarketHelpingYouApplication {
                 }
             }
             return listOrders;
+        }
+
+        @Override
+        public List<OrderDetail> getOrderDetailsById(String orderId) throws SQLException, ClassNotFoundException {
+            Connection con = null;
+            PreparedStatement stmt = null;
+            ResultSet rs = null;
+            List<OrderDetail> list = null;
+
+            try {
+                con = DBUtils.getConnection();
+                if (con != null) {
+                    String sql = "EXEC GET_ORDER_DETAIL_BY_ID ?";
+                    stmt = con.prepareStatement(sql);
+                    stmt.setString(1, orderId);
+                    rs = stmt.executeQuery();
+                    while (rs.next()) {
+                        if (list == null) {
+                            list = new ArrayList();
+                        }
+                        list.add(new OrderDetail(rs.getString("ID"),
+                                rs.getString("NAME"),
+                                rs.getString("IMAGE"),
+                                rs.getDouble("ORIGINAL_PRICE"),
+                                rs.getDouble("PAID_PRICE"),
+                                rs.getDouble("WEIGHT"),
+                                rs.getInt("SALE_OFF")));
+                    }
+                }
+            } finally {
+                if (rs != null) {
+                    rs.close();
+                }
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (con != null) {
+                    con.close();
+                }
+            }
+            return list;
         }
 
         @Override

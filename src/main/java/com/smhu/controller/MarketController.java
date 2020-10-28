@@ -30,16 +30,20 @@ public class MarketController {
     IMarket marketListener = new MarketService();
     MarketService service = new MarketService();
 
-    @GetMapping("/markets")
-    public ResponseEntity<?> getMarkets() {
+    @GetMapping("/corporations/all")
+    public ResponseEntity<?> getCorporationOfMarkets() {
         try {
-            if (mapMarket.isEmpty()) {
-                List<Market> markets = service.getMarkets();
-                markets.forEach((market) -> {
-                    MarketController.mapMarket.put(market.getId(), market);
-                });
-            }
-            return new ResponseEntity<>(mapMarket.values(), HttpStatus.OK);
+            return new ResponseEntity<>(service.getCorporations(), HttpStatus.OK);
+        } catch (ClassNotFoundException | SQLException e) {
+            Logger.getLogger(MarketController.class.getName()).log(Level.SEVERE, e.getMessage());
+            return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/markets/{corporationId}")
+    public ResponseEntity<?> getAllMarketsByCorporationId(@PathVariable("corporationId") String corporationId) {
+        try {
+            return new ResponseEntity<>(service.getBranchMarkets(corporationId), HttpStatus.OK);
         } catch (ClassNotFoundException | SQLException e) {
             Logger.getLogger(MarketController.class.getName()).log(Level.SEVERE, e.getMessage());
             return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -63,7 +67,7 @@ public class MarketController {
     class MarketService implements IMarket {
 
         @Override
-        public List<Market> getMarkets() throws SQLException, ClassNotFoundException {
+        public List<Market> getBranchMarkets() throws SQLException, ClassNotFoundException {
             Connection con = null;
             PreparedStatement stmt = null;
             ResultSet rs = null;
@@ -102,6 +106,86 @@ public class MarketController {
                 }
             }
             return listMarkets;
+        }
+
+        public List<Market> getBranchMarkets(String corporationId) throws SQLException, ClassNotFoundException {
+            Connection con = null;
+            PreparedStatement stmt = null;
+            ResultSet rs = null;
+            List<Market> listMarkets = null;
+
+            try {
+                con = DBUtils.getConnection();
+                if (con != null) {
+                    String sql = "SELECT *\n"
+                            + "FROM MARKET\n"
+                            + "WHERE CORPORATION = ?";
+                    stmt = con.prepareStatement(sql);
+                    stmt.setString(1, corporationId);
+                    rs = stmt.executeQuery();
+                    while (rs.next()) {
+                        if (listMarkets == null) {
+                            listMarkets = new ArrayList<>();
+                        }
+                        listMarkets.add(new Market(rs.getString("ID"),
+                                rs.getString("NAME"),
+                                rs.getString("ADDR_1"),
+                                rs.getString("ADDR_2"),
+                                rs.getString("ADDR_3"),
+                                rs.getString("ADDR_4"),
+                                rs.getString("LAT"),
+                                rs.getString("LNG")));
+                    }
+                }
+            } finally {
+                if (rs != null) {
+                    rs.close();
+                }
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (con != null) {
+                    con.close();
+                }
+            }
+            return listMarkets;
+        }
+
+        public List<Map<String, String>> getCorporations() throws SQLException, ClassNotFoundException {
+            Connection con = null;
+            PreparedStatement stmt = null;
+            ResultSet rs = null;
+            List<Map<String, String>> list = null;
+
+            try {
+                con = DBUtils.getConnection();
+                if (con != null) {
+                    String sql = "SELECT ID, NAME\n"
+                            + "FROM CORPORATION";
+                    stmt = con.prepareStatement(sql);
+                    rs = stmt.executeQuery();
+                    while (rs.next()) {
+                        if (list == null) {
+                            list = new ArrayList<>();
+                        }
+                        Map<String, String> map = new HashMap<>();
+                        map.put("name", rs.getString("NAME"));
+                        map.put("id", rs.getString("ID"));
+                        list.add(map);
+                    }
+                }
+            } finally {
+                if (rs != null) {
+                    rs.close();
+                }
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (con != null) {
+                    con.close();
+                }
+            }
+            return list;
         }
 
         @Override

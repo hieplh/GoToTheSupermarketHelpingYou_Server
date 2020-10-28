@@ -1,6 +1,6 @@
 package com.smhu.controller;
 
-import com.smhu.schedule.SystemTime;
+import com.smhu.system.SystemTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Calendar;
@@ -15,10 +15,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequestMapping("/api")
 public class SystemTimeController {
 
-    SystemTimeService service = new SystemTimeService();
+    SystemTimeService service;
 
-    @GetMapping("/system/time/{time}")
+    @GetMapping("/system/{time}")
     public ResponseEntity updateSystemTime(@PathVariable("time") String time) {
+        service = new SystemTimeService();
         ZonedDateTime dateTime = ZonedDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));
         Calendar calendar = Calendar.getInstance();
         calendar.set(dateTime.getYear(), dateTime.getMonthValue() - 1, dateTime.getDayOfMonth(),

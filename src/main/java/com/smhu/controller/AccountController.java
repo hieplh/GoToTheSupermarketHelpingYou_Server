@@ -30,11 +30,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class AccountController {
 
     public static Map<String, String> mapRoles = new HashMap<>();
+
     IAccount accountListener = new AccountService();
-
-    final String EMAIL = "EMAIL";
-    final String PHONE = "PHONE";
-
     AccountService service = new AccountService();
 
     @PostMapping("/account/username")
@@ -43,7 +40,7 @@ public class AccountController {
 
         try {
             if (!mapRoles.containsKey(accountObj.getRole().toLowerCase())) {
-                return new ResponseEntity<>(new ResponseMsg(HttpStatus.METHOD_NOT_ALLOWED.toString()), HttpStatus.METHOD_NOT_ALLOWED);
+                return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
             }
 
             String encrypt = service.getEncryptionPassword(accountObj.getUsername(), accountObj.getRole().toLowerCase());
@@ -65,15 +62,15 @@ public class AccountController {
         return new ResponseEntity<>(account, HttpStatus.OK);
     }
 
-    @GetMapping("/account/phone/{phone}/type/{type}")
-    public ResponseEntity<?> getAccountByPhone(@PathVariable("phone") String phone, @PathVariable("type") String type) {
+    @GetMapping("/account/phone/{phone}/role/{role}")
+    public ResponseEntity<?> getAccountByPhone(@PathVariable("phone") String phone, @PathVariable("role") String role) {
         Account account = null;
 
         try {
-            if (mapRoles.containsKey(type)) {
-                account = service.getAccountByEmailOrPhone(phone.toLowerCase(), PHONE);
+            if (mapRoles.containsKey(role)) {
+                account = service.getAccountByEmailOrPhone(phone.toLowerCase(), role, service.PHONE);
             } else {
-                return new ResponseEntity<>(new ResponseMsg(HttpStatus.METHOD_NOT_ALLOWED.toString()), HttpStatus.METHOD_NOT_ALLOWED);
+                return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
             }
 
             if (account == null) {
@@ -86,15 +83,15 @@ public class AccountController {
         return new ResponseEntity<>(account, HttpStatus.OK);
     }
 
-    @GetMapping("/account/email/{email}/type/{type}")
-    public ResponseEntity<?> getAccountByEmail(@PathVariable("email") String email, @PathVariable("type") String type) {
+    @GetMapping("/account/email/{email}/role/{role}")
+    public ResponseEntity<?> getAccountByEmail(@PathVariable("email") String email, @PathVariable("role") String role) {
         Account account = null;
 
         try {
-            if (mapRoles.containsKey(type)) {
-                account = service.getAccountByEmailOrPhone(email.toLowerCase(), EMAIL);
+            if (mapRoles.containsKey(role)) {
+                account = service.getAccountByEmailOrPhone(email.toLowerCase(), role, service.EMAIL);
             } else {
-                return new ResponseEntity<>(new ResponseMsg(HttpStatus.METHOD_NOT_ALLOWED.toString()), HttpStatus.METHOD_NOT_ALLOWED);
+                return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
             }
 
             if (account == null) {
@@ -112,6 +109,9 @@ public class AccountController {
     }
 
     class AccountService implements IAccount {
+
+        final String EMAIL = "EMAIL";
+        final String PHONE = "PHONE";
 
         @Override
         public Map<String, String> getRoles() throws SQLException, ClassNotFoundException {
@@ -146,6 +146,10 @@ public class AccountController {
         }
 
         String getEncryptionPassword(String username, String type) throws SQLException, ClassNotFoundException {
+            if (!AccountController.mapRoles.containsKey(type)) {
+                return null;
+            }
+
             Connection con = null;
             PreparedStatement stmt = null;
             ResultSet rs = null;
@@ -154,20 +158,19 @@ public class AccountController {
                 con = DBUtils.getConnection();
                 if (con != null) {
                     StringBuilder sql = new StringBuilder();
-                    sql.append("SELECT SALT");
-                    sql.append("\n");
-                    sql.append("FROM ACCOUNT");
-                    sql.append("\n");
-                    sql.append("WHERE USERNAME = ? AND IS_ACTIVE = 1");
-                    sql.append("\n");
-                    if (AccountController.mapRoles.containsKey(type)) {
-                        sql.append("AND ROLE = ").append(type);
-                    } else {
-                        return null;
-                    }
+                    sql.append("SELECT SALT")
+                            .append("\n");
+                    sql.append("FROM ACCOUNT")
+                            .append("\n");
+                    sql.append("WHERE IS_ACTIVE = 1")
+                            .append("\n");
+                    sql.append("AND USERNAME = ?")
+                            .append("\n");
+                    sql.append("AND ROLE = ?");
 
                     stmt = con.prepareStatement(sql.toString());
                     stmt.setString(1, username);
+                    stmt.setString(2, type);
                     rs = stmt.executeQuery();
                     if (rs.next()) {
                         return rs.getString("SALT");
@@ -213,7 +216,7 @@ public class AccountController {
                     String sql = "SELECT *\n"
                             + "FROM GET_ACCOUNT\n"
                             + "WHERE USERNAME = ? AND PASSWORD = ? "
-                            + "AND ROLE = ? AND IS_ACTIVE = 1";
+                            + "AND ROLE = ?";
                     stmt = con.prepareStatement(sql);
                     stmt.setString(1, username);
                     stmt.setString(2, password);
@@ -228,7 +231,7 @@ public class AccountController {
                                 rs.getString("EMAIL"),
                                 rs.getString("PHONE"),
                                 rs.getDate("DOB"),
-                                rs.getInt("ROLE"),
+                                rs.getString("ROLE"),
                                 rs.getInt("NUM_SUCCESS"),
                                 rs.getInt("NUM_CANCEL"),
                                 rs.getDouble("WALLET"));
@@ -248,7 +251,11 @@ public class AccountController {
             return null;
         }
 
-        Account getAccountByEmailOrPhone(String param, String type) throws SQLException, ClassNotFoundException {
+        Account getAccountByEmailOrPhone(String param, String role, String type) throws SQLException, ClassNotFoundException {
+            if (!AccountController.mapRoles.containsKey(role)) {
+                return null;
+            }
+
             Connection con = null;
             PreparedStatement stmt = null;
             ResultSet rs = null;
@@ -257,16 +264,26 @@ public class AccountController {
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
-                    sql.append("SELECT *");
-                    sql.append("\n");
-                    sql.append("FROM GET_ACCOUNT");
-                    sql.append("\n");
-                    sql.append("WHERE IS_ACTIVE = 1");
-                    sql.append("\n");
-                    sql.append("AND ROLE = ").append(type);
+                    sql.append("SELECT *")
+                            .append("\n");
+                    sql.append("FROM GET_ACCOUNT")
+                            .append("\n");
+                    sql.append("WHERE ROLE = ?")
+                            .append("\n");
+                    switch (type) {
+                        case EMAIL:
+                            sql.append("AND EMAIL = ?");
+                            break;
+                        case PHONE:
+                            sql.append("AND PHONE = ?");
+                            break;
+                        default:
+                            return null;
+                    }
 
                     stmt = con.prepareStatement(sql.toString());
-                    stmt.setString(1, param);
+                    stmt.setString(1, role);
+                    stmt.setString(2, param);
                     rs = stmt.executeQuery();
                     if (rs.next()) {
                         return new Account(rs.getString("ID"),
@@ -277,7 +294,7 @@ public class AccountController {
                                 rs.getString("EMAIL"),
                                 rs.getString("PHONE"),
                                 rs.getDate("DOB"),
-                                rs.getInt("ROLE"),
+                                rs.getString("ROLE"),
                                 rs.getInt("NUM_SUCCESS"),
                                 rs.getInt("NUM_CANCEL"),
                                 rs.getDouble("WALLET"));

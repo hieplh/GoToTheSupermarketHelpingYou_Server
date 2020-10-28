@@ -7,7 +7,9 @@ import com.smhu.response.shipper.OrderDelivery;
 import com.smhu.url.UrlConnection;
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
+import com.smhu.iface.IStatus;
 import com.smhu.order.Order;
+import com.smhu.system.SystemTime;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
@@ -30,21 +32,27 @@ public class ShipperController {
     public static Map<String, String[]> mapLocationAvailableShipper = new HashMap();
     public static Map<String, String[]> mapLocationInProgressShipper = new HashMap();
 
-    public static UrlConnection url = new UrlConnection();
+    UrlConnection url;
 
     ShipperService service = new ShipperService();
+    IStatus statusListener;
 
     @GetMapping("/shipper/{shipperId}/lat/{lat}/lng/{lng}")
     public ResponseEntity<?> getNewOrders(@PathVariable("shipperId") String id,
             @PathVariable("lat") String lat, @PathVariable("lng") String lng) {
+        url = new UrlConnection();
         try {
-            if (OrderController.mapOrderInProcess.isEmpty()) {
-                return new ResponseEntity<>(null, HttpStatus.OK);
+            if (OrderController.mapOrderIsWaitingRelease.isEmpty()) {
+                return new ResponseEntity<>(HttpStatus.OK);
+            }
+
+            if (mapLocationInProgressShipper.containsKey(id)) {
+                return new ResponseEntity<>(HttpStatus.OK);
             }
 
             String[] shipperLocation = {lat, lng};
-            mapLocationAvailableShipper.put(id, shipperLocation);
-            Map<String[][], List<Order>> ordersLocation = service.getOrderLocation(OrderController.mapOrderInProcess, shipperLocation);
+            mapLocationInProgressShipper.put(id, shipperLocation);
+            Map<String[][], List<Order>> ordersLocation = service.getOrderLocation(OrderController.mapOrderIsWaitingRelease, shipperLocation);
 
             DistanceMatrixObject distanceObj = GsonHelper.gson.fromJson(new InputStreamReader(
                     url.openConnection(shipperLocation, ordersLocation), "utf-8"), DistanceMatrixObject.class);
@@ -54,11 +62,19 @@ public class ShipperController {
             List<String> listDistanceValue = service.getListDistance(listElments, "value");
 
             OrderDelivery[] arrOrders = service.filterOrderNearShipper(listDistanceString, listDistanceValue, ordersLocation);
-
+            preProcessOrderRelease(arrOrders, id);
             return new ResponseEntity<>(arrOrders, HttpStatus.OK);
         } catch (JsonIOException | JsonSyntaxException | IOException e) {
             Logger.getLogger(ShipperController.class.getName()).log(Level.SEVERE, e.getMessage());
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private void preProcessOrderRelease(OrderDelivery[] arrOrders, String shipperId) {
+        for (OrderDelivery order : arrOrders) {
+            Order obj = OrderController.mapOrderIsWaitingRelease.remove(order.getOrder().getId());
+            obj.setShipper(shipperId);
+            OrderController.mapOrderIsWaitingAccept.put(obj, SystemTime.SYSTEM_TIME + (20 * 1000));
         }
     }
 

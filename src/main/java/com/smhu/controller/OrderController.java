@@ -1,8 +1,10 @@
 package com.smhu.controller;
 
 import com.google.firebase.messaging.FirebaseMessagingException;
+import com.smhu.GototheSupermarketHelpingYouApplication;
 import com.smhu.google.Firebase;
 import com.smhu.helper.DateTimeHelper;
+import com.smhu.iface.IMain;
 import com.smhu.iface.IOrder;
 import com.smhu.iface.IStatus;
 import com.smhu.order.Order;
@@ -11,7 +13,7 @@ import com.smhu.response.customer.OrderCustomer;
 import com.smhu.order.OrderDetail;
 import com.smhu.order.TimeTravel;
 import com.smhu.response.shipper.OrderShipper;
-import com.smhu.schedule.SystemTime;
+import com.smhu.system.SystemTime;
 import com.smhu.utils.DBUtils;
 import java.io.IOException;
 import java.sql.Connection;
@@ -30,6 +32,7 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 
 import org.springframework.http.ResponseEntity;
@@ -47,22 +50,58 @@ import org.springframework.web.bind.annotation.RestController;
 public class OrderController {
 
     public static Map<Order, Integer> mapOrderInQueue = new HashMap<>();
-    public static Map<String, Order> mapOrderInProcess = new HashMap<>();
+    public static Map<String, Order> mapOrderIsWaitingRelease = new HashMap<>();
+    public static Map<Order, Long> mapOrderIsWaitingAccept = new HashMap<>();
+
+    public static Map<String, Order> mapOrderInProgress = new HashMap<>();
     public static Map<String, Order> mapOrderIsDone = new HashMap<>();
-    
+
     public static Map<String, Order> mapOrderInCancelQueue = new HashMap<>();
     public static Map<String, Order> mapOrderIsCancel = new HashMap<>();
 
-    IOrder orderListener = new OrderService();
-    OrderService service = new OrderService();
+    IOrder orderListener;
+    OrderService service;
+
     IStatus statusListener;
+    IMain mainListener;
+
+    public OrderController() {
+        orderListener = new OrderService();
+        service = new OrderService();
+        statusListener = new StatusController().getStatusListener();
+        mainListener = new GototheSupermarketHelpingYouApplication().getMainListener();
+    }
+
+    @GetMapping("order/{id}")
+    public ResponseEntity<?> getOrderById(@PathVariable("id") String id) {
+        try {
+            return new ResponseEntity<>(mainListener.getOrderDetailsById(id), HttpStatus.OK);
+        } catch (ClassNotFoundException | SQLException e) {
+            Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
+            return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("orders/all")
+    public ResponseEntity<?> getAllOrders() {
+        List<Order> list = new ArrayList<>();
+        list.addAll(mapOrderInQueue.keySet());
+        list.addAll(mapOrderIsWaitingRelease.values());
+        list.addAll(mapOrderIsWaitingAccept.keySet().stream().collect(Collectors.toList()));
+        list.addAll(mapOrderInProgress.values());
+        list.addAll(mapOrderIsDone.values());
+        list.addAll(mapOrderIsCancel.values());
+        return new ResponseEntity<>(list, HttpStatus.OK);
+    }
 
     @PostMapping("/order")
     public ResponseEntity<?> newOrder(@RequestBody OrderCustomer orderReceive) {
-        String result = "";
+        String result;
         statusListener = new StatusController().getStatusListener();
         try {
             int status = statusListener.getStatusIsPaidOrder();
+            java.sql.Date date = new java.sql.Date(new Date().getTime());
+            Time time = new Time(new Date().getTime());
 
             Order order = new Order();
             order.setId(new OrderService().generateId(orderReceive));
@@ -70,9 +109,9 @@ public class OrderController {
             order.setAddressDelivery(orderReceive.getAddressDelivery());
             order.setNote(orderReceive.getNote());
             order.setMarket(orderReceive.getMarket());
-            order.setCreateDate(new java.sql.Date(new Date().getTime()));
-            order.setCreateTime(new Time(new Date().getTime()));
-            order.setLastUpdate(new Time(new Date().getTime()));
+            order.setCreateDate(date);
+            order.setCreateTime(time);
+            order.setLastUpdate(time);
             order.setStatus(status);
             order.setCostShopping(orderReceive.getCostShopping());
             order.setCostDelivery(orderReceive.getCostDelivery());
@@ -111,23 +150,38 @@ public class OrderController {
 
     @PutMapping("/orders/update")
     public ResponseEntity<?> updatetOrder(@RequestBody List<OrderShipper> listOrders) {
-        statusListener = new StatusController().getStatusListener();
         List<OrderShipper> listResults = new ArrayList<>();
+        Order order;
         for (OrderShipper orderInProcess : listOrders) {
-            Order order = mapOrderInProcess.get(orderInProcess.getId());
+            order = service.checkOrderIsInProgress(orderInProcess);
             if (order == null) {
+                Order orderWaitAccept = mapOrderIsWaitingAccept.keySet()
+                        .stream()
+                        .filter(o -> orderInProcess.getId().equals(o.getId()))
+                        .findFirst()
+                        .orElse(null);
+
+                if (orderWaitAccept == null || !orderWaitAccept.getShipper().equals(orderInProcess.getShipper())) {
+                    return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
+                }
+
+                mapOrderIsWaitingAccept.remove(orderWaitAccept);
+                order = orderWaitAccept;
+                mapOrderInProgress.put(order.getId(), order);
+            }
+
+            if (order == null || order.getShipper() == null) {
                 return new ResponseEntity<>(new ResponseMsg("Đơn hàng của bạn đã hoàn thành hoặc bị hủy"), HttpStatus.NOT_FOUND);
             }
 
             int status;
             try {
-                if (order.getShipper() == null || order.getShipper().isEmpty() || order.getShipper().equalsIgnoreCase("null")) {
-                    order.setShipper(orderInProcess.getShipper());
-                }
+//                if (order.getShipper() == null || order.getShipper().isEmpty() || order.getShipper().equalsIgnoreCase("null")) {
+//                    order.setShipper(orderInProcess.getShipper());
+//                }
 
-                String[] location = ShipperController.mapLocationAvailableShipper.remove(order.getShipper());
-                ShipperController.mapLocationInProgressShipper.put(order.getShipper(), location);
-
+//                String[] location = ShipperController.mapLocationAvailableShipper.remove(order.getShipper());
+//                ShipperController.mapLocationInProgressShipper.put(order.getShipper(), location);
                 if (!String.valueOf(order.getStatus()).matches("2\\d")) {
                     status = statusListener.getStatusIsAccept();
                 } else {
@@ -142,7 +196,11 @@ public class OrderController {
 
                 int tmpStatus = statusListener.getStatusIsDoneOrder();
                 if (status == tmpStatus) {
-                    Order orderClone = mapOrderInProcess.remove(order.getId());
+                    if (ShipperController.mapLocationInProgressShipper.containsKey(order.getShipper())) {
+                        ShipperController.mapLocationInProgressShipper.remove(order.getShipper());
+                    }
+
+                    Order orderClone = mapOrderInProgress.remove(order.getId());
                     mapOrderIsDone.put(orderClone.getId(), orderClone);
                 }
             } catch (SQLException | ClassNotFoundException e) {
@@ -153,13 +211,14 @@ public class OrderController {
                 Map<String, String> token = new HashMap<>();
                 token.put("cust_id", order.getCust());
                 Map<String, String> values = new HashMap<>();
-                values.put("order_id", order.getId());
                 values.put("msg", "Đơn hàng của bạn đã có shipper nhận");
-                try {
-                    new Firebase().pushNotifyByToken(token, values);
-                } catch (FirebaseMessagingException | IOException e) {
-                    Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
-                }
+                values.put("order_id", order.getId());
+
+//                try {
+//                    new Firebase().pushNotifyByToken(token, values);
+//                } catch (FirebaseMessagingException | IOException e) {
+//                    Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
+//                }
             }
         }
         return new ResponseEntity<>(listResults, HttpStatus.OK);
@@ -170,7 +229,7 @@ public class OrderController {
             @PathVariable("lat") String lat, @PathVariable("lng") String lng) {
         Firebase firebase = new Firebase();
 
-        mapOrderInProcess.values().stream()
+        mapOrderIsWaitingRelease.values().stream()
                 .filter((t) -> {
                     return shipperId.equals(t.getShipper());
                 })
@@ -197,7 +256,7 @@ public class OrderController {
             case STAFF:
                 order = mapOrderInCancelQueue.remove(orderId);
                 if (order == null) {
-                    order = mapOrderInProcess.remove(orderId);
+                    order = mapOrderIsWaitingRelease.remove(orderId);
                 }
                 mapOrderIsCancel.put(order.getId(), order);
 
@@ -225,7 +284,7 @@ public class OrderController {
 
                 return new ResponseEntity<>(new ResponseMsg("Order_id: " + result + ", is canceled"), HttpStatus.OK);
             case SHIPPER:
-                order = mapOrderInProcess.remove(orderId);
+                order = mapOrderIsWaitingRelease.remove(orderId);
 
                 order.setStatus(order.getStatus() * -1);
                 mapOrderInCancelQueue.put(order.getId(), order);
@@ -235,16 +294,6 @@ public class OrderController {
                 return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
         }
     }
-    
-    @GetMapping("orders/all")
-    public ResponseEntity<?>getAllOrders() {
-        List<Order> list = new ArrayList<>();
-        list.addAll(mapOrderInQueue.keySet());
-        list.addAll(mapOrderInProcess.values());
-        list.addAll(mapOrderIsDone.values());
-        list.addAll(mapOrderIsCancel.values());
-        return new ResponseEntity<>(list, HttpStatus.OK);
-    }
 
     public IOrder getOrderListener() {
         return orderListener;
@@ -252,21 +301,12 @@ public class OrderController {
 
     class OrderService implements IOrder {
 
-        @Override
-        public void checkOrderInqueue() {
-            List<Order> tmp = new ArrayList<>();
-            for (Map.Entry<Order, Integer> order : OrderController.mapOrderInQueue.entrySet()) {
-                int totalMinuteCurrent = DateTimeHelper.parseTimeToMinute(new Time(SystemTime.SYSTEM_TIME).toLocalTime());
-                if (totalMinuteCurrent >= order.getValue() - 180 && totalMinuteCurrent <= order.getValue()) {
-                    mapOrderInProcess.put(order.getKey().getId(), order.getKey());
-                    System.out.println(order);
-                    tmp.add(order.getKey());
-                }
-            }
-
-            for (Order order : tmp) {
-                OrderController.mapOrderInQueue.remove(order);
-            }
+        Order checkOrderIsInProgress(OrderShipper order) {
+            return OrderController.mapOrderInProgress.values()
+                    .stream()
+                    .filter(o -> order.getId().equals(o.getId()))
+                    .findFirst()
+                    .orElse(null);
         }
 
         String generateId(OrderCustomer obj) {
@@ -477,6 +517,23 @@ public class OrderController {
             obj.setTimeDelivery(order.getTimeDelivery());
             obj.setDetails(order.getDetails());
             return obj;
+        }
+
+        @Override
+        public void checkOrderInqueue() {
+            List<Order> tmp = new ArrayList<>();
+            for (Map.Entry<Order, Integer> order : OrderController.mapOrderInQueue.entrySet()) {
+                int totalMinuteCurrent = DateTimeHelper.parseTimeToMinute(new Time(SystemTime.SYSTEM_TIME).toLocalTime());
+                if (totalMinuteCurrent >= order.getValue() - 180 && totalMinuteCurrent <= order.getValue()) {
+                    mapOrderIsWaitingRelease.put(order.getKey().getId(), order.getKey());
+                    System.out.println(order);
+                    tmp.add(order.getKey());
+                }
+            }
+
+            for (Order order : tmp) {
+                OrderController.mapOrderInQueue.remove(order);
+            }
         }
     }
 }
