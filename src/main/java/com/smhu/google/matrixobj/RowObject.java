@@ -11,4 +11,9 @@ public class RowObject {
     public List<ElementObject> getElements() {
         return elements;
     }
+
+    @Override
+    public String toString() {
+        return "RowObject{" + "elements=" + elements + '}';
+    }
 }

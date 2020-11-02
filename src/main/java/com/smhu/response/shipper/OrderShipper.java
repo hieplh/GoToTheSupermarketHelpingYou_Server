@@ -20,8 +20,6 @@ public class OrderShipper {
     private double totalCost;
     private Date dateDelivery;
     private Time timeDelivery;
-    private String lat;
-    private String lng;
     private List<OrderDetail> details;
 
     public OrderShipper() {
@@ -29,7 +27,7 @@ public class OrderShipper {
 
     public OrderShipper(String id, String cust, String addressDelivery, Market market, String note, String shipper, int status,
             double costShopping, double costDelivery, double totalCost,
-            Date dateDelivery, Time timeDelivery, List<OrderDetail> details, String lat, String lng) {
+            Date dateDelivery, Time timeDelivery, List<OrderDetail> details) {
         this.id = id;
         this.cust = cust;
         this.addressDelivery = addressDelivery;
@@ -43,8 +41,6 @@ public class OrderShipper {
         this.dateDelivery = dateDelivery;
         this.timeDelivery = timeDelivery;
         this.details = details;
-        this.lat = lat;
-        this.lng = lng;
     }
 
     public String getId() {
@@ -93,14 +89,6 @@ public class OrderShipper {
 
     public Time getTimeDelivery() {
         return timeDelivery;
-    }
-
-    public String getLat() {
-        return lat;
-    }
-
-    public String getLng() {
-        return lng;
     }
 
     public List<OrderDetail> getDetails() {
@@ -153,14 +141,6 @@ public class OrderShipper {
 
     public void setTimeDelivery(Time timeDelivery) {
         this.timeDelivery = timeDelivery;
-    }
-
-    public void setLat(String lat) {
-        this.lat = lat;
-    }
-
-    public void setLng(String lng) {
-        this.lng = lng;
     }
 
     public void setDetails(List<OrderDetail> details) {

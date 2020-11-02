@@ -37,11 +37,14 @@ public class SystemTime {
             try {
                 Order order = iterator.next();
                 if (SYSTEM_TIME >= OrderController.mapOrderIsWaitingAccept.get(order)) {
-                    iterator.remove();
-                    ShipperController.mapLocationInProgressShipper.remove(order.getShipper());
+                    if (ShipperController.listInProgressShipper.contains(order.getShipper())) {
+                        ShipperController.listInProgressShipper.remove(order.getShipper());
+                    }
+                    OrderController.mapOrderDeliveryForShipper.remove(order.getId());
                     order.setShipper(null);
-                    OrderController.mapOrderIsWaitingRelease.put(order.getId(), order);
+                    OrderController.mapOrderInQueue.put(order.getId(), order);
                     System.out.println(order);
+                    iterator.remove();
                 }
             } catch (Exception e) {
                 Logger.getLogger(SystemTime.class.getName()).log(Level.SEVERE, e.getMessage());

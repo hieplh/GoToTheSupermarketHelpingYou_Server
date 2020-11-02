@@ -76,8 +76,8 @@ public class MarketController {
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
-                    String sql = "SELECT *\n"
-                            + "FROM GET_ALL_MARKETS";
+                    String sql = "SELECT ID, NAME, ADDR_1, ADDR_2, ADDR_3, ADDR_4, LAT, LNG, IMAGE\n"
+                            + "FROM MARKET";
                     stmt = con.prepareStatement(sql);
                     rs = stmt.executeQuery();
                     while (rs.next()) {
@@ -91,7 +91,8 @@ public class MarketController {
                                 rs.getString("ADDR_3"),
                                 rs.getString("ADDR_4"),
                                 rs.getString("LAT"),
-                                rs.getString("LNG")));
+                                rs.getString("LNG"),
+                                rs.getString("IMAGE")));
                     }
                 }
             } finally {
@@ -117,7 +118,7 @@ public class MarketController {
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
-                    String sql = "SELECT *\n"
+                    String sql = "SELECT ID, NAME, ADDR_1, ADDR_2, ADDR_3, ADDR_4, LAT, LNG, IMAGE\n"
                             + "FROM MARKET\n"
                             + "WHERE CORPORATION = ?";
                     stmt = con.prepareStatement(sql);
@@ -134,7 +135,8 @@ public class MarketController {
                                 rs.getString("ADDR_3"),
                                 rs.getString("ADDR_4"),
                                 rs.getString("LAT"),
-                                rs.getString("LNG")));
+                                rs.getString("LNG"),
+                                rs.getString("IMAGE")));
                     }
                 }
             } finally {
@@ -160,7 +162,7 @@ public class MarketController {
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
-                    String sql = "SELECT ID, NAME\n"
+                    String sql = "SELECT ID, NAME, IMAGE\n"
                             + "FROM CORPORATION";
                     stmt = con.prepareStatement(sql);
                     rs = stmt.executeQuery();
@@ -169,6 +171,7 @@ public class MarketController {
                             list = new ArrayList<>();
                         }
                         Map<String, String> map = new HashMap<>();
+                        map.put("image", rs.getString("IMAGE"));
                         map.put("name", rs.getString("NAME"));
                         map.put("id", rs.getString("ID"));
                         list.add(map);
@@ -197,8 +200,8 @@ public class MarketController {
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
-                    String sql = "SELECT *\n"
-                            + "FROM GET_MARKET_BY_ID\n"
+                    String sql = "SELECT ID, NAME, ADDR_1, ADDR_2, ADDR_3, ADDR_4, LAT, LNG, IMAGE\n"
+                            + "FROM MARKET\n"
                             + "WHERE ID = ?";
                     stmt = con.prepareStatement(sql);
                     stmt.setString(1, id);
@@ -211,7 +214,8 @@ public class MarketController {
                                 rs.getString("ADDR_3"),
                                 rs.getString("ADDR_4"),
                                 rs.getString("LAT"),
-                                rs.getString("LNG"));
+                                rs.getString("LNG"),
+                                rs.getString("IMAGE"));
                     }
                 }
             } finally {

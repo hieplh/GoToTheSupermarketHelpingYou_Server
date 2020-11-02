@@ -25,4 +25,9 @@ public class ElementObject {
     public String getStatus() {
         return status;
     }
+
+    @Override
+    public String toString() {
+        return "ElementObject{" + "distance=" + distance + ", duration=" + duration + ", status=" + status + '}';
+    }
 }

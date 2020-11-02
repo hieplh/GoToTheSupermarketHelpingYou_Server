@@ -5,7 +5,7 @@ import java.sql.Time;
 import java.util.List;
 import java.util.Objects;
 
-public class Order {
+public class Order implements Cloneable {
 
     private String id;
     private String cust;
@@ -24,6 +24,7 @@ public class Order {
     private double costShopping;
     private double costDelivery;
     private double totalCost;
+    private double refundCost;
     private Date dateDelivery;
     private Time timeDelivery;
     private TimeTravel timeTravel;
@@ -36,7 +37,7 @@ public class Order {
     public Order(String id, String cust, String addressDelivery, String note, String market,
             String shipper, String lat, String lng,
             Date createDate, Time createTime, Time lastUpdate,
-            int status, String author, String reasonCancel, double costShopping, double costDelivery, double totalCost,
+            int status, String author, String reasonCancel, double costShopping, double costDelivery, double totalCost, double refundCost,
             Date dateDelivery, Time timeDelivery, TimeTravel timeTravel, List<OrderDetail> details, List<Evidence> evidences) {
         this.id = id;
         this.cust = cust;
@@ -55,6 +56,7 @@ public class Order {
         this.costShopping = costShopping;
         this.costDelivery = costDelivery;
         this.totalCost = totalCost;
+        this.refundCost = refundCost;
         this.dateDelivery = dateDelivery;
         this.timeDelivery = timeDelivery;
         this.timeTravel = timeTravel;
@@ -198,6 +200,14 @@ public class Order {
         this.totalCost = totalCost;
     }
 
+    public double getRefundCost() {
+        return refundCost;
+    }
+
+    public void setRefundCost(double refundCost) {
+        this.refundCost = refundCost;
+    }
+
     public Date getDateDelivery() {
         return dateDelivery;
     }
@@ -259,5 +269,10 @@ public class Order {
             return false;
         }
         return true;
+    }
+
+    @Override
+    protected Object clone() throws CloneNotSupportedException {
+        return super.clone(); //To change body of generated methods, choose Tools | Templates.
     }
 }

@@ -158,6 +158,7 @@ public class HistoryController {
                             listDetails = new ArrayList<>();
                         }
                         listDetails.add(new OrderDetail(rs.getString("ID"),
+                                rs.getString("FOOD"),
                                 rs.getString("NAME"),
                                 rs.getString("IMAGE"),
                                 rs.getDouble("ORIGINAL_PRICE"),

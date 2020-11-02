@@ -1,11 +1,7 @@
 package com.smhu.controller;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import com.smhu.iface.IOrder;
+import com.smhu.system.SystemTime;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
@@ -16,22 +12,17 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequestMapping("/api")
 public class TestController {
 
-    @GetMapping("/readFile")
-    public ResponseEntity<?> getFile() {
-        try {
-            readTxtFile();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    @GetMapping("/remove")
+    public ResponseEntity<?> removeOrder() {
+        SystemTime systemTime = new SystemTime();
+        systemTime.checkOrderOutOfTimeRelease();
         return new ResponseEntity<>(HttpStatus.OK);
     }
-
-    public void readTxtFile() throws FileNotFoundException, IOException {
-        InputStreamReader isr = new FileReader(new File("WEB-INF\\test.txt"));
-        BufferedReader br = new BufferedReader(isr);
-        int c;
-        while ((c = br.read()) != -1) {
-            System.out.println(c);
-        }
+    
+    @GetMapping("/scan")
+    public ResponseEntity<?> scanOrder() {
+        IOrder orderListener = new OrderController().getOrderListener();
+        orderListener.scanOrdesrReleaseToShippers();
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 }

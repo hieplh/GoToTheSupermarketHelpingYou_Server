@@ -1,36 +1,21 @@
 package com.smhu.market;
 
-import com.google.gson.annotations.SerializedName;
-
 public class Market {
 
     String id;
-    
-    @SerializedName("name")
     String name;
-    
-    @SerializedName("addr1")
     String addr1;
-    
-    @SerializedName("addr2")
     String addr2;
-    
-    @SerializedName("addr3")
     String addr3;
-    
-    @SerializedName("addr4")
     String addr4;
-    
-    @SerializedName("lat")
     String lat;
-    
-    @SerializedName("lng")
     String lng;
+    String image;
 
     public Market() {
     }
 
-    public Market(String id, String name, String addr1, String addr2, String addr3, String addr4, String lat, String lng) {
+    public Market(String id, String name, String addr1, String addr2, String addr3, String addr4, String lat, String lng, String image) {
         this.id = id;
         this.name = name;
         this.addr1 = addr1;
@@ -39,6 +24,7 @@ public class Market {
         this.addr4 = addr4;
         this.lat = lat;
         this.lng = lng;
+        this.image = image;
     }
 
     public String getId() {
@@ -76,13 +62,21 @@ public class Market {
     public void setLat(String lat) {
         this.lat = lat;
     }
-    
+
     public void setLng(String lng) {
         this.lng = lng;
     }
 
+    public String getImage() {
+        return image;
+    }
+
+    public void setImage(String image) {
+        this.image = image;
+    }
+
     @Override
     public String toString() {
-        return "Market{" + "id=" + id + ", name=" + name + ", addr1=" + addr1 + ", addr2=" + addr2 + ", addr3=" + addr3 + ", addr4=" + addr4 + ", lat=" + lat + ", lng=" + lng + '}';
+        return "Market{" + "id=" + id + ", name=" + name + ", addr1=" + addr1 + ", addr2=" + addr2 + ", addr3=" + addr3 + ", addr4=" + addr4 + ", lat=" + lat + ", lng=" + lng + ", image=" + image + '}';
     }
 }

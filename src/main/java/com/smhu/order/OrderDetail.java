@@ -1,11 +1,10 @@
 package com.smhu.order;
 
-import com.google.gson.annotations.SerializedName;
-
 public class OrderDetail {
 
     private String id;
-    private String food;
+    private String foodId;
+    private String foodName;
     private String image;
     private double priceOriginal;
     private double pricePaid;
@@ -15,9 +14,10 @@ public class OrderDetail {
     public OrderDetail() {
     }
 
-    public OrderDetail(String id, String food, String image, double priceOrginal, double pricePaid, double weight, int saleOff) {
+    public OrderDetail(String id, String food, String foodName, String image,
+            double priceOrginal, double pricePaid, double weight, int saleOff) {
         this.id = id;
-        this.food = food;
+        this.foodId = food;
         this.image = image;
         this.priceOriginal = priceOrginal;
         this.pricePaid = pricePaid;
@@ -29,51 +29,64 @@ public class OrderDetail {
         return id;
     }
 
-    public String getFood() {
-        return food;
+    public void setId(String id) {
+        this.id = id;
     }
 
-    public double getPriceOriginal() {
-        return priceOriginal;
+    public String getFoodId() {
+        return foodId;
     }
 
-    public double getPricePaid() {
-        return pricePaid;
+    public void setFoodId(String foodId) {
+        this.foodId = foodId;
     }
 
-    public double getWeight() {
-        return weight;
+    public String getFoodName() {
+        return foodName;
     }
 
-    public int getSaleOff() {
-        return saleOff;
+    public void setFoodName(String foodName) {
+        this.foodName = foodName;
     }
 
     public String getImage() {
         return image;
     }
 
-    public void setId(String id) {
-        this.id = id;
+    public void setImage(String image) {
+        this.image = image;
     }
 
-    public void setFood(String food) {
-        this.food = food;
+    public double getPriceOriginal() {
+        return priceOriginal;
     }
 
     public void setPriceOriginal(double priceOriginal) {
         this.priceOriginal = priceOriginal;
     }
 
+    public double getPricePaid() {
+        return pricePaid;
+    }
+
     public void setPricePaid(double pricePaid) {
         this.pricePaid = pricePaid;
+    }
+
+    public double getWeight() {
+        return weight;
     }
 
     public void setWeight(double weight) {
         this.weight = weight;
     }
 
+    public int getSaleOff() {
+        return saleOff;
+    }
+
     public void setSaleOff(int saleOff) {
         this.saleOff = saleOff;
     }
+
 }

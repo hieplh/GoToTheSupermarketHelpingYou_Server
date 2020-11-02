@@ -1,6 +1,8 @@
 package com.smhu.account;
 
 import java.sql.Date;
+import java.util.List;
+import java.util.Objects;
 
 public class Account {
 
@@ -16,13 +18,14 @@ public class Account {
     private int numSuccess;
     private int numCancel;
     private double wallet;
+    private List<Address> addresses;
 
     public Account() {
     }
 
     public Account(String id, String username, String firstName, String middleName, String lastName,
             String email, String phone, Date dob, String role, int numSuccess, int numCancel,
-            double wallet) {
+            double wallet, List<Address> addresses) {
         this.id = id;
         this.username = username;
         this.firstName = firstName;
@@ -35,6 +38,7 @@ public class Account {
         this.numSuccess = numSuccess;
         this.numCancel = numCancel;
         this.wallet = wallet;
+        this.addresses = addresses;
     }
 
     public String getId() {
@@ -131,5 +135,31 @@ public class Account {
 
     public void setWallet(double wallet) {
         this.wallet = wallet;
+    }
+
+    public List<Address> getAddresses() {
+        return addresses;
+    }
+
+    public void setAddresses(List<Address> addresses) {
+        this.addresses = addresses;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final Account other = (Account) obj;
+        if (!Objects.equals(this.id, other.id)) {
+            return false;
+        }
+        return true;
     }
 }

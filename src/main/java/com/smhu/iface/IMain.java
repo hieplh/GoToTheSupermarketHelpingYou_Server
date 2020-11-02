@@ -2,7 +2,6 @@ package com.smhu.iface;
 
 import com.smhu.market.Market;
 import com.smhu.order.Order;
-import com.smhu.order.OrderDetail;
 import com.smhu.status.Status;
 import java.sql.Date;
 import java.sql.SQLException;
@@ -19,7 +18,9 @@ public interface IMain {
 
     List<Order> loadOrder(Date date, String status) throws SQLException, ClassNotFoundException;
 
-    List<OrderDetail> getOrderDetailsById(String orderId) throws SQLException, ClassNotFoundException;
+    Order getOrderById(String orderId) throws SQLException, ClassNotFoundException;
+    
+    void loadOrderDetail(Order order) throws SQLException, ClassNotFoundException;
     
     void loadOrderDetail(List<Order> listOrders) throws SQLException, ClassNotFoundException;
 }

@@ -32,4 +32,9 @@ public class DistanceMatrixObject {
         return status;
     }
 
+    @Override
+    public String toString() {
+        return "DistanceMatrixObject{" + "destinationAddr=" + destinationAddr + ", originAddr=" + originAddr + ", rows=" + rows + ", status=" + status + '}';
+    }
+
 }

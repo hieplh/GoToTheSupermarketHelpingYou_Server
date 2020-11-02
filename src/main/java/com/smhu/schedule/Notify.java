@@ -78,9 +78,9 @@ public class Notify {
 //            }
 //        } while (INFINITE_PUSH_ORDER_FLAG);
 //    }
-    @Scheduled(fixedRate = 30 * 1000)
-    public void checkOrderInQueue() {
-        orderListener.checkOrderInqueue();
+    //@Scheduled(fixedRate = 30 * 1000)
+    public void scanOrder() {
+        orderListener.scanOrdesrReleaseToShippers();
     }
 
     private void clear() {
@@ -104,20 +104,20 @@ public class Notify {
             OrderController.mapOrderIsDone.clear();
         }
 
-        if (!OrderController.mapOrderInCancelQueue.isEmpty()) {
-            OrderController.mapOrderInCancelQueue.clear();
+        if (!OrderController.mapOrderIsCancelInQueue.isEmpty()) {
+            OrderController.mapOrderIsCancelInQueue.clear();
         }
 
         if (!OrderController.mapOrderIsCancel.isEmpty()) {
             OrderController.mapOrderIsCancel.clear();
         }
 
-        if (!ShipperController.mapLocationAvailableShipper.isEmpty()) {
-            ShipperController.mapLocationAvailableShipper.clear();
+        if (!ShipperController.mapShipper.isEmpty()) {
+            ShipperController.mapShipper.clear();
         }
 
-        if (!ShipperController.mapLocationAvailableShipper.isEmpty()) {
-            ShipperController.mapLocationInProgressShipper.clear();
+        if (!ShipperController.mapShipper.isEmpty()) {
+            ShipperController.listInProgressShipper.clear();
         }
     }
 }

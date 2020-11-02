@@ -27,8 +27,8 @@ public class FoodController {
 
     FoodService service = new FoodService();
 
-    @GetMapping("/foods/{id_mall}")
-    public ResponseEntity<?> getAllFoodsAtMall(@PathVariable("id_mall") String id) {
+    @GetMapping("/foods/{marketId}")
+    public ResponseEntity<?> getAllFoodsAtMall(@PathVariable("marketId") String id) {
         try {
             return new ResponseEntity<>(service.getAllFoodsAtMall(id), HttpStatus.OK);
         } catch (SQLException | ClassNotFoundException e) {
@@ -37,8 +37,8 @@ public class FoodController {
         }
     }
 
-    @GetMapping("/food/{id_food}")
-    public ResponseEntity<?> getFoodById(@PathVariable("id_food") String id) {
+    @GetMapping("/food/{foodId}")
+    public ResponseEntity<?> getFoodById(@PathVariable("foodId") String id) {
         try {
             return new ResponseEntity<>(service.getFoodById(id), HttpStatus.OK);
         } catch (SQLException | ClassNotFoundException e) {
@@ -110,7 +110,7 @@ public class FoodController {
                     rs = stmt.executeQuery();
                     if (rs.next()) {
                         return new Food(rs.getString("ID"),
-                                rs.getString("FOOD_NAME"),
+                                rs.getString("NAME"),
                                 rs.getString("IMAGE"),
                                 rs.getString("DESCRIPTION"),
                                 rs.getDouble("PRICE"));

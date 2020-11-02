@@ -2,6 +2,8 @@ package com.smhu.controller;
 
 import com.smhu.account.Account;
 import com.smhu.account.AccountLogin;
+import com.smhu.account.Address;
+import com.smhu.account.Shipper;
 import com.smhu.iface.IAccount;
 import com.smhu.response.ResponseMsg;
 import com.smhu.utils.DBUtils;
@@ -12,7 +14,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -28,6 +32,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api")
 public class AccountController {
+
+    final String STAFF = "staff";
+    final String CUSTOMER = "customer";
+    final String SHIPPER = "shipper";
 
     public static Map<String, String> mapRoles = new HashMap<>();
 
@@ -54,12 +62,21 @@ public class AccountController {
                 return new ResponseEntity<>(new ResponseMsg("Username or Password is not correct"), HttpStatus.NOT_FOUND);
             }
 
+            switch (account.getRole().toLowerCase()) {
+                case CUSTOMER:
+                    account.setAddresses(service.getAddressOfAccount(account.getId()));
+                    return new ResponseEntity<>(account, HttpStatus.OK);
+                case SHIPPER:
+                    ShipperController.mapShipper.put((Shipper) account, null);
+                    return new ResponseEntity<>((Shipper) account, HttpStatus.OK);
+                default:
+                    return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
+            }
         } catch (SQLException | ClassNotFoundException
                 | NoSuchAlgorithmException | UnsupportedEncodingException e) {
             Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, e.getMessage());
             return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        return new ResponseEntity<>(account, HttpStatus.OK);
     }
 
     @GetMapping("/account/phone/{phone}/role/{role}")
@@ -76,6 +93,7 @@ public class AccountController {
             if (account == null) {
                 return new ResponseEntity<>(new ResponseMsg("Phone number is not correct"), HttpStatus.NOT_FOUND);
             }
+            account.setAddresses(service.getAddressOfAccount(account.getId()));
         } catch (SQLException | ClassNotFoundException e) {
             Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, e.getMessage());
             return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -97,6 +115,7 @@ public class AccountController {
             if (account == null) {
                 return new ResponseEntity<>(new ResponseMsg("Email is not correct"), HttpStatus.NOT_FOUND);
             }
+            account.setAddresses(service.getAddressOfAccount(account.getId()));
         } catch (SQLException | ClassNotFoundException e) {
             Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, e.getMessage());
             return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -217,12 +236,39 @@ public class AccountController {
                             + "FROM GET_ACCOUNT\n"
                             + "WHERE USERNAME = ? AND PASSWORD = ? "
                             + "AND ROLE = ?";
+                    if (type.toLowerCase().equals(SHIPPER)) {
+                        sql = "SELECT *,\n"
+                                + "ISNULL((\n"
+                                + "	SELECT MAX_ORDER\n"
+                                + "	FROM MAX_ACCEPT_ORDER\n"
+                                + "	WHERE ACCOUNT = ID\n"
+                                + "), 0) AS MAX_ORDER\n"
+                                + "FROM GET_ACCOUNT \n"
+                                + "WHERE USERNAME = ? AND PASSWORD = ?\n"
+                                + "AND ROLE = ?";
+                    }
                     stmt = con.prepareStatement(sql);
                     stmt.setString(1, username);
                     stmt.setString(2, password);
                     stmt.setString(3, type);
                     rs = stmt.executeQuery();
                     if (rs.next()) {
+                        if (type.toLowerCase().equals(SHIPPER)) {
+                            return new Shipper(new Account(rs.getString("ID"),
+                                    rs.getString("USERNAME"),
+                                    rs.getString("FIRST_NAME"),
+                                    rs.getString("MID_NAME"),
+                                    rs.getString("LAST_NAME"),
+                                    rs.getString("EMAIL"),
+                                    rs.getString("PHONE"),
+                                    rs.getDate("DOB"),
+                                    rs.getString("ROLE"),
+                                    rs.getInt("NUM_SUCCESS"),
+                                    rs.getInt("NUM_CANCEL"),
+                                    rs.getDouble("WALLET"),
+                                    null),
+                                    rs.getInt("MAX_ORDER"));
+                        }
                         return new Account(rs.getString("ID"),
                                 rs.getString("USERNAME"),
                                 rs.getString("FIRST_NAME"),
@@ -234,7 +280,8 @@ public class AccountController {
                                 rs.getString("ROLE"),
                                 rs.getInt("NUM_SUCCESS"),
                                 rs.getInt("NUM_CANCEL"),
-                                rs.getDouble("WALLET"));
+                                rs.getDouble("WALLET"),
+                                null);
                     }
                 }
             } finally {
@@ -297,7 +344,8 @@ public class AccountController {
                                 rs.getString("ROLE"),
                                 rs.getInt("NUM_SUCCESS"),
                                 rs.getInt("NUM_CANCEL"),
-                                rs.getDouble("WALLET"));
+                                rs.getDouble("WALLET"),
+                                null);
                     }
                 }
             } finally {
@@ -312,6 +360,46 @@ public class AccountController {
                 }
             }
             return null;
+        }
+
+        List<Address> getAddressOfAccount(String accountId) throws ClassNotFoundException, SQLException {
+            Connection con = null;
+            PreparedStatement stmt = null;
+            ResultSet rs = null;
+            List<Address> list = null;
+
+            try {
+                con = DBUtils.getConnection();
+                if (con != null) {
+                    String sql = "SELECT *\n"
+                            + "FROM GET_ADDRESS_OF_ACCOUNT_BY_ID\n"
+                            + "WHERE ACCOUNT = ?";
+                    stmt = con.prepareStatement(sql);
+                    stmt.setString(1, accountId);
+                    rs = stmt.executeQuery();
+                    while (rs.next()) {
+                        if (list == null) {
+                            list = new ArrayList<>();
+                        }
+                        list.add(new Address(
+                                rs.getString("ADDR_1"),
+                                rs.getString("ADDR_2"),
+                                rs.getString("ADDR_3"),
+                                rs.getString("ADDR_4")));
+                    }
+                }
+            } finally {
+                if (rs != null) {
+                    rs.close();
+                }
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (con != null) {
+                    con.close();
+                }
+            }
+            return list;
         }
     }
 }

@@ -1,7 +1,6 @@
 package com.smhu.response.customer;
 
 import com.smhu.order.OrderDetail;
-import com.smhu.order.TimeTravel;
 import java.sql.Date;
 import java.sql.Time;
 import java.util.List;
@@ -17,13 +16,12 @@ public class OrderCustomer {
     private double totalCost;
     private Date dateDelivery;
     private Time timeDelivery;
-    private TimeTravel timeTravel;
     private List<OrderDetail> details;
 
     public OrderCustomer() {
     }
 
-    public OrderCustomer(String cust, String addressDelivery, String market, String note, double costShopping, double costDelivery, double totalCost, Date dateDelivery, Time timeDelivery, TimeTravel timeTravel, List<OrderDetail> details) {
+    public OrderCustomer(String cust, String addressDelivery, String market, String note, double costShopping, double costDelivery, double totalCost, Date dateDelivery, Time timeDelivery, List<OrderDetail> details) {
         this.cust = cust;
         this.addressDelivery = addressDelivery;
         this.market = market;
@@ -33,7 +31,6 @@ public class OrderCustomer {
         this.totalCost = totalCost;
         this.dateDelivery = dateDelivery;
         this.timeDelivery = timeDelivery;
-        this.timeTravel = timeTravel;
         this.details = details;
     }
 
@@ -107,14 +104,6 @@ public class OrderCustomer {
 
     public void setTimeDelivery(Time timeDelivery) {
         this.timeDelivery = timeDelivery;
-    }
-
-    public TimeTravel getTimeTravel() {
-        return timeTravel;
-    }
-
-    public void setTimeTravel(TimeTravel timeTravel) {
-        this.timeTravel = timeTravel;
     }
 
     public List<OrderDetail> getDetails() {

@@ -2,12 +2,13 @@ package com.smhu.response.shipper;
 
 import com.smhu.controller.MarketController;
 import com.google.gson.annotations.SerializedName;
+import com.smhu.controller.ShipperController;
 import com.smhu.order.Order;
 
 public class OrderDelivery {
 
-    @SerializedName("distance")
-    private String distance; // string 14.3 km
+    @SerializedName("destination")
+    private String destination; // address delivery
 
     @SerializedName("value")
     private int value; // int 14300
@@ -18,8 +19,8 @@ public class OrderDelivery {
     public OrderDelivery() {
     }
 
-    public OrderDelivery(String distance, int value, Order order) {
-        this.distance = distance;
+    public OrderDelivery(String destination, int value, Order order) {
+        this.destination = destination;
         this.value = value;
         this.order = new OrderShipper(order.getId(),
                 order.getCust(),
@@ -33,12 +34,11 @@ public class OrderDelivery {
                 order.getTotalCost(),
                 order.getDateDelivery(),
                 order.getTimeDelivery(),
-                order.getDetails(),
-                null, null);
+                order.getDetails());
     }
 
-    public String getDistance() {
-        return distance;
+    public String getDestination() {
+        return destination;
     }
 
     public int getValue() {
