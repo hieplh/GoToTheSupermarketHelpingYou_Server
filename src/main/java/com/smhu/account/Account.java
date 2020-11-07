@@ -1,7 +1,6 @@
 package com.smhu.account;
 
 import java.sql.Date;
-import java.util.List;
 import java.util.Objects;
 
 public class Account {
@@ -15,17 +14,13 @@ public class Account {
     private String phone;
     private Date dob;
     private String role;
-    private int numSuccess;
-    private int numCancel;
-    private double wallet;
-    private List<Address> addresses;
+    
 
     public Account() {
     }
 
     public Account(String id, String username, String firstName, String middleName, String lastName,
-            String email, String phone, Date dob, String role, int numSuccess, int numCancel,
-            double wallet, List<Address> addresses) {
+            String email, String phone, Date dob, String role) {
         this.id = id;
         this.username = username;
         this.firstName = firstName;
@@ -35,10 +30,6 @@ public class Account {
         this.phone = phone;
         this.dob = dob;
         this.role = role;
-        this.numSuccess = numSuccess;
-        this.numCancel = numCancel;
-        this.wallet = wallet;
-        this.addresses = addresses;
     }
 
     public String getId() {
@@ -111,38 +102,6 @@ public class Account {
 
     public void setRole(String role) {
         this.role = role;
-    }
-
-    public int getNumSuccess() {
-        return numSuccess;
-    }
-
-    public void setNumSuccess(int numSuccess) {
-        this.numSuccess = numSuccess;
-    }
-
-    public int getNumCancel() {
-        return numCancel;
-    }
-
-    public void setNumCancel(int numCancel) {
-        this.numCancel = numCancel;
-    }
-
-    public double getWallet() {
-        return wallet;
-    }
-
-    public void setWallet(double wallet) {
-        this.wallet = wallet;
-    }
-
-    public List<Address> getAddresses() {
-        return addresses;
-    }
-
-    public void setAddresses(List<Address> addresses) {
-        this.addresses = addresses;
     }
 
     @Override

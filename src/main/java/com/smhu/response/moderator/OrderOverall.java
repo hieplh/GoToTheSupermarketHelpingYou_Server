@@ -1,25 +1,30 @@
-package com.smhu.order;
+package com.smhu.response.moderator;
 
+import com.smhu.account.Account;
+import com.smhu.account.Shipper;
+import com.smhu.market.Market;
+import com.smhu.order.Evidence;
+import com.smhu.order.Order;
+import com.smhu.order.OrderDetail;
 import java.sql.Date;
 import java.sql.Time;
 import java.util.List;
-import java.util.Objects;
 
-public class Order implements Cloneable {
+public class OrderOverall {
 
     private String id;
-    private String cust;
+    private Account customer;
     private String addressDelivery;
     private String note;
-    private String market;
-    private String shipper;
+    private Market market;
+    private Shipper shipper;
     private String lat;
     private String lng;
     private Date createDate;
     private Time createTime;
     private Time lastUpdate;
     private int status;
-    private String author;
+    private Account author;
     private String reasonCancel;
     private double costShopping;
     private double costDelivery;
@@ -30,36 +35,27 @@ public class Order implements Cloneable {
     private List<OrderDetail> details;
     private List<Evidence> evidences;
 
-    public Order() {
+    public OrderOverall() {
     }
 
-    public Order(String id, String cust, String addressDelivery, String note, String market,
-            String shipper, String lat, String lng,
-            Date createDate, Time createTime, Time lastUpdate,
-            int status, String author, String reasonCancel, double costShopping, double costDelivery, double totalCost, double refundCost,
-            Date dateDelivery, Time timeDelivery, List<OrderDetail> details, List<Evidence> evidences) {
-        this.id = id;
-        this.cust = cust;
-        this.addressDelivery = addressDelivery;
-        this.note = note;
-        this.market = market;
-        this.shipper = shipper;
-        this.lat = lat;
-        this.lng = lng;
-        this.createDate = createDate;
-        this.createTime = createTime;
-        this.lastUpdate = lastUpdate;
-        this.status = status;
-        this.author = author;
-        this.reasonCancel = reasonCancel;
-        this.costShopping = costShopping;
-        this.costDelivery = costDelivery;
-        this.totalCost = totalCost;
-        this.refundCost = refundCost;
-        this.dateDelivery = dateDelivery;
-        this.timeDelivery = timeDelivery;
-        this.details = details;
-        this.evidences = evidences;
+    public OrderOverall(Order order) {
+        this.id = order.getId();
+        this.addressDelivery = order.getAddressDelivery();
+        this.note = order.getNote();
+        this.lat = order.getLat();
+        this.lng = order.getLng();
+        this.createDate = order.getCreateDate();
+        this.createTime = order.getCreateTime();
+        this.lastUpdate = order.getLastUpdate();
+        this.status = order.getStatus();
+        this.reasonCancel = order.getReasonCancel();
+        this.costShopping = order.getCostShopping();
+        this.costDelivery = order.getCostDelivery();
+        this.totalCost = order.getTotalCost();
+        this.refundCost = order.getRefundCost();
+        this.dateDelivery = order.getDateDelivery();
+        this.timeDelivery = order.getTimeDelivery();
+        this.details = order.getDetails();
     }
 
     public String getId() {
@@ -70,12 +66,12 @@ public class Order implements Cloneable {
         this.id = id;
     }
 
-    public String getCust() {
-        return cust;
+    public Account getCustomer() {
+        return customer;
     }
 
-    public void setCust(String cust) {
-        this.cust = cust;
+    public void setCustomer(Account customer) {
+        this.customer = customer;
     }
 
     public String getAddressDelivery() {
@@ -94,19 +90,19 @@ public class Order implements Cloneable {
         this.note = note;
     }
 
-    public String getMarket() {
+    public Market getMarket() {
         return market;
     }
 
-    public void setMarket(String market) {
+    public void setMarket(Market market) {
         this.market = market;
     }
 
-    public String getShipper() {
+    public Shipper getShipper() {
         return shipper;
     }
 
-    public void setShipper(String shipper) {
+    public void setShipper(Shipper shipper) {
         this.shipper = shipper;
     }
 
@@ -158,11 +154,11 @@ public class Order implements Cloneable {
         this.status = status;
     }
 
-    public String getAuthor() {
+    public Account getAuthor() {
         return author;
     }
 
-    public void setAuthor(String author) {
+    public void setAuthor(Account author) {
         this.author = author;
     }
 
@@ -240,29 +236,6 @@ public class Order implements Cloneable {
 
     @Override
     public String toString() {
-        return "Order{" + "id=" + id + ", cust=" + cust + ", addressDelivery=" + addressDelivery + ", note=" + note + ", market=" + market + ", shipper=" + shipper + ", lat=" + lat + ", lng=" + lng + ", createDate=" + createDate + ", createTime=" + createTime + ", lastUpdate=" + lastUpdate + ", status=" + status + ", author=" + author + ", reasonCancel=" + reasonCancel + ", costShopping=" + costShopping + ", costDelivery=" + costDelivery + ", totalCost=" + totalCost + ", dateDelivery=" + dateDelivery + ", timeDelivery=" + timeDelivery + ", details=" + details + ", evidences=" + evidences + '}';
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final Order other = (Order) obj;
-        if (!Objects.equals(this.id, other.id)) {
-            return false;
-        }
-        return true;
-    }
-
-    @Override
-    protected Object clone() throws CloneNotSupportedException {
-        return super.clone(); //To change body of generated methods, choose Tools | Templates.
+        return "OrderOverall{" + "id=" + id + ", customer=" + customer + ", addressDelivery=" + addressDelivery + ", note=" + note + ", market=" + market + ", shipper=" + shipper + ", lat=" + lat + ", lng=" + lng + ", createDate=" + createDate + ", createTime=" + createTime + ", lastUpdate=" + lastUpdate + ", status=" + status + ", author=" + author + ", reasonCancel=" + reasonCancel + ", costShopping=" + costShopping + ", costDelivery=" + costDelivery + ", totalCost=" + totalCost + ", refundCost=" + refundCost + ", dateDelivery=" + dateDelivery + ", timeDelivery=" + timeDelivery + ", details=" + details + ", evidences=" + evidences + '}';
     }
 }

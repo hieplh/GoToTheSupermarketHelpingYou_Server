@@ -2,9 +2,12 @@ package com.smhu.system;
 
 import com.smhu.controller.OrderController;
 import com.smhu.controller.ShipperController;
+import com.smhu.iface.IShipper;
 import com.smhu.order.Order;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.logging.Level;
@@ -25,29 +28,46 @@ public class SystemTime {
 
     //@Scheduled(fixedRate = 10 * 1000)
     public void checkOrderOutOfTimeRelease() {
-//        for (Map.Entry<Order, Long> order : OrderController.mapPreOrderRelease.entrySet()) {
-//            if (SYSTEM_TIME >= order.getValue()) {
-//                OrderController.mapOrderInProcess.put(order.getKey().getId(), order.getKey());
-//            }
-//        }
         System.out.println("");
         System.out.println("Check Order Out Of Time Release");
+
+        IShipper shipperListener = new ShipperController().getShipperListener();
+        List<String> listShipperId = null;
         Iterator<Order> iterator = OrderController.mapOrderIsWaitingAccept.keySet().iterator();
         while (iterator.hasNext()) {
             try {
                 Order order = iterator.next();
                 if (SYSTEM_TIME >= OrderController.mapOrderIsWaitingAccept.get(order)) {
-                    if (ShipperController.listInProgressShipper.contains(order.getShipper())) {
-                        ShipperController.listInProgressShipper.remove(order.getShipper());
+                    if (listShipperId == null) {
+                        listShipperId = new ArrayList<>();
                     }
-                    OrderController.mapOrderDeliveryForShipper.remove(order.getId());
+                    if (!listShipperId.contains(order.getShipper())) {
+                        listShipperId.add(order.getShipper());
+                    }
+
+                    List<String> list = OrderController.mapOrdersShipperReject.get(order.getShipper());
+                    if (list == null) {
+                        list = new ArrayList<>();
+                    }
+                    System.out.println(order);
+
+                    list.add(order.getId());
+                    OrderController.mapOrdersShipperReject.put(order.getShipper(), list);
+                    OrderController.mapOrderDeliveryForShipper.remove(order.getShipper());
                     order.setShipper(null);
                     OrderController.mapOrderInQueue.put(order.getId(), order);
-                    System.out.println(order);
                     iterator.remove();
                 }
             } catch (Exception e) {
                 Logger.getLogger(SystemTime.class.getName()).log(Level.SEVERE, e.getMessage());
+            }
+        }
+
+        if (listShipperId != null) {
+            synchronized (ShipperController.mapAvailableShipper) {
+                for (String id : listShipperId) {
+                    shipperListener.changeStatusOfShipper(id);
+                }
             }
         }
     }

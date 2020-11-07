@@ -1,15 +1,20 @@
 package com.smhu.controller;
 
+import static com.smhu.controller.ShipperController.mapMechanismReleaseOrder;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.smhu.GototheSupermarketHelpingYouApplication;
+import com.smhu.account.Account;
+import com.smhu.account.Customer;
 import com.smhu.account.Shipper;
-import static com.smhu.controller.ShipperController.mapMechanismReleaseOrder;
+import com.smhu.comparator.SortByHighActive;
+import com.smhu.comparator.SortByLowActive;
 import com.smhu.google.Firebase;
 import com.smhu.google.matrixobj.DistanceMatrixObject;
 import com.smhu.google.matrixobj.ElementObject;
 import com.smhu.helper.DateTimeHelper;
 import com.smhu.helper.ExtractElementDistanceMatrixApi;
 import com.smhu.helper.GsonHelper;
+import com.smhu.iface.IAccount;
 import com.smhu.iface.IMain;
 import com.smhu.iface.IOrder;
 import com.smhu.iface.IShipper;
@@ -19,6 +24,7 @@ import com.smhu.response.ResponseMsg;
 import com.smhu.response.customer.OrderCustomer;
 import com.smhu.order.OrderDetail;
 import com.smhu.order.TimeTravel;
+import com.smhu.response.moderator.OrderOverall;
 import com.smhu.response.shipper.OrderDelivery;
 import com.smhu.response.shipper.OrderShipper;
 import com.smhu.system.SystemTime;
@@ -30,14 +36,17 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Time;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -63,41 +72,68 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 public class OrderController {
 
-//    public static Map<Order, Integer> mapOrderInQueue = new HashMap<>();
-    public static Map<String, Order> mapOrderInQueue = new HashMap<>();
-    public static Map<String, Order> mapOrderIsWaitingRelease = new HashMap<>();
+    public final static Map<String, Order> mapOrderInQueue = new HashMap<>();
 
-    public static Map<Order, Long> mapOrderIsWaitingAccept = new HashMap<>();
-    public static Map<String, OrderDelivery> mapOrderDeliveryForShipper = new HashMap<>();
+    public final static Map<Order, Long> mapOrderIsWaitingAccept = new HashMap<>();
+    public final static Map<String, List<OrderDelivery>> mapOrderDeliveryForShipper = new HashMap<>();
 
-    public static Map<String, Integer> mapCountOrderRelease = new HashMap<>();
+    public final static Map<String, Integer> mapCountOrderRelease = new HashMap<>();
 
-    public static Map<String, Order> mapOrderInProgress = new HashMap<>();
-    public static Map<String, Order> mapOrderIsDone = new HashMap<>();
+    public final static Map<String, Order> mapOrderInProgress = new HashMap<>();
+    public final static Map<String, Order> mapOrderIsDone = new HashMap<>();
 
-    public static Map<String, List<String>> mapOrdersShipperReject = new HashMap<>();
-    public static Map<String, Order> mapOrderIsCancelInQueue = new HashMap<>();
-    public static Map<String, Order> mapOrderIsCancel = new HashMap<>();
+    public final static Map<String, List<String>> mapOrdersShipperReject = new HashMap<>();
+    public final static Map<String, Order> mapOrderIsCancelInQueue = new HashMap<>();
+    public final static Map<String, Order> mapOrderIsCancel = new HashMap<>();
 
-    private IOrder orderListener;
-    private OrderService service;
+    private final OrderService service;
 
-    private IStatus statusListener;
-    private IMain mainListener;
+    private final IOrder orderListener;
+    private final IShipper shipperListener;
+    private final IStatus statusListener;
+    private final IMain mainListener;
+    private final IAccount accountListener;
+
+    private final String CUSTOMER = "CUSTOMER";
+    private final String STAFF = "STAFF";
+    private final String SHIPPER = "SHIPPER";
 
     public OrderController() {
-        orderListener = new OrderService();
         service = new OrderService();
+        orderListener = new OrderService();
         statusListener = new StatusController().getStatusListener();
         mainListener = new GototheSupermarketHelpingYouApplication().getMainListener();
+        shipperListener = new ShipperController().getShipperListener();
+        accountListener = new AccountController().getAccountListener();
     }
 
-    @GetMapping("order/{id}")
-    public ResponseEntity<?> getOrderById(@PathVariable("id") String id) {
+    @GetMapping("order/{type}/{id}")
+    public ResponseEntity<?> getOrderById(@PathVariable("id") String id, @PathVariable("type") String type) {
         try {
-            Order order = mainListener.getOrderById(id);
+            Order order = service.getOrderById(id, STAFF);
+            if (order == null) {
+                return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
+            }
             mainListener.loadOrderDetail(order);
-            return new ResponseEntity<>(order, HttpStatus.OK);
+            switch (type.toUpperCase()) {
+                case CUSTOMER:
+                    return new ResponseEntity<>(order, HttpStatus.OK);
+                case STAFF:
+                    OrderOverall orderStaff = new OrderOverall(order);
+                    orderStaff.setMarket(MarketController.mapMarket.get(order.getMarket()));
+                    orderStaff.setCustomer((Customer) accountListener.getAccountById(order.getCust(), CUSTOMER));
+                    Shipper shipper = shipperListener.getShipper(order.getShipper());
+                    if (shipper == null) {
+                        shipper = (Shipper) accountListener.getAccountById(order.getShipper(), SHIPPER);
+                    }
+                    orderStaff.setShipper(shipper);
+                    if (order.getAuthor() != null) {
+                        orderStaff.setAuthor((Account) accountListener.getAccountById(order.getAuthor(), STAFF));
+                    }
+                    return new ResponseEntity<>(orderStaff, HttpStatus.OK);
+                default:
+                    return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
+            }
         } catch (ClassNotFoundException | SQLException e) {
             Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
             return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -108,7 +144,7 @@ public class OrderController {
     public ResponseEntity<?> getAllOrders() {
         List<Order> list = new ArrayList<>();
         list.addAll(mapOrderInQueue.values());
-        list.addAll(mapOrderIsWaitingRelease.values());
+//        list.addAll(mapOrderIsWaitingRelease.values());
         list.addAll(mapOrderIsWaitingAccept.keySet().stream().collect(Collectors.toList()));
         list.addAll(mapOrderInProgress.values());
         list.addAll(mapOrderIsDone.values());
@@ -116,10 +152,55 @@ public class OrderController {
         return new ResponseEntity<>(list, HttpStatus.OK);
     }
 
+    @GetMapping("switch/{orderId}")
+    public ResponseEntity<?> changeShipper(@PathVariable("orderId") String orderId) {
+        DistanceMatrixObject distanceObj;
+        List<Shipper> listShipper = service.getShippers(new SortByLowActive());
+        if (listShipper.isEmpty()) {
+            return new ResponseEntity<>(null, HttpStatus.OK);
+        }
+
+        synchronized (listShipper) {
+            Order order = mapOrderInProgress.get(orderId);
+            Shipper oldShipper = shipperListener.getShipper(order.getShipper());
+            for (Iterator<Shipper> it = listShipper.iterator(); it.hasNext();) {
+                Shipper newShipper = it.next();
+                if (newShipper.getLat() != null && newShipper.getLng() != null) {
+                    try {
+                        String[] sourceLocation = new String[]{oldShipper.getLat(), oldShipper.getLng()};
+                        String[] destinationLocation = new String[]{newShipper.getLat(), newShipper.getLng()};
+
+                        distanceObj = service.getDistanceMatrixObject(sourceLocation, destinationLocation);
+                        ExtractElementDistanceMatrixApi extract = new ExtractElementDistanceMatrixApi();
+                        List<ElementObject> listElments = extract.getListElements(distanceObj);
+                        List<String> listDistanceValue = extract.getListDistance(listElments, "value");
+
+                        int range = service.getTheLongestDistanceInMechanism();
+                        for (String distanceString : listDistanceValue) {
+                            int distance = Integer.parseInt(distanceString);
+                            if (distance <= range) {
+                                order.setShipper(newShipper.getId());
+                                order.setLastUpdate(new Time(new Date().getTime()));
+                                service.updatetOrder(order);
+
+                                it.remove();
+                                shipperListener.addShipper(newShipper);
+                                System.out.println("Change shipper from: " + oldShipper.getId() + " to: " + newShipper.getId());
+                                return new ResponseEntity<>(order, HttpStatus.OK);
+                            }
+                        }
+                    } catch (IOException | ClassNotFoundException | NumberFormatException | SQLException e) {
+                        Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, "Scan Order: {0}", e.getMessage());
+                    }
+                }
+            }
+        }
+        return new ResponseEntity<>(null, HttpStatus.OK);
+    }
+
     @PostMapping("/order")
     public ResponseEntity<?> newOrder(@RequestBody OrderCustomer orderReceive) {
         String result;
-        statusListener = new StatusController().getStatusListener();
         try {
             int status = statusListener.getStatusIsPaidOrder();
             java.sql.Date date = new java.sql.Date(new Date().getTime());
@@ -168,90 +249,12 @@ public class OrderController {
         return new ResponseEntity<>(new ResponseMsg(result), HttpStatus.OK);
     }
 
-    /*
     @PutMapping("/orders/update")
     public ResponseEntity<?> updatetOrder(@RequestBody List<OrderShipper> listOrders) {
         List<OrderShipper> listResults = new ArrayList<>();
-        Order order;
-        for (OrderShipper orderInProcess : listOrders) {
-            order = service.checkOrderIsInProgress(orderInProcess);
-            if (order == null) {
-                Order orderWaitAccept = mapOrderIsWaitingAccept.keySet()
-                        .stream()
-                        .filter(o -> orderInProcess.getId().equals(o.getId()))
-                        .findFirst()
-                        .orElse(null);
-
-                if (orderWaitAccept == null || !orderWaitAccept.getShipper().equals(orderInProcess.getShipper())) {
-                    return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
-                }
-
-                mapOrderIsWaitingAccept.remove(orderWaitAccept);
-                order = orderWaitAccept;
-                mapOrderInProgress.put(order.getId(), order);
-                mapCountOrderRelease.remove(order.getId());
-            }
-
-            if (order == null || order.getShipper() == null) {
-                return new ResponseEntity<>(new ResponseMsg("Đơn hàng của bạn đã hoàn thành hoặc bị hủy"), HttpStatus.NOT_FOUND);
-            }
-
-            int status;
-            try {
-//                if (order.getShipper() == null || order.getShipper().isEmpty() || order.getShipper().equalsIgnoreCase("null")) {
-//                    order.setShipper(orderInProcess.getShipper());
-//                }
-
-//                String[] location = ShipperController.mapLocationAvailableShipper.remove(order.getShipper());
-//                ShipperController.mapLocationInProgressShipper.put(order.getShipper(), location);
-                if (!String.valueOf(order.getStatus()).matches("2\\d")) {
-                    status = statusListener.getStatusIsAccept();
-                } else {
-                    status = order.getStatus() + 1;
-                }
-                order.setStatus(status);
-                order.setLastUpdate(new Time(new Date().getTime()));
-
-                service.updatetOrder(order);
-
-                listResults.add(service.syncOrderSystemToOrderShipper(order));
-
-                int tmpStatus = statusListener.getStatusIsDoneOrder();
-                if (status == tmpStatus) {
-                    if (ShipperController.mapLocationInProgressShipper.containsKey(order.getShipper())) {
-                        ShipperController.mapLocationInProgressShipper.remove(order.getShipper());
-                    }
-
-                    Order orderClone = mapOrderInProgress.remove(order.getId());
-                    mapOrderIsDone.put(orderClone.getId(), orderClone);
-                }
-            } catch (SQLException | ClassNotFoundException e) {
-                Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
-                return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-            if (status == 21) {
-                Map<String, String> token = new HashMap<>();
-                token.put("cust_id", order.getCust());
-                Map<String, String> values = new HashMap<>();
-                values.put("msg", "Đơn hàng của bạn đã có shipper nhận");
-                values.put("order_id", order.getId());
-
-//                try {
-//                    new Firebase().pushNotifyByToken(token, values);
-//                } catch (FirebaseMessagingException | IOException e) {
-//                    Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
-//                }
-            }
-        }
-        return new ResponseEntity<>(listResults, HttpStatus.OK);
-    }
-     */
-    @PutMapping("/orders/update")
-    public ResponseEntity<?> updatetOrder(@RequestBody List<OrderShipper> listOrders) {
-        IShipper shipperListener = new ShipperController().getShipperListener();
-        List<OrderShipper> listResults = new ArrayList<>();
-        String shipperId = null;
+        Shipper shipper = null;
         int status;
+        boolean isFirstAcceptOrder = false;
         boolean orderIsDone = false;
         for (OrderShipper orderInProcess : listOrders) {
             Order order = service.checkOrderIsInProgress(orderInProcess);
@@ -266,17 +269,15 @@ public class OrderController {
                     return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
                 }
 
+                if (shipper == null) {
+                    shipper = shipperListener.getShipper(orderWaitAccept.getShipper());
+                }
+                isFirstAcceptOrder = true;
                 mapOrderIsWaitingAccept.remove(orderWaitAccept);
-                mapOrderDeliveryForShipper.remove(orderWaitAccept.getId());
                 mapCountOrderRelease.remove(orderWaitAccept.getId());
 
                 order = orderWaitAccept;
                 mapOrderInProgress.put(order.getId(), order);
-
-                Shipper shipper = shipperListener.getShipperAccount(order.getShipper());
-                if (!ShipperController.listInProgressShipper.contains(shipper.getId())) {
-                    ShipperController.listInProgressShipper.add(shipper.getId());
-                }
             }
 
             if (order.getShipper() == null) {
@@ -288,8 +289,6 @@ public class OrderController {
 //                    order.setShipper(orderInProcess.getShipper());
 //                }
 
-//                String[] location = ShipperController.mapLocationAvailableShipper.remove(order.getShipper());
-//                ShipperController.mapLocationInProgressShipper.put(order.getShipper(), location);
                 int tmpStatus = statusListener.getStatusIsDoneOrder();
                 if (!String.valueOf(order.getStatus()).matches("2\\d")) {
                     status = statusListener.getStatusIsAccept();
@@ -301,7 +300,9 @@ public class OrderController {
                     Order orderClone = mapOrderInProgress.remove(order.getId());
                     mapOrderIsDone.put(orderClone.getId(), orderClone);
                     orderIsDone = true;
-                    shipperId = orderClone.getShipper();
+                    if (shipper == null) {
+                        shipper = shipperListener.getShipper(order.getShipper());
+                    }
                 }
 
                 order.setStatus(status);
@@ -325,9 +326,11 @@ public class OrderController {
 //                    Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
 //                }
             }
-        }
-        if (orderIsDone) {
-            ShipperController.listInProgressShipper.remove(shipperId);
+        } // end for
+        if (isFirstAcceptOrder) {
+            mapOrderDeliveryForShipper.remove(shipper.getId());
+        } else if (orderIsDone) {
+            shipperListener.changeStatusOfShipper(shipper.getId());
         }
         return new ResponseEntity<>(listResults, HttpStatus.OK);
     }
@@ -335,30 +338,27 @@ public class OrderController {
     @GetMapping("/tracking/shipper/{shipperId}/lat/{lat}/lng/{lng}")
     public ResponseEntity trackingOrder(@PathVariable("shipperId") String shipperId,
             @PathVariable("lat") String lat, @PathVariable("lng") String lng) {
-        Firebase firebase = new Firebase();
-
-        mapOrderIsWaitingRelease.values().stream()
-                .filter((t) -> {
-                    return shipperId.equals(t.getShipper());
-                })
-                .forEach((t) -> {
-                    try {
-                        firebase.pushNotifyLocationOfShipperToCustomer(t.getId(), lat, lng);
-                    } catch (FirebaseMessagingException | IOException e) {
-                        Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
-                    }
-                });
+//        Firebase firebase = new Firebase();
+//
+//        mapOrderIsWaitingRelease.values().stream()
+//                .filter((t) -> {
+//                    return shipperId.equals(t.getShipper());
+//                })
+//                .forEach((t) -> {
+//                    try {
+//                        firebase.pushNotifyLocationOfShipperToCustomer(t.getId(), lat, lng);
+//                    } catch (FirebaseMessagingException | IOException e) {
+//                        Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
+//                    }
+//                });
 
         return new ResponseEntity(HttpStatus.OK);
     }
 
-    private final String STAFF = "STAFF";
-    private final String SHIPPER = "SHIPPER";
-
     @DeleteMapping("delete/{orderId}/{type}/{personId}")
     public ResponseEntity<?> cancelOrder(@PathVariable("orderId") String orderId, @PathVariable("type") String type,
             @PathVariable("personId") String personId) {
-        Order order = null;
+        Order order;
 
         switch (type.toUpperCase()) {
             case STAFF:
@@ -380,10 +380,8 @@ public class OrderController {
                 if (result == null) {
                     return new ResponseEntity<>(new ResponseMsg("Error while cancel order. Please try again!"), HttpStatus.INTERNAL_SERVER_ERROR);
                 }
-                if (ShipperController.listInProgressShipper.contains(order.getShipper())) {
-                    ShipperController.listInProgressShipper.remove(order.getShipper());
-                }
-                
+                shipperListener.changeStatusOfShipper(order.getShipper());
+
                 Map<String, String> token = new HashMap<>();
                 token.put("shipper_id", order.getShipper());
                 Map<String, String> values = new HashMap<>();
@@ -434,6 +432,69 @@ public class OrderController {
 
         void addOrderInqueue(Order order) {
             mapOrderInQueue.put(order.getId(), order);
+        }
+
+        public Order getOrderById(String orderId, String type) throws SQLException, ClassNotFoundException {
+            Connection con = null;
+            PreparedStatement stmt = null;
+            ResultSet rs = null;
+            Order order = null;
+
+            try {
+                con = DBUtils.getConnection();
+                if (con != null) {
+                    String sql = "SELECT *\n"
+                            + "FROM GET_ORDER_BY_ID\n"
+                            + "WHERE ID = ?";
+                    stmt = con.prepareStatement(sql);
+                    stmt.setString(1, orderId);
+                    rs = stmt.executeQuery();
+                    if (rs.next()) {
+                        order = new Order();
+                        order.setId(rs.getString("ID"));
+                        if (type.toUpperCase().equals(STAFF)) {
+                            order.setCust(rs.getString("CUST"));
+                        } else {
+                            order.setCust(rs.getString("CUST_NAME"));
+                        }
+                        order.setAddressDelivery(rs.getString("ADDRESS_DELIVERY"));
+                        order.setNote(rs.getString("NOTE"));
+                        if (type.toUpperCase().equals(STAFF)) {
+                            order.setMarket(rs.getString("MARKET"));
+                        } else {
+                            order.setMarket(rs.getString("MARKET_NAME"));
+                        }
+
+                        if (type.toUpperCase().equals(STAFF)) {
+                            order.setShipper(rs.getString("SHIPPER"));
+                        } else {
+                            order.setShipper(rs.getString("SHIPPER_NAME"));
+                        }
+                        order.setCreateDate(rs.getDate("CREATED_DATE"));
+                        order.setCreateTime(rs.getTime("CREATED_TIME"));
+                        order.setStatus(rs.getInt("STATUS"));
+                        order.setAuthor(rs.getString("AUTHOR"));
+                        order.setReasonCancel(rs.getString("REASON_CANCEL"));
+                        order.setCostShopping(rs.getDouble("COST_SHOPPING"));
+                        order.setCostDelivery(rs.getDouble("COST_DELIVERY"));
+                        order.setTotalCost(rs.getDouble("TOTAL_COST"));
+                        order.setRefundCost(rs.getDouble("REFUND_COST"));
+                        order.setDateDelivery(rs.getDate("DATE_DELIVERY"));
+                        order.setTimeDelivery(rs.getTime("TIME_DELIVERY"));
+                    }
+                }
+            } finally {
+                if (rs != null) {
+                    rs.close();
+                }
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (con != null) {
+                    con.close();
+                }
+            }
+            return order;
         }
 
         String insertOrder(Order order) throws SQLException, ClassNotFoundException {
@@ -627,22 +688,6 @@ public class OrderController {
             return obj;
         }
 
-//        @Override
-//        public void checkOrderInqueue() {
-//            List<Order> tmp = new ArrayList<>();
-//            for (Map.Entry<Order, Integer> order : OrderController.mapOrderInQueue.entrySet()) {
-//                int totalMinuteCurrent = DateTimeHelper.parseTimeToMinute(new Time(SystemTime.SYSTEM_TIME).toLocalTime());
-//                if (totalMinuteCurrent >= order.getValue() - 180 && totalMinuteCurrent <= order.getValue()) {
-//                    mapOrderIsWaitingRelease.put(order.getKey().getId(), order.getKey());
-//                    System.out.println(order);
-//                    tmp.add(order.getKey());
-//                }
-//            }
-//
-//            for (Order order : tmp) {
-//                OrderController.mapOrderInQueue.remove(order);
-//            }
-//        }
         private String splitLocation(String location) {
             return location.split("\\.")[0];
         }
@@ -669,6 +714,18 @@ public class OrderController {
         private int getTheShortesDistanceInMechanism() {
             TreeMap<Integer, Integer> sortMechanismReleaseOrder = new TreeMap<>(mapMechanismReleaseOrder);
             return sortMechanismReleaseOrder.get(sortMechanismReleaseOrder.firstKey());
+        }
+
+        private int getTheLongestDistanceInMechanism() {
+            TreeMap<Integer, Integer> sortMechanismReleaseOrder = new TreeMap<>(mapMechanismReleaseOrder);
+            return sortMechanismReleaseOrder.get(sortMechanismReleaseOrder.lastKey());
+        }
+
+        private DistanceMatrixObject getDistanceMatrixObject(String[] source, String[] destination) throws IOException {
+            UrlConnection url = new UrlConnection();
+            return GsonHelper.gson.fromJson(new InputStreamReader(
+                    url.openConnectionFromSourceToDestination(source, destination), "utf-8"),
+                    DistanceMatrixObject.class);
         }
 
         private DistanceMatrixObject getDistanceMatrixObject(String[] source, Set<String[]> destination) throws IOException {
@@ -721,10 +778,9 @@ public class OrderController {
                 if (flag) {
                     String lat = MarketController.mapMarket.get(order.getMarket()).getLat();
                     String lng = MarketController.mapMarket.get(order.getMarket()).getLng();
-                    String[] shipperLocation = ShipperController.mapShipper.get(shipper);
 
-                    if (splitLocation(shipperLocation[0]).equals(splitLocation(lat))) {
-                        if (splitLocation(shipperLocation[1]).equals(splitLocation(lng))) {
+                    if (splitLocation(shipper.getLat()).equals(splitLocation(lat))) {
+                        if (splitLocation(shipper.getLng()).equals(splitLocation(lng))) {
                             String[] tmp = null;
                             for (String[] arr : map.keySet()) {
                                 if (arr[0].equals(lat)) {
@@ -799,6 +855,7 @@ public class OrderController {
                     int timeDelivery = getTimeDelivery(listDurationValue, index);
                     int timeGoing = (int) entry.getKey()[1];
                     int totalTime = timeGoing + timeDelivery + timeShopping > 180 ? timeGoing + timeDelivery + timeShopping : 180;
+                    System.out.println("Order: " + order.getId() + " - Time: " + totalTime);
                     map.put(order, new int[]{totalTime, Integer.parseInt(listDistanceValue.get(index))});
                     index++;
                 }
@@ -806,72 +863,112 @@ public class OrderController {
             return map;
         }
 
-        @Override
-        public void scanOrdesrReleaseToShippers() {
-            DistanceMatrixObject distanceObj = null;
-            List<Shipper> listShipper = ShipperController.mapShipper.keySet()
-                    .stream()
-                    .sorted()
-                    .collect(Collectors.toList());
-
-            for (Shipper shipper : listShipper) {
-                try {
-                    Map<String[], List<Order>> locationOrders = groupOrders(shipper, mapOrderInQueue);
-                    distanceObj = getDistanceMatrixObject(ShipperController.mapShipper.get(shipper), locationOrders.keySet());
-
-                    Map<long[], List<Order>> mapOrdersNearShipper = filterOrderNearShipper(locationOrders, distanceObj);
-                    if (mapOrdersNearShipper != null) {
-                        List<Order> listOrder = mapOrdersNearShipper.values()
-                                .iterator()
-                                .next();
-                        String[] locationMarket = extractLocationMarket(listOrder);
-                        distanceObj = getDistanceMatrixObject(locationMarket, getListDestinationAddress(listOrder));
-                        Map<Order, int[]> mapResult = filterOrderOnTimeToRelease(mapOrdersNearShipper, distanceObj);
-
-                        if (!mapResult.isEmpty()) {
-                            int count = 0;
-                            DateTimeHelper helper = new DateTimeHelper();
-                            Map<Order, Integer> mapOrdersResult = null;
-                            for (Map.Entry<Order, int[]> entry : mapResult.entrySet()) {
-                                if (helper.calculateTimeForShipper(entry.getKey(), entry.getValue()[0])) {
-                                    if (++count > shipper.getMaxOrder()) {
-                                        break;
-                                    }
-                                    if (mapOrdersResult == null) {
-                                        mapOrdersResult = new HashMap<>();
-                                    }
-                                    mapOrdersResult.put(entry.getKey(), entry.getValue()[1]);
-                                }
-                            }
-
-                            if (mapOrdersResult != null) {
-                                System.out.println("Order Release For Shipper");
-                                System.out.println("Shipper: " + shipper.getId());
-                                for (Map.Entry<Order, Integer> entry : mapOrdersResult.entrySet()) {
-                                    System.out.println(entry.getKey());
-                                }
-                                preProcessOrderRelease(shipper.getId(), mapOrdersResult);
-                            }
-                        }
-                    }
-                } catch (UnsupportedEncodingException e) {
-                    Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, "Scan Order: {0}", e.getMessage());
-                } catch (IOException e) {
-                    Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, "Scan Order: {0}", e.getMessage());
-                }
+        private List<Shipper> getShippers(Comparator comparator) {
+            List<Shipper> list = new ArrayList<>();
+            for (Map.Entry<String, Shipper> entry : ShipperController.mapAvailableShipper.entrySet()) {
+                list.add(entry.getValue());
             }
+            list.sort(comparator);
+            
+            for (Shipper shipper : list) {
+                System.out.println(shipper);
+            }
+            return list;
         }
 
-        private void preProcessOrderRelease(String shipperId, Map<Order, Integer> map) {
+        private void preProcessOrderRelease(Shipper shipper, Map<Order, Integer> map) {
+            List<OrderDelivery> list = new ArrayList();
             for (Map.Entry<Order, Integer> entry : map.entrySet()) {
                 Order order = mapOrderInQueue.remove(entry.getKey().getId());
-                order.setShipper(shipperId);
+                order.setShipper(shipper.getId());
                 mapOrderIsWaitingAccept.put(order, SystemTime.SYSTEM_TIME + (20 * 1000));
-                mapOrderDeliveryForShipper.put(order.getId(), new OrderDelivery(order.getAddressDelivery(),
+                list.add(new OrderDelivery(order.getAddressDelivery(),
                         entry.getValue(),
                         order));
                 int numRelease = mapCountOrderRelease.getOrDefault(order.getId(), 0);
                 mapCountOrderRelease.put(order.getId(), numRelease + 1);
+            }
+            mapOrderDeliveryForShipper.put(shipper.getId(), list);
+            shipperListener.changeStatusOfShipper(shipper.getId());
+        }
+
+        private void sendNotificationOrderToShipper(String shipperId) {
+            IShipper shipperListener = new ShipperController().getShipperListener();
+            Map<String, String> map = new HashMap<>();
+            map.put("compulsory", "false");
+
+            Firebase firebase = new Firebase();
+            try {
+                String result = firebase.pushNotifyOrdersToShipper(shipperListener.getShipper(shipperId).getTokenFCM(), map);
+                System.out.println("Firebase: " + result);
+                System.out.println("");
+            } catch (FirebaseMessagingException | IOException e) {
+                Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, "Send Notification: {0}", e.getMessage());
+            } catch (IllegalArgumentException e) {
+
+            }
+        }
+
+        @Override
+        public void scanOrdesrReleaseToShippers() {
+            if (mapOrderInQueue.isEmpty()) {
+                return;
+            }
+            DistanceMatrixObject distanceObj;
+            List<Shipper> listShipper = getShippers(new SortByHighActive());
+
+            synchronized (listShipper) {
+                for (Iterator<Shipper> it = listShipper.iterator(); it.hasNext();) {
+                    Shipper shipper = it.next();
+                    if (shipper.getLat() != null && shipper.getLng() != null) {
+                        try {
+                            Map<String[], List<Order>> locationOrders = groupOrders(shipper, mapOrderInQueue);
+                            distanceObj = getDistanceMatrixObject(new String[]{shipper.getLat(), shipper.getLng()}, locationOrders.keySet());
+
+                            Map<long[], List<Order>> mapOrdersNearShipper = filterOrderNearShipper(locationOrders, distanceObj);
+                            if (mapOrdersNearShipper != null) {
+                                List<Order> listOrder = mapOrdersNearShipper.values()
+                                        .iterator()
+                                        .next();
+                                String[] locationMarket = extractLocationMarket(listOrder);
+                                distanceObj = getDistanceMatrixObject(locationMarket, getListDestinationAddress(listOrder));
+                                Map<Order, int[]> mapResult = filterOrderOnTimeToRelease(mapOrdersNearShipper, distanceObj);
+
+                                if (!mapResult.isEmpty()) {
+                                    int count = 0;
+                                    DateTimeHelper helper = new DateTimeHelper();
+                                    Map<Order, Integer> mapOrdersResult = null;
+                                    for (Map.Entry<Order, int[]> entry : mapResult.entrySet()) {
+                                        if (helper.calculateTimeForShipper(entry.getKey(), entry.getValue()[0])) {
+                                            if (++count > shipper.getMaxOrder()) {
+                                                break;
+                                            }
+                                            if (mapOrdersResult == null) {
+                                                mapOrdersResult = new HashMap<>();
+                                            }
+                                            mapOrdersResult.put(entry.getKey(), entry.getValue()[1]);
+                                        }
+                                    }
+
+                                    if (mapOrdersResult != null) {
+                                        System.out.println("Order Release For Shipper");
+                                        System.out.println("Shipper: " + shipper.getId());
+                                        for (Map.Entry<Order, Integer> entry : mapOrdersResult.entrySet()) {
+                                            System.out.println(entry.getKey());
+                                        }
+                                        it.remove();
+                                        preProcessOrderRelease(shipper, mapOrdersResult);
+                                        sendNotificationOrderToShipper(shipper.getId());
+                                    }
+                                }
+                            }
+                        } catch (UnsupportedEncodingException e) {
+                            Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, "Scan Order, UnsupportedEncodingException: {0}", e.getMessage());
+                        } catch (IOException | NullPointerException e) {
+                            Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, "Scan Order, IO - NullPointer: {0}", e.getMessage());
+                        }
+                    }
+                }
             }
         }
     }

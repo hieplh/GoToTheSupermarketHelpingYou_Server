@@ -18,7 +18,7 @@ public interface IMain {
 
     List<Order> loadOrder(Date date, String status) throws SQLException, ClassNotFoundException;
 
-    Order getOrderById(String orderId) throws SQLException, ClassNotFoundException;
+//    Order getOrderById(String orderId) throws SQLException, ClassNotFoundException;
     
     void loadOrderDetail(Order order) throws SQLException, ClassNotFoundException;
     

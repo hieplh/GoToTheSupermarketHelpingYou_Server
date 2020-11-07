@@ -32,37 +32,27 @@ public class UrlConnection {
         }
     }
 
-//    public InputStream openConnectionFromSourceToDestination(String[] locationShipper, Map<String[][], List<Order>> locationOrder) throws IOException {
-//        StringBuilder sb = new StringBuilder();
-//        sb.append(URL);
-//        sb.append("&origins=");
-//
-//        sb.append(locationShipper[0]);
-//        sb.append(",");
-//        sb.append(locationShipper[1]);
-//
-//        boolean flag = false;
-//        sb.append("&destinations=");
-//        for (String[][] destLocation : locationOrder.keySet()) {
-//            if (flag) {
-//                sb.append("|");
-//            } else {
-//                flag = true;
-//            }
-//
-//            for (String[] location : destLocation) {
-//                sb.append(location[0]);
-//                sb.append(",");
-//                sb.append(location[1]);
-//            }
-//        }
-//
-//        sb.append("&language=vi");
-//        sb.append("&mode=driving");
-//        sb.append("&key=");
-//        sb.append(properties.getProperty("google.api.key.distance.matrix"));
-//        return new URL(sb.toString()).openStream();
-//    }
+    public InputStream openConnectionFromSourceToDestination(String[] oldShipper, String[] newShipper) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        sb.append(URL);
+        sb.append("&origins=");
+
+        sb.append(oldShipper[0]);
+        sb.append(",");
+        sb.append(oldShipper[1]);
+
+        sb.append("&destinations=");
+        sb.append(newShipper[0]);
+        sb.append(",");
+        sb.append(newShipper[1]);
+
+        sb.append("&language=vi");
+        sb.append("&mode=driving");
+        sb.append("&key=");
+        sb.append(properties.getProperty("google.api.key.distance.matrix"));
+        return new URL(sb.toString()).openStream();
+    }
+
     public InputStream openConnectionFromSourceToDestination(String[] source, Set<String[]> destination) throws IOException {
         StringBuilder sb = new StringBuilder();
         sb.append(URL);

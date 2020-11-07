@@ -11,7 +11,6 @@ import com.smhu.iface.IStatus;
 import com.smhu.market.Market;
 import com.smhu.order.Order;
 import com.smhu.order.OrderDetail;
-import com.smhu.order.TimeTravel;
 import com.smhu.status.Status;
 import com.smhu.utils.DBUtils;
 import java.io.IOException;
@@ -225,10 +224,6 @@ public class GototheSupermarketHelpingYouApplication {
                         order.setTotalCost(rs.getDouble("TOTAL_COST"));
                         order.setDateDelivery(rs.getDate("DATE_DELIVERY"));
                         order.setTimeDelivery(rs.getTime("TIME_DELIVERY"));
-                        order.setTimeTravel(new TimeTravel(rs.getTime("GOING"),
-                                rs.getTime("SHOPPING"),
-                                rs.getTime("DELIVERY"),
-                                rs.getTime("TRAFFIC")));
                         listOrders.add(order);
                     }
                 }
@@ -244,57 +239,6 @@ public class GototheSupermarketHelpingYouApplication {
                 }
             }
             return listOrders;
-        }
-
-        @Override
-        public Order getOrderById(String orderId) throws SQLException, ClassNotFoundException {
-            Connection con = null;
-            PreparedStatement stmt = null;
-            ResultSet rs = null;
-            Order order = null;
-
-            try {
-                con = DBUtils.getConnection();
-                if (con != null) {
-                    String sql = "SELECT *\n"
-                            + "FROM GET_ORDER_BY_ID\n"
-                            + "WHERE ID = ?";
-                    stmt = con.prepareStatement(sql);
-                    stmt.setString(1, orderId);
-                    rs = stmt.executeQuery();
-                    if (rs.next()) {
-                        order = new Order();
-                        order.setId(rs.getString("ID"));
-                        order.setCust(rs.getString("CUST_NAME"));
-                        order.setAddressDelivery(rs.getString("ADDRESS_DELIVERY"));
-                        order.setNote(rs.getString("NOTE"));
-                        order.setMarket(rs.getString("MARKET_NAME"));
-                        order.setShipper(rs.getString("SHIPPER_NAME"));
-                        order.setCreateDate(rs.getDate("CREATED_DATE"));
-                        order.setCreateTime(rs.getTime("CREATED_TIME"));
-                        order.setStatus(rs.getInt("STATUS"));
-                        order.setAuthor(rs.getString("AUTHOR"));
-                        order.setReasonCancel(rs.getString("REASON_CANCEL"));
-                        order.setCostShopping(rs.getDouble("COST_SHOPPING"));
-                        order.setCostDelivery(rs.getDouble("COST_DELIVERY"));
-                        order.setTotalCost(rs.getDouble("TOTAL_COST"));
-                        order.setRefundCost(rs.getDouble("REFUND_COST"));
-                        order.setDateDelivery(rs.getDate("DATE_DELIVERY"));
-                        order.setTimeDelivery(rs.getTime("TIME_DELIVERY"));
-                    }
-                }
-            } finally {
-                if (rs != null) {
-                    rs.close();
-                }
-                if (stmt != null) {
-                    stmt.close();
-                }
-                if (con != null) {
-                    con.close();
-                }
-            }
-            return order;
         }
 
         @Override

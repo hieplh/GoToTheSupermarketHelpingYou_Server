@@ -147,4 +147,9 @@ public class OrderShipper {
         this.details = details;
     }
 
+    @Override
+    public String toString() {
+        return "OrderShipper{" + "id=" + id + ", cust=" + cust + ", addressDelivery=" + addressDelivery + ", market=" + market + ", note=" + note + ", shipper=" + shipper + ", status=" + status + ", costShopping=" + costShopping + ", costDelivery=" + costDelivery + ", totalCost=" + totalCost + ", dateDelivery=" + dateDelivery + ", timeDelivery=" + timeDelivery + ", details=" + details + '}';
+    }
+
 }

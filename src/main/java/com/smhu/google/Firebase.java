@@ -3,13 +3,10 @@ package com.smhu.google;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
-import com.google.firebase.messaging.BatchResponse;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import org.springframework.core.io.ClassPathResource;
 
@@ -28,23 +25,14 @@ public class Firebase {
         }
     }
 
-    public BatchResponse pushNotifyOrdedrToShipper(String topic, Map<String, String> mapData) throws FirebaseMessagingException, IOException {
+    public String pushNotifyOrdersToShipper(String token, Map<String, String> map) throws FirebaseMessagingException, IOException {
         initOptions();
-        List<Message> list = null;
-        for (Map.Entry<String, String> data : mapData.entrySet()) {
-            if (list == null) {
-                list = new ArrayList<>();
-            }
-            list.add(Message.builder()
-                    .setTopic(topic)
-                    .putData("order", data.getKey())
-                    .putData("distance", data.getValue())
-                    .build());
-        }
-
-        return FirebaseMessaging.getInstance().sendAll(list);
+        return FirebaseMessaging.getInstance().send(Message.builder()
+                .setToken(token)
+                .putAllData(map)
+                .build());
     }
-    
+
     public String pushNotifyByToken(Map<String, String> token, Map<String, String> values) throws FirebaseMessagingException, IOException {
         initOptions();
         return FirebaseMessaging.getInstance().send(Message.builder()
@@ -62,4 +50,20 @@ public class Firebase {
                 .putData("lng", lng)
                 .build());
     }
+
+//    public static void main(String[] args) throws IOException, FirebaseMessagingException {
+//        InputStream is = new FileInputStream("C:\\Users\\Admin\\Desktop\\Capstone\\GototheSupermarketHelpingYou\\src\\main\\resources\\gothetosupermarkethelpingyou-firebase-adminsdk-hxbba-c08e13d162.json");
+//        FirebaseOptions options = FirebaseOptions.builder()
+//                .setCredentials(GoogleCredentials.fromStream(is))
+//                .build();
+//        if (FirebaseApp.getApps().isEmpty()) {
+//            FirebaseApp.initializeApp(options);
+//        }
+//
+//        String result = FirebaseMessaging.getInstance().send(Message.builder()
+//                .setToken("ZByWMHkKE:APA91bGDxAPmcLplLITn1tVpgpvR7n0KEjhC-wucCDHlutq41c3BWM6vkBOfxFPGXeeM-pHJRrmxKTMs10suJkeZ_KZ2mvUgIGq8wKxUxQ5Nk5_r3bACKQAgY__vr03NKujV1u-VPF4i")
+//                .putData("orderId", "123456789")
+//                .build());
+//        System.out.println("Result: " + result);
+//    }
 }

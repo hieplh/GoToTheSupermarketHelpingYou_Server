@@ -1,38 +1,59 @@
 package com.smhu.account;
 
-import java.sql.Date;
-import java.util.List;
 import java.util.Objects;
 
-public class Shipper extends Account implements Comparable<Shipper> {
+public class Shipper extends Account {
 
+    private int numDelivery;
+    private int numCancel;
+    private double wallet;
     private int maxOrder;
     private String lat;
     private String lng;
+    private String tokenFCM;
 
     public Shipper() {
     }
 
     public Shipper(Account account) {
         super(account.getId(), account.getUsername(), account.getFirstName(), account.getMiddleName(), account.getLastName(),
-                account.getEmail(), account.getPhone(), account.getDob(), account.getRole(),
-                account.getNumSuccess(), account.getNumCancel(), account.getWallet(), null);
+                account.getEmail(), account.getPhone(), account.getDob(), account.getRole());
     }
 
-    public Shipper(Account account, int maxOrder) {
+    public Shipper(Account account, int numDelivery, int numCancel, int maxOrder, double wallet, String lat, String lng, String tokenFCM) {
         super(account.getId(), account.getUsername(), account.getFirstName(), account.getMiddleName(), account.getLastName(),
-                account.getEmail(), account.getPhone(), account.getDob(), account.getRole(),
-                account.getNumSuccess(), account.getNumCancel(), account.getWallet(), null);
+                account.getEmail(), account.getPhone(), account.getDob(), account.getRole());
         this.maxOrder = maxOrder;
-    }
-
-    public Shipper(String id, String username, String firstName, String middleName, String lastName,
-            String email, String phone, Date dob, String role, int numSuccess, int numCancel, double wallet, List<Address> addresses,
-            int maxOrder, String lat, String lng) {
-        super(id, username, firstName, middleName, lastName, email, phone, dob, role, numSuccess, numCancel, wallet, addresses);
-        this.maxOrder = maxOrder;
+        this.numDelivery = numDelivery;
+        this.numCancel = numCancel;
+        this.wallet = wallet;
         this.lat = lat;
         this.lng = lng;
+        this.tokenFCM = tokenFCM;
+    }
+
+    public int getNumDelivery() {
+        return numDelivery;
+    }
+
+    public void setNumDelivery(int numDelivery) {
+        this.numDelivery = numDelivery;
+    }
+
+    public int getNumCancel() {
+        return numCancel;
+    }
+
+    public void setNumCancel(int numCancel) {
+        this.numCancel = numCancel;
+    }
+
+    public double getWallet() {
+        return wallet;
+    }
+
+    public void setWallet(double wallet) {
+        this.wallet = wallet;
     }
 
     public int getMaxOrder() {
@@ -59,9 +80,17 @@ public class Shipper extends Account implements Comparable<Shipper> {
         this.lng = lng;
     }
 
+    public String getTokenFCM() {
+        return tokenFCM;
+    }
+
+    public void setTokenFCM(String tokenFCM) {
+        this.tokenFCM = tokenFCM;
+    }
+
     @Override
     public String toString() {
-        return "Shipper{" + "id=" + this.getId() + ", maxOrder=" + maxOrder + ", lat=" + lat + ", lng=" + lng + '}';
+        return "Shipper{" + "id=" + this.getId() + ", lat=" + lat + ", lng=" + lng + ", tokenFCM=" + tokenFCM + '}';
     }
 
     @Override
@@ -80,24 +109,5 @@ public class Shipper extends Account implements Comparable<Shipper> {
             return false;
         }
         return true;
-    }
-
-    @Override
-    public int compareTo(Shipper o) {
-        int sumO1 = this.getNumSuccess() + this.getNumCancel();
-        int sumO2 = o.getNumSuccess() + o.getNumCancel();
-        if (Math.round((double) this.getNumSuccess() / sumO1 * 1000) / 1000.0
-                == Math.round((double) o.getNumSuccess() / sumO2 * 1000) / 1000.0) {
-            if (this.getNumSuccess() > o.getNumSuccess()) {
-                return 1;
-            } else {
-                return -1;
-            }
-        } else if (Math.round((double) this.getNumSuccess() / sumO1 * 1000) / 1000.0
-                > Math.round((double) o.getNumSuccess() / sumO2 * 1000) / 1000.0) {
-            return 1;
-        } else {
-            return -1;
-        }
     }
 }

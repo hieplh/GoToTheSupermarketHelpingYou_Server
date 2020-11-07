@@ -2,7 +2,6 @@ package com.smhu.response.shipper;
 
 import com.smhu.controller.MarketController;
 import com.google.gson.annotations.SerializedName;
-import com.smhu.controller.ShipperController;
 import com.smhu.order.Order;
 
 public class OrderDelivery {
@@ -47,5 +46,10 @@ public class OrderDelivery {
 
     public OrderShipper getOrder() {
         return order;
+    }
+
+    @Override
+    public String toString() {
+        return "OrderDelivery{" + "destination=" + destination + ", value=" + value + ", order=" + order + '}';
     }
 }
