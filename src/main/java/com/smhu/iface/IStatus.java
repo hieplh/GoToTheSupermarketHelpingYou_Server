@@ -6,5 +6,7 @@ public interface IStatus {
     
     public int getStatusIsAccept();
 
+    public int getStatusIsRecharge();
+    
     public int getStatusIsDoneOrder();
 }

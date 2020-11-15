@@ -15,7 +15,6 @@ public class Account {
     private Date dob;
     private String role;
     
-
     public Account() {
     }
 

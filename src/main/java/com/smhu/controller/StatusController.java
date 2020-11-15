@@ -36,6 +36,18 @@ public class StatusController {
         }
 
         @Override
+        public int getStatusIsRecharge() {
+            return StatusController.mapStatus.keySet()
+                    .stream()
+                    .filter((s) -> {
+                        return s.toString().matches("1\\d");
+                    })
+                    .mapToInt((value) -> {
+                        return value;
+                    }).min().getAsInt();
+        }
+        
+        @Override
         public int getStatusIsPaidOrder() {
             return StatusController.mapStatus.keySet()
                     .stream()
@@ -46,6 +58,5 @@ public class StatusController {
                         return value;
                     }).max().getAsInt();
         }
-
     }
 }

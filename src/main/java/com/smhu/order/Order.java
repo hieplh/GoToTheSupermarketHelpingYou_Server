@@ -1,11 +1,12 @@
 package com.smhu.order;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.sql.Date;
 import java.sql.Time;
 import java.util.List;
 import java.util.Objects;
 
-public class Order implements Cloneable {
+public class Order implements Cloneable, Comparable<Order> {
 
     private String id;
     private String cust;
@@ -28,6 +29,8 @@ public class Order implements Cloneable {
     private Date dateDelivery;
     private Time timeDelivery;
     private List<OrderDetail> details;
+    
+    @JsonIgnore
     private List<Evidence> evidences;
 
     public Order() {
@@ -255,14 +258,17 @@ public class Order implements Cloneable {
             return false;
         }
         final Order other = (Order) obj;
-        if (!Objects.equals(this.id, other.id)) {
-            return false;
-        }
-        return true;
+        return Objects.equals(this.id, other.id);
     }
 
     @Override
     protected Object clone() throws CloneNotSupportedException {
-        return super.clone(); //To change body of generated methods, choose Tools | Templates.
+        return super.clone();
+    }
+
+    @Override
+    public int compareTo(Order o) {
+        return this.timeDelivery.compareTo(o.timeDelivery) != 0
+                ? (this.timeDelivery.compareTo(o.timeDelivery)) : (this.createTime.compareTo(o.createTime));
     }
 }

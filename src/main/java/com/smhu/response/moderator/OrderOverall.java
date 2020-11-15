@@ -2,7 +2,8 @@ package com.smhu.response.moderator;
 
 import com.smhu.account.Account;
 import com.smhu.account.Shipper;
-import com.smhu.market.Market;
+import com.smhu.account.ShipperAlter;
+import com.smhu.entity.Market;
 import com.smhu.order.Evidence;
 import com.smhu.order.Order;
 import com.smhu.order.OrderDetail;
@@ -33,6 +34,7 @@ public class OrderOverall {
     private Date dateDelivery;
     private Time timeDelivery;
     private List<OrderDetail> details;
+    private List<ShipperAlter> alters;
     private List<Evidence> evidences;
 
     public OrderOverall() {
@@ -232,6 +234,14 @@ public class OrderOverall {
 
     public void setEvidences(List<Evidence> evidences) {
         this.evidences = evidences;
+    }
+
+    public List<ShipperAlter> getAlters() {
+        return alters;
+    }
+
+    public void setAlters(List<ShipperAlter> alters) {
+        this.alters = alters;
     }
 
     @Override

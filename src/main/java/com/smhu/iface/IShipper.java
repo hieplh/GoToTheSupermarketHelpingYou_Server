@@ -1,6 +1,7 @@
 package com.smhu.iface;
 
 import com.smhu.account.Shipper;
+import java.sql.SQLException;
 
 public interface IShipper {
 
@@ -16,4 +17,8 @@ public interface IShipper {
 //    public Shipper getInProgressShipperAccount(String id);
 
     public void changeStatusOfShipper(String shipperId);
+    
+    public int updateNumDeliveryOfShipper(String shipperId, int num) throws ClassNotFoundException, SQLException;
+    
+    public int updateNumCancelOfShipper(String shipperId, int num) throws ClassNotFoundException, SQLException;
 }

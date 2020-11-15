@@ -8,7 +8,7 @@ import com.smhu.controller.StatusController;
 import com.smhu.helper.PropertiesWithJavaConfig;
 import com.smhu.iface.IMain;
 import com.smhu.iface.IStatus;
-import com.smhu.market.Market;
+import com.smhu.entity.Market;
 import com.smhu.order.Order;
 import com.smhu.order.OrderDetail;
 import com.smhu.status.Status;
@@ -45,7 +45,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class GototheSupermarketHelpingYouApplication {
 
     final String ORDER_RELEASE_CONFIG_FILE_PATH = "order-release.properties";
-    
+
     MainService service;
     IMain mainListener;
     IStatus statusListener;
@@ -131,7 +131,7 @@ public class GototheSupermarketHelpingYouApplication {
         public Properties loadFileConfig(String path) throws IOException {
             return new PropertiesWithJavaConfig(path).getProperties();
         }
-        
+
         @Override
         public Map<String, String> loadRoles() throws SQLException, ClassNotFoundException {
             return new AccountController().getAccountListener().getRoles();
@@ -181,7 +181,6 @@ public class GototheSupermarketHelpingYouApplication {
 //                Logger.getLogger(GototheSupermarketHelpingYouApplication.class.getName()).log(Level.SEVERE, e.getMessage());
 //            }
 //        }
-
         @Override
         public List<Market> loadMarket() throws SQLException, ClassNotFoundException {
             return new MarketController().getMarketListener().getBranchMarkets();

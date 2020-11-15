@@ -1,3 +1,5 @@
+package com.smhu.entity;
+
 //package com.smhu.enity;
 //
 //import javax.persistence.Column;

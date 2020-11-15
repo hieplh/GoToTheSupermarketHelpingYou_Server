@@ -75,7 +75,7 @@ public class HistoryController {
                 if (con != null) {
 
                     StringBuilder sql = new StringBuilder();
-                    sql.append("SELECT O.ID, O.CREATED_DATE, O.CREATED_TIME, O.ADDRESS_DELIVERY, O.SHIPPER, \n"
+                    sql.append("SELECT O.ID, O.CREATED_DATE, O.CREATED_TIME, O.TIME_DELIVERY, O.LAST_UPDATE, O.ADDRESS_DELIVERY, O.SHIPPER, \n"
                             + "M.NAME, O.NOTE, O.COST_DELIVERY, O.COST_SHOPPING, O.TOTAL_COST")
                             .append("\n");
                     sql.append("FROM ORDERS O\n"
@@ -116,6 +116,8 @@ public class HistoryController {
                         history.setId(rs.getString("ID"));
                         history.setCreateDate(rs.getDate("CREATED_DATE"));
                         history.setCreateTime(rs.getTime("CREATED_TIME"));
+                        history.setReceiveTime(rs.getTime("TIME_DELIVERY"));
+                        history.setDeliveryTime(rs.getTime("LAST_UPDATE"));
                         history.setAddressDelivery(rs.getString("ADDRESS_DELIVERY"));
                         history.setShipper(rs.getString("SHIPPER"));
                         history.setMarketName(rs.getString("NAME"));

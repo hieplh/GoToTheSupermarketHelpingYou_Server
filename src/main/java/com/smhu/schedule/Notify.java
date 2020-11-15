@@ -1,19 +1,23 @@
 package com.smhu.schedule;
 
-import com.smhu.account.Shipper;
 import com.smhu.controller.OrderController;
 import com.smhu.iface.IOrder;
-import com.smhu.controller.ShipperController;
-import java.util.Iterator;
+import com.smhu.system.SystemTime;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
 public class Notify {
 
-    IOrder orderListener = new OrderController().getOrderListener();
-
-    //@Scheduled(fixedRate = 30 * 1000)
+//    @Scheduled(fixedRate = 15 * 1000)
+    public void removeOrder() {
+        SystemTime systemTime = new SystemTime();
+        systemTime.checkOrderOutOfTimeRelease();
+    }
+    
+    @Scheduled(fixedRate = 20 * 1000)
     public void scanOrder() {
+        IOrder orderListener = new OrderController().getOrderListener();
         orderListener.scanOrdesrReleaseToShippers();
     }
 

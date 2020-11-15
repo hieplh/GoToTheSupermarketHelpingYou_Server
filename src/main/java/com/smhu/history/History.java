@@ -12,6 +12,8 @@ public class History {
     private String shipper;
     private Date createDate;
     private Time createTime;
+    private Time receiveTime;
+    private Time deliveryTime;
     private double costShopping;
     private double costDelivery;
     private double totalCost;
@@ -19,7 +21,7 @@ public class History {
     public History() {
     }
 
-    public History(String id, String addressDelivery, String marketName, String note, String shipper, Date createDate, Time createTime, double costShopping, double costDelivery, double totalCost) {
+    public History(String id, String addressDelivery, String marketName, String note, String shipper, Date createDate, Time createTime, Time receiveTime, Time deliveryTime, double costShopping, double costDelivery, double totalCost) {
         this.id = id;
         this.addressDelivery = addressDelivery;
         this.marketName = marketName;
@@ -27,6 +29,8 @@ public class History {
         this.shipper = shipper;
         this.createDate = createDate;
         this.createTime = createTime;
+        this.receiveTime = receiveTime;
+        this.deliveryTime = deliveryTime;
         this.costShopping = costShopping;
         this.costDelivery = costDelivery;
         this.totalCost = totalCost;
@@ -110,6 +114,22 @@ public class History {
 
     public void setTotalCost(double totalCost) {
         this.totalCost = totalCost;
+    }
+
+    public Time getReceiveTime() {
+        return receiveTime;
+    }
+
+    public void setReceiveTime(Time receiveTime) {
+        this.receiveTime = receiveTime;
+    }
+
+    public Time getDeliveryTime() {
+        return deliveryTime;
+    }
+
+    public void setDeliveryTime(Time deliveryTime) {
+        this.deliveryTime = deliveryTime;
     }
 
 }

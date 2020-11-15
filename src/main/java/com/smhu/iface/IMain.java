@@ -1,6 +1,6 @@
 package com.smhu.iface;
 
-import com.smhu.market.Market;
+import com.smhu.entity.Market;
 import com.smhu.order.Order;
 import com.smhu.status.Status;
 import java.sql.Date;

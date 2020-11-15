@@ -2,7 +2,12 @@ package com.smhu.controller;
 
 import com.smhu.response.shipper.OrderDelivery;
 import com.smhu.account.Shipper;
+import com.smhu.account.ShipperAlter;
 import com.smhu.iface.IShipper;
+import com.smhu.utils.DBUtils;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -98,6 +103,58 @@ public class ShipperController {
         }
 
         @Override
+        public int updateNumDeliveryOfShipper(String shipperId, int num) throws ClassNotFoundException, SQLException {
+            Connection con = null;
+            PreparedStatement stmt = null;
+
+            try {
+                con = DBUtils.getConnection();
+                if (con != null) {
+
+                    String sql = "EXEC UPDATE_NUM_SUCCESS ?, ?";
+                    stmt = con.prepareStatement(sql);
+                    stmt.setString(1, shipperId);
+                    stmt.setInt(2, num);
+                    return stmt.executeUpdate() > 0 ? 1 : 0;
+                }
+            } finally {
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (con != null) {
+                    con.close();
+                }
+            }
+            return 0;
+        }
+
+        @Override
+        public int updateNumCancelOfShipper(String shipperId, int num) throws ClassNotFoundException, SQLException {
+            Connection con = null;
+            PreparedStatement stmt = null;
+
+            try {
+                con = DBUtils.getConnection();
+                if (con != null) {
+
+                    String sql = "EXEC UPDATE_NUM_CANCEL ?, ?";
+                    stmt = con.prepareStatement(sql);
+                    stmt.setString(1, shipperId);
+                    stmt.setInt(2, num);
+                    return stmt.executeUpdate() > 0 ? 1 : 0;
+                }
+            } finally {
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (con != null) {
+                    con.close();
+                }
+            }
+            return 0;
+        }
+
+        @Override
         public void changeStatusOfShipper(String shipperId) {
             if (mapAvailableShipper.containsKey(shipperId)) {
                 Shipper shipper = mapAvailableShipper.remove(shipperId);
@@ -108,15 +165,6 @@ public class ShipperController {
             }
         }
 
-//        @Override
-//        public void addShipperAccountAvailable(Shipper shipper) {
-//            mapAvailableShipper.put(shipper.getId(), shipper);
-//        }
-//
-//        @Override
-//        public void addShipperAccountInProgress(Shipper shipper) {
-//            mapInProgressShipper.put(shipper.getId(), shipper);
-//        }
         Shipper getAvailableShipperAccount(String id) {
             return mapAvailableShipper.getOrDefault(id, null);
         }
@@ -125,29 +173,5 @@ public class ShipperController {
             return mapInProgressShipper.getOrDefault(id, null);
         }
 
-//        String getShipperInProgress(String shipperId) {
-//            return listInProgressShipper.stream()
-//                    .filter(id -> id.equals(id))
-//                    .findFirst()
-//                    .orElseThrow(null);
-//        }
-//        String checkOrderShipperRejected(List<String> listOrderReject, String orderId) {
-//            return listOrderReject.stream()
-//                    .filter(id -> orderId.equals(id))
-//                    .findFirst()
-//                    .orElse(null);
-//        }
-//
-//        int getTheShortestDistance(List<String> listDistanceValue) {
-//            int index = 0;
-//            int tmp = Integer.parseInt(listDistanceValue.get(0));
-//            for (int i = 1; i < listDistanceValue.size(); i++) {
-//                if (tmp > Integer.parseInt(listDistanceValue.get(i))) {
-//                    index = i;
-//                    tmp = Integer.parseInt(listDistanceValue.get(i));
-//                }
-//            }
-//            return index;
-//        }
     }
 }

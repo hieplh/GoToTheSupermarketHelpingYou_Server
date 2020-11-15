@@ -2,13 +2,16 @@ package com.smhu.controller;
 
 import com.smhu.account.Account;
 import com.smhu.account.AccountLogin;
+import com.smhu.account.AccountUpdateWallet;
 import com.smhu.account.Address;
 import com.smhu.account.Customer;
 import com.smhu.account.Shipper;
 import com.smhu.iface.IAccount;
 import com.smhu.iface.IShipper;
+import com.smhu.iface.ITransaction;
 import com.smhu.response.ResponseMsg;
 import com.smhu.utils.DBUtils;
+
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -22,11 +25,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -51,6 +55,27 @@ public class AccountController {
         shipperListener = new ShipperController().getShipperListener();
     }
 
+    @CrossOrigin
+    @PutMapping("/account/")
+    public ResponseEntity<?> updateWalletAccount(@RequestBody AccountUpdateWallet account) {
+        try {
+            int result = service.updateWalletAccount(account.getId(), account.getAmount());
+            if (result <= 0) {
+                return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
+            }
+            ITransaction transactionListener = new TransactionController().getTransactionListener();
+            int checkTransaction = transactionListener.updateRechargeTransaction(account.getId(), account.getAmount());
+            if (checkTransaction <= 0) {
+                return new ResponseEntity<>(new ResponseMsg("Update Traction Error. Please try again!"), HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        } catch (ClassNotFoundException | SQLException | NumberFormatException e) {
+            Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, "Update Wallet: {0}", e.getMessage());
+            return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @CrossOrigin
     @PostMapping("/account/username")
     public ResponseEntity<?> getAccountByUsername(@RequestBody AccountLogin accountObj) {
         Object obj;
@@ -150,38 +175,6 @@ public class AccountController {
         final String EMAIL = "EMAIL";
         final String PHONE = "PHONE";
 
-        @Override
-        public Map<String, String> getRoles() throws SQLException, ClassNotFoundException {
-            Connection con = null;
-            PreparedStatement stmt = null;
-            ResultSet rs = null;
-            Map<String, String> map = new HashMap<>();
-
-            try {
-                con = DBUtils.getConnection();
-                if (con != null) {
-                    String sql = "SELECT *\n"
-                            + "FROM GET_ALL_ROLES";
-                    stmt = con.prepareStatement(sql);
-                    rs = stmt.executeQuery();
-                    while (rs.next()) {
-                        map.put(rs.getString("ID"), rs.getString("DESCRIPTION"));
-                    }
-                }
-            } finally {
-                if (rs != null) {
-                    rs.close();
-                }
-                if (stmt != null) {
-                    stmt.close();
-                }
-                if (con != null) {
-                    con.close();
-                }
-            }
-            return map;
-        }
-
         String getEncryptionPassword(String username, String type) throws SQLException, ClassNotFoundException {
             if (!AccountController.mapRoles.containsKey(type)) {
                 return null;
@@ -240,77 +233,6 @@ public class AccountController {
                 hexString.append(hex);
             }
             return hexString.toString();
-        }
-
-        @Override
-        public Object getAccountById(String id, String type) throws SQLException, ClassNotFoundException {
-            Connection con = null;
-            PreparedStatement stmt = null;
-            ResultSet rs = null;
-
-            try {
-                con = DBUtils.getConnection();
-                if (con != null) {
-                    String sql = "SELECT *\n"
-                            + "FROM GET_ACCOUNT\n"
-                            + "WHERE ID = ?";
-                    if (type.toUpperCase().equals(SHIPPER)) {
-                        sql = "SELECT *,\n"
-                                + "ISNULL((\n"
-                                + "	SELECT MAX_ORDER\n"
-                                + "	FROM MAX_ACCEPT_ORDER\n"
-                                + "	WHERE ACCOUNT = ID\n"
-                                + "), 0) AS MAX_ORDER\n"
-                                + "FROM GET_ACCOUNT \n"
-                                + "WHERE ID = ?";
-                    }
-                    stmt = con.prepareStatement(sql);
-                    stmt.setString(1, id);
-                    rs = stmt.executeQuery();
-                    if (rs.next()) {
-                        if (type.toUpperCase().equals(SHIPPER)) {
-                            return new Shipper(new Account(rs.getString("ID"),
-                                    rs.getString("USERNAME"),
-                                    rs.getString("FIRST_NAME"),
-                                    rs.getString("MID_NAME"),
-                                    rs.getString("LAST_NAME"),
-                                    rs.getString("EMAIL"),
-                                    rs.getString("PHONE"),
-                                    rs.getDate("DOB"),
-                                    rs.getString("ROLE")),
-                                    rs.getInt("NUM_SUCCESS"),
-                                    rs.getInt("NUM_CANCEL"),
-                                    rs.getInt("MAX_ORDER"),
-                                    rs.getDouble("WALLET"),
-                                    null, null, null);
-                        }
-                        return new Customer(new Account(rs.getString("ID"),
-                                rs.getString("USERNAME"),
-                                rs.getString("FIRST_NAME"),
-                                rs.getString("MID_NAME"),
-                                rs.getString("LAST_NAME"),
-                                rs.getString("EMAIL"),
-                                rs.getString("PHONE"),
-                                rs.getDate("DOB"),
-                                rs.getString("ROLE")),
-                                rs.getInt("NUM_SUCCESS"),
-                                rs.getInt("NUM_CANCEL"),
-                                rs.getDouble("WALLET"),
-                                null);
-                    }
-                }
-            } finally {
-                if (rs != null) {
-                    rs.close();
-                }
-                if (stmt != null) {
-                    stmt.close();
-                }
-                if (con != null) {
-                    con.close();
-                }
-            }
-            return null;
         }
 
         Object getAccountByUsername(String username, String password, String type) throws SQLException, ClassNotFoundException {
@@ -488,6 +410,145 @@ public class AccountController {
                 }
             }
             return list;
+        }
+
+        @Override
+        public Map<String, String> getRoles() throws SQLException, ClassNotFoundException {
+            Connection con = null;
+            PreparedStatement stmt = null;
+            ResultSet rs = null;
+            Map<String, String> map = new HashMap<>();
+
+            try {
+                con = DBUtils.getConnection();
+                if (con != null) {
+                    String sql = "SELECT *\n"
+                            + "FROM GET_ALL_ROLES";
+                    stmt = con.prepareStatement(sql);
+                    rs = stmt.executeQuery();
+                    while (rs.next()) {
+                        map.put(rs.getString("ID"), rs.getString("DESCRIPTION"));
+                    }
+                }
+            } finally {
+                if (rs != null) {
+                    rs.close();
+                }
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (con != null) {
+                    con.close();
+                }
+            }
+            return map;
+        }
+
+        @Override
+        public Object getAccountById(String id, String type) throws SQLException, ClassNotFoundException {
+            Connection con = null;
+            PreparedStatement stmt = null;
+            ResultSet rs = null;
+
+            try {
+                con = DBUtils.getConnection();
+                if (con != null) {
+                    String sql = "SELECT *\n"
+                            + "FROM GET_ACCOUNT\n"
+                            + "WHERE ID = ?";
+                    if (type.toUpperCase().equals(SHIPPER)) {
+                        sql = "SELECT *,\n"
+                                + "ISNULL((\n"
+                                + "	SELECT MAX_ORDER\n"
+                                + "	FROM MAX_ACCEPT_ORDER\n"
+                                + "	WHERE ACCOUNT = ID\n"
+                                + "), 0) AS MAX_ORDER\n"
+                                + "FROM GET_ACCOUNT \n"
+                                + "WHERE ID = ?";
+                    }
+                    stmt = con.prepareStatement(sql);
+                    stmt.setString(1, id);
+                    rs = stmt.executeQuery();
+                    if (rs.next()) {
+                        if (type.toUpperCase().equals(SHIPPER)) {
+                            return new Shipper(new Account(rs.getString("ID"),
+                                    rs.getString("USERNAME"),
+                                    rs.getString("FIRST_NAME"),
+                                    rs.getString("MID_NAME"),
+                                    rs.getString("LAST_NAME"),
+                                    rs.getString("EMAIL"),
+                                    rs.getString("PHONE"),
+                                    rs.getDate("DOB"),
+                                    rs.getString("ROLE")),
+                                    rs.getInt("NUM_SUCCESS"),
+                                    rs.getInt("NUM_CANCEL"),
+                                    rs.getInt("MAX_ORDER"),
+                                    rs.getDouble("WALLET"),
+                                    null, null, null);
+                        } else if (type.toUpperCase().equals(CUSTOMER)) {
+                            return new Customer(new Account(rs.getString("ID"),
+                                    rs.getString("USERNAME"),
+                                    rs.getString("FIRST_NAME"),
+                                    rs.getString("MID_NAME"),
+                                    rs.getString("LAST_NAME"),
+                                    rs.getString("EMAIL"),
+                                    rs.getString("PHONE"),
+                                    rs.getDate("DOB"),
+                                    rs.getString("ROLE")),
+                                    rs.getInt("NUM_SUCCESS"),
+                                    rs.getInt("NUM_CANCEL"),
+                                    rs.getDouble("WALLET"),
+                                    null);
+                        } else {
+                            return new Account(rs.getString("ID"),
+                                    rs.getString("USERNAME"),
+                                    rs.getString("FIRST_NAME"),
+                                    rs.getString("MID_NAME"),
+                                    rs.getString("LAST_NAME"),
+                                    rs.getString("EMAIL"),
+                                    rs.getString("PHONE"),
+                                    rs.getDate("DOB"),
+                                    rs.getString("ROLE"));
+                        }
+                    }
+                }
+            } finally {
+                if (rs != null) {
+                    rs.close();
+                }
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (con != null) {
+                    con.close();
+                }
+            }
+            return null;
+        }
+
+        @Override
+        public int updateWalletAccount(String accountId, double amount) throws ClassNotFoundException, SQLException {
+            Connection con = null;
+            PreparedStatement stmt = null;
+
+            try {
+                con = DBUtils.getConnection();
+                if (con != null) {
+                    String sql = "EXEC UPDATE_WALLET_ACCOUNT ?, ?";
+                    stmt = con.prepareStatement(sql);
+                    stmt.setString(1, accountId);
+                    stmt.setDouble(2, amount);
+                    return stmt.executeUpdate();
+                }
+            } finally {
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (con != null) {
+                    con.close();
+                }
+            }
+            return 0;
         }
     }
 }

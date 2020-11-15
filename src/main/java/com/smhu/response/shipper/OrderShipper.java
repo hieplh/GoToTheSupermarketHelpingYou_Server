@@ -1,6 +1,6 @@
 package com.smhu.response.shipper;
 
-import com.smhu.market.Market;
+import com.smhu.entity.Market;
 import com.smhu.order.OrderDetail;
 import java.sql.Date;
 import java.sql.Time;

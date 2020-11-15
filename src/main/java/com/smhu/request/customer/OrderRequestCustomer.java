@@ -1,11 +1,11 @@
-package com.smhu.response.customer;
+package com.smhu.request.customer;
 
 import com.smhu.order.OrderDetail;
 import java.sql.Date;
 import java.sql.Time;
 import java.util.List;
 
-public class OrderCustomer {
+public class OrderRequestCustomer {
 
     private String cust;
     private String addressDelivery;
@@ -18,10 +18,10 @@ public class OrderCustomer {
     private Time timeDelivery;
     private List<OrderDetail> details;
 
-    public OrderCustomer() {
+    public OrderRequestCustomer() {
     }
 
-    public OrderCustomer(String cust, String addressDelivery, String market, String note, double costShopping, double costDelivery, double totalCost, Date dateDelivery, Time timeDelivery, List<OrderDetail> details) {
+    public OrderRequestCustomer(String cust, String addressDelivery, String market, String note, double costShopping, double costDelivery, double totalCost, Date dateDelivery, Time timeDelivery, List<OrderDetail> details) {
         this.cust = cust;
         this.addressDelivery = addressDelivery;
         this.market = market;
