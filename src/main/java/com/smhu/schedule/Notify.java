@@ -9,16 +9,24 @@ import org.springframework.stereotype.Component;
 @Component
 public class Notify {
 
+    public static boolean ENABLE_SCAN_SCHEDULE = false;
+    private final IOrder orderListener;
+
+    public Notify() {
+        orderListener = new OrderController().getOrderListener();
+    }
+
 //    @Scheduled(fixedRate = 15 * 1000)
     public void removeOrder() {
         SystemTime systemTime = new SystemTime();
         systemTime.checkOrderOutOfTimeRelease();
     }
-    
+
     @Scheduled(fixedRate = 20 * 1000)
     public void scanOrder() {
-        IOrder orderListener = new OrderController().getOrderListener();
-        orderListener.scanOrdesrReleaseToShippers();
+        if (ENABLE_SCAN_SCHEDULE) {
+            orderListener.scanOrdesrReleaseToShippers();
+        }
     }
 
 //    private void clear() {

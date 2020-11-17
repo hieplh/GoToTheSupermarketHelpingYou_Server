@@ -6,30 +6,14 @@ import java.io.InputStream;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.List;
-import java.util.Properties;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import org.springframework.core.io.ClassPathResource;
 
 public class UrlConnection {
 
     private static final String URL = "https://maps.googleapis.com/maps/api/distancematrix/json?units=imperial";
-    private final String PATH = "application.properties";
-
-    private Properties properties;
 
     public UrlConnection() {
-        try {
-            properties = new PropertiesWithJavaConfig(PATH).getProperties();
-        } catch (IOException e) {
-            try {
-                properties = new Properties();
-                properties.load(new ClassPathResource(PATH).getInputStream());
-            } catch (IOException ex) {
-                Logger.getLogger(UrlConnection.class.getName()).log(Level.SEVERE, ex.getMessage());
-            }
-        }
+        System.setProperty("https.protocols", "TLSv1,TLSv1.1,TLSv1.2");
     }
 
     public InputStream openConnectionFromSourceToDestination(String[] oldShipper, String[] newShipper) throws IOException {
@@ -49,7 +33,8 @@ public class UrlConnection {
         sb.append("&language=vi");
         sb.append("&mode=driving");
         sb.append("&key=");
-        sb.append(properties.getProperty("google.api.key.distance.matrix"));
+        sb.append(PropertiesWithJavaConfig.PROPERTIES.get("google.api.key.distance.matrix"));
+
         return new URL(sb.toString()).openStream();
     }
 
@@ -78,7 +63,8 @@ public class UrlConnection {
         sb.append("&language=vi");
         sb.append("&mode=driving");
         sb.append("&key=");
-        sb.append(properties.getProperty("google.api.key.distance.matrix"));
+        sb.append(PropertiesWithJavaConfig.PROPERTIES.get("google.api.key.distance.matrix"));
+
         return new URL(sb.toString()).openStream();
     }
 
@@ -105,7 +91,8 @@ public class UrlConnection {
         sb.append("&language=vi");
         sb.append("&mode=driving");
         sb.append("&key=");
-        sb.append(properties.getProperty("google.api.key.distance.matrix"));
+        sb.append(PropertiesWithJavaConfig.PROPERTIES.get("google.api.key.distance.matrix"));
+
         return new URL(sb.toString()).openStream();
     }
 }

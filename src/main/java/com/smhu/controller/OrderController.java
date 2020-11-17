@@ -1,7 +1,8 @@
 package com.smhu.controller;
 
-import static com.smhu.controller.ShipperController.mapMechanismReleaseOrder;
 import com.google.firebase.messaging.FirebaseMessagingException;
+
+import static com.smhu.controller.ShipperController.mapMechanismReleaseOrder;
 import com.smhu.GototheSupermarketHelpingYouApplication;
 import com.smhu.account.Account;
 import com.smhu.account.Customer;
@@ -29,6 +30,7 @@ import com.smhu.order.OrderDetail;
 import com.smhu.response.customer.OrderResponseCustomer;
 import com.smhu.response.moderator.OrderOverall;
 import com.smhu.response.shipper.OrderDelivery;
+import com.smhu.response.shipper.OrderDoneDelivery;
 import com.smhu.response.shipper.OrderShipper;
 import com.smhu.system.SystemTime;
 import com.smhu.url.UrlConnection;
@@ -37,13 +39,16 @@ import com.smhu.utils.DBUtils;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Time;
+
 import java.time.LocalTime;
 import java.time.ZoneId;
+
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -116,7 +121,7 @@ public class OrderController {
     @GetMapping("order/{type}/{id}")
     public ResponseEntity<?> getOrderById(@PathVariable("id") String id, @PathVariable("type") String type) {
         try {
-            Order order = service.getOrderById(id, STAFF);
+            Order order = service.getOrderById(id, type);
             if (order == null) {
                 return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
             }
@@ -172,7 +177,7 @@ public class OrderController {
             return new ResponseEntity<>(null, HttpStatus.OK);
         }
         Collections.sort(listTmp);
-        
+
         SyncHelper sync = new SyncHelper();
         for (Order order : listTmp) {
             if (listResponseOrders == null) {
@@ -182,7 +187,7 @@ public class OrderController {
         }
         return new ResponseEntity<>(listResponseOrders, HttpStatus.OK);
     }
-    
+
     @GetMapping("orders/all")
     public ResponseEntity<?> getAllOrders() {
         List<Order> list = new ArrayList<>();
@@ -232,22 +237,23 @@ public class OrderController {
                     detail.setId(result + String.valueOf(++count));
                 }
             }
-//            if (service.insertOrderTimeTravel(result, order.getTimeTravel()) == 0) {
-//                return new ResponseEntity<>(new ResponseMsg("Insert new order time travel failed"), HttpStatus.INTERNAL_SERVER_ERROR);
-//            }
+            transactionListener.updateDeliveryTransaction(order.getCust(), order.getTotalCost() * -1,
+                    status, order.getId());
+            accountListener.updateWalletAccount(order.getCust(), order.getTotalCost() * -1);
 
             service.addOrderInqueue(order);
-
         } catch (SQLException | ClassNotFoundException e) {
             Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
             return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return new ResponseEntity<>(new ResponseMsg(result), HttpStatus.OK);
     }
-    
+
     @PutMapping("/orders/update")
     public ResponseEntity<?> updatetOrder(@RequestBody List<OrderShipper> listOrders) {
-        List<OrderShipper> listResults = new ArrayList<>();
+        List<OrderShipper> listResults = null;
+        List<OrderDoneDelivery> listVerificationResults = null;
+        SyncHelper sync = new SyncHelper();
         Shipper shipper = null;
         int status;
         boolean isFirstAcceptOrder = false;
@@ -303,8 +309,15 @@ public class OrderController {
                     transactionListener.updateDeliveryTransaction(shipper.getId(), totalReceivedCost, status,
                             orderDoneObj.getId());
                     accountListener.updateWalletAccount(shipper.getId(), totalReceivedCost);
+
+                    if (listVerificationResults == null) {
+                        listVerificationResults = new ArrayList();
+                    }
+                    listVerificationResults.add(sync.syncOrderSystemToOrderDoneDelivery(orderDoneObj));
                 } else {
-                    SyncHelper sync = new SyncHelper();
+                    if (listResults == null) {
+                        listResults = new ArrayList<>();
+                    }
                     listResults.add(sync.syncOrderSystemToOrderShipper(order));
                 }
 
@@ -314,19 +327,6 @@ public class OrderController {
             } catch (SQLException | ClassNotFoundException e) {
                 Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
                 return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-            if (status == 21) {
-                Map<String, String> token = new HashMap<>();
-                token.put("cust_id", order.getCust());
-                Map<String, String> values = new HashMap<>();
-                values.put("msg", "Đơn hàng của bạn đã có shipper nhận");
-                values.put("order_id", order.getId());
-
-//                try {
-//                    new Firebase().pushNotifyByToken(token, values);
-//                } catch (FirebaseMessagingException | IOException e) {
-//                    Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
-//                }
             }
         } // end for
         if (isFirstAcceptOrder) {
@@ -340,10 +340,11 @@ public class OrderController {
             } catch (SQLException | ClassNotFoundException e) {
                 Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
             }
+            return new ResponseEntity<>(listVerificationResults, HttpStatus.OK);
         }
         return new ResponseEntity<>(listResults, HttpStatus.OK);
     }
-    
+
     @GetMapping("switch/{orderId}/{authorId}")
     public ResponseEntity<?> changeShipper(@PathVariable("orderId") String orderId, @PathVariable("authorId") String authorId) {
         DistanceMatrixObject distanceObj;
@@ -775,7 +776,7 @@ public class OrderController {
             }
             return null;
         }
-        
+
         private String splitLocation(String location) {
             return location.split("\\.")[0];
         }
@@ -980,7 +981,7 @@ public class OrderController {
             shipperListener.changeStatusOfShipper(shipper.getId());
         }
 
-        private void sendNotificationOrderToShipper(String shipperId, Map<Order, Integer> mapOrdersResult) {
+        private void sendNotificationOrderToShipper(String shipperId) {
             IShipper shipperListener = new ShipperController().getShipperListener();
             Map<String, String> map = new HashMap<>();
             map.put("compulsory", "false");
@@ -989,16 +990,14 @@ public class OrderController {
             try {
                 String result = firebase.pushNotifyOrdersToShipper(shipperListener.getShipper(shipperId).getTokenFCM(), map);
                 System.out.println("Firebase: " + result);
-                System.out.println("");
-            } catch (FirebaseMessagingException | IOException e) {
+            } catch (FirebaseMessagingException | IOException | IllegalArgumentException e) {
                 Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, "Send Notification: {0}", e.getMessage());
-            } catch (IllegalArgumentException e) {
-
             }
         }
 
         @Override
         public void scanOrdesrReleaseToShippers() {
+            System.out.println("Scan Order Release For Shipper");
             if (mapOrderInQueue.isEmpty()) {
                 return;
             }
@@ -1039,14 +1038,13 @@ public class OrderController {
                                     }
 
                                     if (mapOrdersResult != null) {
-                                        System.out.println("Order Release For Shipper");
-                                        System.out.println("Shipper: " + shipper.getId());
+                                        System.out.println("Shipper = " + shipper.getId() + "is has Orders");
                                         for (Map.Entry<Order, Integer> entry : mapOrdersResult.entrySet()) {
                                             System.out.println(entry.getKey());
                                         }
                                         it.remove();
                                         preProcessOrderRelease(shipper, mapOrdersResult);
-                                        sendNotificationOrderToShipper(shipper.getId(), mapOrdersResult);
+                                        sendNotificationOrderToShipper(shipper.getId());
                                     }
                                 }
                             }
@@ -1058,6 +1056,7 @@ public class OrderController {
                     }
                 }
             }
+            System.out.println("");
         }
     }
 }

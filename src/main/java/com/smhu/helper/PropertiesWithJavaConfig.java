@@ -6,14 +6,11 @@ import org.springframework.core.io.ClassPathResource;
 
 public class PropertiesWithJavaConfig {
 
-    private final Properties properties;
+    public static final Properties PROPERTIES = new Properties();
 
-    public PropertiesWithJavaConfig(String path) throws IOException {
-        properties = new Properties();
-        properties.load(new ClassPathResource(path).getInputStream());
-    }
-
-    public Properties getProperties() {
-        return properties;
+    public static Properties getProperties(String path) throws IOException {
+        Properties prop = new Properties();
+        prop.load(new ClassPathResource(path).getInputStream());
+        return prop;
     }
 }

@@ -1,5 +1,6 @@
 package com.smhu.account;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.Objects;
 
 public class Shipper extends Account {
@@ -10,6 +11,8 @@ public class Shipper extends Account {
     private int maxOrder;
     private String lat;
     private String lng;
+    
+    @JsonIgnore
     private String tokenFCM;
 
     public Shipper() {

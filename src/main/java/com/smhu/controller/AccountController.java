@@ -29,6 +29,8 @@ import java.util.logging.Logger;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -56,23 +58,58 @@ public class AccountController {
     }
 
     @CrossOrigin
-    @PutMapping("/account/")
-    public ResponseEntity<?> updateWalletAccount(@RequestBody AccountUpdateWallet account) {
+    @GetMapping("/accounts/{type}/count")
+    public ResponseEntity<?> getCountAccounts(@PathVariable("type") String type) {
         try {
-            int result = service.updateWalletAccount(account.getId(), account.getAmount());
-            if (result <= 0) {
-                return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
-            }
-            ITransaction transactionListener = new TransactionController().getTransactionListener();
-            int checkTransaction = transactionListener.updateRechargeTransaction(account.getId(), account.getAmount());
-            if (checkTransaction <= 0) {
-                return new ResponseEntity<>(new ResponseMsg("Update Traction Error. Please try again!"), HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-        } catch (ClassNotFoundException | SQLException | NumberFormatException e) {
-            Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, "Update Wallet: {0}", e.getMessage());
+            return new ResponseEntity<>(service.getCountAccounts(type), HttpStatus.OK);
+        } catch (ClassNotFoundException | SQLException e) {
+            Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, "Get All Account: {0}", e.getMessage());
             return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @CrossOrigin
+    @GetMapping("/accounts/{type}/{page}")
+    public ResponseEntity<?> getAllAccounts(@PathVariable("type") String type, @PathVariable("page") String page) {
+        try {
+            List<?> result = service.getAccounts(type, page);
+            if (result != null) {
+                for (Object account : result) {
+                    if (account instanceof Customer) {
+                        ((Customer) account).setAddresses(service.getAddressOfAccount(((Customer) account).getId()));
+                    }
+                }
+            }
+
+            return new ResponseEntity<>(service.getAccounts(type, page), HttpStatus.OK);
+        } catch (ClassNotFoundException | SQLException e) {
+            Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, "Get All Account: {0}", e.getMessage());
+            return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @CrossOrigin
+    @GetMapping("/account/{accountId}/{type}")
+    public ResponseEntity<?> getAccountById(@PathVariable("accountId") String id, @PathVariable("type") String type) {
+        try {
+            Object account = service.getAccountById(id, type);
+            if (account == null) {
+                return new ResponseEntity<>(new ResponseMsg("Account ID is not correct"), HttpStatus.NOT_FOUND);
+            }
+
+            if (account instanceof Shipper) {
+                return new ResponseEntity<>((Shipper) account, HttpStatus.OK);
+            } else if (account instanceof Customer) {
+                return new ResponseEntity<>((Customer) account, HttpStatus.OK);
+            } else if (account instanceof Account) {
+                return new ResponseEntity<>((Account) account, HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
+            }
+        } catch (SQLException | ClassNotFoundException e) {
+            Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, "Get Account By Id: {0}", e.getMessage());
+            return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @CrossOrigin
@@ -166,6 +203,26 @@ public class AccountController {
 //        }
 //        return new ResponseEntity<>(account, HttpStatus.OK);
 //    }
+    @CrossOrigin
+    @PutMapping("/account")
+    public ResponseEntity<?> updateWalletAccount(@RequestBody AccountUpdateWallet account) {
+        try {
+            int result = service.updateWalletAccount(account.getId(), account.getAmount());
+            if (result <= 0) {
+                return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
+            }
+            ITransaction transactionListener = new TransactionController().getTransactionListener();
+            int checkTransaction = transactionListener.updateRechargeTransaction(account.getId(), account.getAmount());
+            if (checkTransaction <= 0) {
+                return new ResponseEntity<>(new ResponseMsg("Update Traction Error. Please try again!"), HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        } catch (ClassNotFoundException | SQLException | NumberFormatException e) {
+            Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, "Update Wallet: {0}", e.getMessage());
+            return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
     public IAccount getAccountListener() {
         return accountListener;
     }
@@ -174,6 +231,13 @@ public class AccountController {
 
         final String EMAIL = "EMAIL";
         final String PHONE = "PHONE";
+
+        final int ROWS = 20;
+
+        private int convertPageToIndex(String page) {
+            int tmp = Integer.parseInt(page);
+            return tmp > 0 ? (tmp - 1) * ROWS : 0;
+        }
 
         String getEncryptionPassword(String username, String type) throws SQLException, ClassNotFoundException {
             if (!AccountController.mapRoles.containsKey(type)) {
@@ -372,6 +436,38 @@ public class AccountController {
 //            }
 //            return null;
 //        }
+        int getCountAccounts(String role) throws SQLException, ClassNotFoundException {
+            Connection con = null;
+            PreparedStatement stmt = null;
+            ResultSet rs = null;
+
+            try {
+                con = DBUtils.getConnection();
+                if (con != null) {
+                    String sql = "SELECT COUNT(*)\n"
+                            + "FROM ACCOUNT\n"
+                            + "WHERE ROLE = ?";
+                    stmt = con.prepareStatement(sql);
+                    stmt.setString(1, role);
+                    rs = stmt.executeQuery();
+                    if (rs.next()) {
+                        return rs.getInt(1);
+                    }
+                }
+            } finally {
+                if (rs != null) {
+                    rs.close();
+                }
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (con != null) {
+                    con.close();
+                }
+            }
+            return 0;
+        }
+
         List<Address> getAddressOfAccount(String accountId) throws ClassNotFoundException, SQLException {
             Connection con = null;
             PreparedStatement stmt = null;
@@ -445,7 +541,7 @@ public class AccountController {
         }
 
         @Override
-        public Object getAccountById(String id, String type) throws SQLException, ClassNotFoundException {
+        public Object getAccountById(String id, String role) throws SQLException, ClassNotFoundException {
             Connection con = null;
             PreparedStatement stmt = null;
             ResultSet rs = null;
@@ -455,8 +551,8 @@ public class AccountController {
                 if (con != null) {
                     String sql = "SELECT *\n"
                             + "FROM GET_ACCOUNT\n"
-                            + "WHERE ID = ?";
-                    if (type.toUpperCase().equals(SHIPPER)) {
+                            + "WHERE ID = ? AND ROLE = ?";
+                    if (role.toUpperCase().equals(SHIPPER)) {
                         sql = "SELECT *,\n"
                                 + "ISNULL((\n"
                                 + "	SELECT MAX_ORDER\n"
@@ -464,51 +560,53 @@ public class AccountController {
                                 + "	WHERE ACCOUNT = ID\n"
                                 + "), 0) AS MAX_ORDER\n"
                                 + "FROM GET_ACCOUNT \n"
-                                + "WHERE ID = ?";
+                                + "WHERE ID = ? AND ROLE = ?";
                     }
                     stmt = con.prepareStatement(sql);
                     stmt.setString(1, id);
+                    stmt.setString(2, role);
                     rs = stmt.executeQuery();
                     if (rs.next()) {
-                        if (type.toUpperCase().equals(SHIPPER)) {
-                            return new Shipper(new Account(rs.getString("ID"),
-                                    rs.getString("USERNAME"),
-                                    rs.getString("FIRST_NAME"),
-                                    rs.getString("MID_NAME"),
-                                    rs.getString("LAST_NAME"),
-                                    rs.getString("EMAIL"),
-                                    rs.getString("PHONE"),
-                                    rs.getDate("DOB"),
-                                    rs.getString("ROLE")),
-                                    rs.getInt("NUM_SUCCESS"),
-                                    rs.getInt("NUM_CANCEL"),
-                                    rs.getInt("MAX_ORDER"),
-                                    rs.getDouble("WALLET"),
-                                    null, null, null);
-                        } else if (type.toUpperCase().equals(CUSTOMER)) {
-                            return new Customer(new Account(rs.getString("ID"),
-                                    rs.getString("USERNAME"),
-                                    rs.getString("FIRST_NAME"),
-                                    rs.getString("MID_NAME"),
-                                    rs.getString("LAST_NAME"),
-                                    rs.getString("EMAIL"),
-                                    rs.getString("PHONE"),
-                                    rs.getDate("DOB"),
-                                    rs.getString("ROLE")),
-                                    rs.getInt("NUM_SUCCESS"),
-                                    rs.getInt("NUM_CANCEL"),
-                                    rs.getDouble("WALLET"),
-                                    null);
-                        } else {
-                            return new Account(rs.getString("ID"),
-                                    rs.getString("USERNAME"),
-                                    rs.getString("FIRST_NAME"),
-                                    rs.getString("MID_NAME"),
-                                    rs.getString("LAST_NAME"),
-                                    rs.getString("EMAIL"),
-                                    rs.getString("PHONE"),
-                                    rs.getDate("DOB"),
-                                    rs.getString("ROLE"));
+                        switch (role.toUpperCase()) {
+                            case SHIPPER:
+                                return new Shipper(new Account(rs.getString("ID"),
+                                        rs.getString("USERNAME"),
+                                        rs.getString("FIRST_NAME"),
+                                        rs.getString("MID_NAME"),
+                                        rs.getString("LAST_NAME"),
+                                        rs.getString("EMAIL"),
+                                        rs.getString("PHONE"),
+                                        rs.getDate("DOB"),
+                                        rs.getString("ROLE")),
+                                        rs.getInt("NUM_SUCCESS"),
+                                        rs.getInt("NUM_CANCEL"),
+                                        rs.getInt("MAX_ORDER"),
+                                        rs.getDouble("WALLET"),
+                                        null, null, null);
+                            case CUSTOMER:
+                                return new Customer(new Account(rs.getString("ID"),
+                                        rs.getString("USERNAME"),
+                                        rs.getString("FIRST_NAME"),
+                                        rs.getString("MID_NAME"),
+                                        rs.getString("LAST_NAME"),
+                                        rs.getString("EMAIL"),
+                                        rs.getString("PHONE"),
+                                        rs.getDate("DOB"),
+                                        rs.getString("ROLE")),
+                                        rs.getInt("NUM_SUCCESS"),
+                                        rs.getInt("NUM_CANCEL"),
+                                        rs.getDouble("WALLET"),
+                                        null);
+                            default:
+                                return new Account(rs.getString("ID"),
+                                        rs.getString("USERNAME"),
+                                        rs.getString("FIRST_NAME"),
+                                        rs.getString("MID_NAME"),
+                                        rs.getString("LAST_NAME"),
+                                        rs.getString("EMAIL"),
+                                        rs.getString("PHONE"),
+                                        rs.getDate("DOB"),
+                                        rs.getString("ROLE"));
                         }
                     }
                 }
@@ -524,6 +622,98 @@ public class AccountController {
                 }
             }
             return null;
+        }
+
+        List<? super Account> getAccounts(String type, String page) throws SQLException, ClassNotFoundException {
+            Connection con = null;
+            PreparedStatement stmt = null;
+            ResultSet rs = null;
+            List<? super Account> list = null;
+
+            try {
+                con = DBUtils.getConnection();
+                if (con != null) {
+                    String sql = "SELECT *\n"
+                            + "FROM GET_ACCOUNT\n"
+                            + "WHERE ROLE = ?\n"
+                            + "ORDER BY ID\n"
+                            + "OFFSET ? ROWS\n"
+                            + "FETCH NEXT " + ROWS + " ROWS ONLY";
+                    if (type.toUpperCase().equals(SHIPPER)) {
+                        sql = "SELECT *,\n"
+                                + "ISNULL((\n"
+                                + "	SELECT MAX_ORDER\n"
+                                + "	FROM MAX_ACCEPT_ORDER\n"
+                                + "	WHERE ACCOUNT = ID\n"
+                                + "), 0) AS MAX_ORDER\n"
+                                + "FROM GET_ACCOUNT \n"
+                                + "WHERE ROLE = ?\n"
+                                + "ORDER BY ID\n"
+                                + "OFFSET ? ROWS\n"
+                                + "FETCH NEXT " + ROWS + " ROWS ONLY";
+                    }
+                    stmt = con.prepareStatement(sql);
+                    stmt.setString(1, type);
+                    stmt.setInt(2, convertPageToIndex(page));
+                    rs = stmt.executeQuery();
+                    while (rs.next()) {
+                        if (list == null) {
+                            list = new ArrayList<>();
+                        }
+                        if (type.toUpperCase().equals(SHIPPER)) {
+                            list.add(new Shipper(new Account(rs.getString("ID"),
+                                    rs.getString("USERNAME"),
+                                    rs.getString("FIRST_NAME"),
+                                    rs.getString("MID_NAME"),
+                                    rs.getString("LAST_NAME"),
+                                    rs.getString("EMAIL"),
+                                    rs.getString("PHONE"),
+                                    rs.getDate("DOB"),
+                                    rs.getString("ROLE")),
+                                    rs.getInt("NUM_SUCCESS"),
+                                    rs.getInt("NUM_CANCEL"),
+                                    rs.getInt("MAX_ORDER"),
+                                    rs.getDouble("WALLET"),
+                                    null, null, null));
+                        } else if (type.toUpperCase().equals(CUSTOMER)) {
+                            list.add(new Customer(new Account(rs.getString("ID"),
+                                    rs.getString("USERNAME"),
+                                    rs.getString("FIRST_NAME"),
+                                    rs.getString("MID_NAME"),
+                                    rs.getString("LAST_NAME"),
+                                    rs.getString("EMAIL"),
+                                    rs.getString("PHONE"),
+                                    rs.getDate("DOB"),
+                                    rs.getString("ROLE")),
+                                    rs.getInt("NUM_SUCCESS"),
+                                    rs.getInt("NUM_CANCEL"),
+                                    rs.getDouble("WALLET"),
+                                    null));
+                        } else {
+                            list.add(new Account(rs.getString("ID"),
+                                    rs.getString("USERNAME"),
+                                    rs.getString("FIRST_NAME"),
+                                    rs.getString("MID_NAME"),
+                                    rs.getString("LAST_NAME"),
+                                    rs.getString("EMAIL"),
+                                    rs.getString("PHONE"),
+                                    rs.getDate("DOB"),
+                                    rs.getString("ROLE")));
+                        }
+                    }
+                }
+            } finally {
+                if (rs != null) {
+                    rs.close();
+                }
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (con != null) {
+                    con.close();
+                }
+            }
+            return list;
         }
 
         @Override

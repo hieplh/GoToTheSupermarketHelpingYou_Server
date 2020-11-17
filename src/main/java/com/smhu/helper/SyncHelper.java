@@ -4,10 +4,27 @@ import com.smhu.controller.MarketController;
 import com.smhu.controller.ShipperController;
 import com.smhu.iface.IShipper;
 import com.smhu.order.Order;
+import com.smhu.order.OrderDetail;
 import com.smhu.response.customer.OrderResponseCustomer;
+import com.smhu.response.shipper.OrderDoneDelivery;
 import com.smhu.response.shipper.OrderShipper;
 
 public class SyncHelper {
+
+    public OrderResponseCustomer syncOrderSystemToOrderResponseCustomer(Order order) {
+        IShipper shipperListener = new ShipperController().getShipperListener();
+
+        OrderResponseCustomer obj = new OrderResponseCustomer();
+        obj.setId(order.getId());
+        obj.setMarket(MarketController.mapMarket.get(order.getMarket()));
+        obj.setQuantity(order.getDetails().size());
+        obj.setTotalCost(order.getTotalCost());
+        obj.setTimeCreate(order.getCreateTime());
+        obj.setTimeDelivery(order.getTimeDelivery());
+        obj.setStatus(order.getStatus());
+        obj.setShipper(shipperListener.getShipper(order.getShipper()));
+        return obj;
+    }
 
     public OrderShipper syncOrderSystemToOrderShipper(Order order) {
         OrderShipper obj = new OrderShipper();
@@ -27,18 +44,25 @@ public class SyncHelper {
         return obj;
     }
 
-    public OrderResponseCustomer syncOrderSystemToOrderResponseCustomer(Order order) {
-        IShipper shipperListener = new ShipperController().getShipperListener();
-        
-        OrderResponseCustomer obj = new OrderResponseCustomer();
+    public OrderDoneDelivery syncOrderSystemToOrderDoneDelivery(Order order) {
+        OrderDoneDelivery obj = new OrderDoneDelivery();
         obj.setId(order.getId());
-        obj.setMarket(MarketController.mapMarket.get(order.getMarket()));
+        obj.setMarketName(MarketController.mapMarket.get(order.getMarket()).getName());
         obj.setQuantity(order.getDetails().size());
+        obj.setCostDelivery(order.getCostDelivery());
+        obj.setCostShopping(order.getCostShopping());
+        
+        double totalCostItems = 0;
+        for (OrderDetail detail : order.getDetails()) {
+            totalCostItems += detail.getPricePaid();
+        }
+        obj.setTotalCostItems(totalCostItems);
+        
         obj.setTotalCost(order.getTotalCost());
-        obj.setTimeCreate(order.getCreateTime());
-        obj.setTimeDelivery(order.getTimeDelivery());
+        obj.setCreateDate(order.getDateDelivery());
+        obj.setEndTime(order.getLastUpdate());
         obj.setStatus(order.getStatus());
-        obj.setShipper(shipperListener.getShipper(order.getShipper()));
+        obj.setNote(order.getNote());
         return obj;
     }
 }

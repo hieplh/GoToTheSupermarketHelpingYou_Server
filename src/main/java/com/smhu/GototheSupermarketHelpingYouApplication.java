@@ -9,6 +9,7 @@ import com.smhu.helper.PropertiesWithJavaConfig;
 import com.smhu.iface.IMain;
 import com.smhu.iface.IStatus;
 import com.smhu.entity.Market;
+import static com.smhu.helper.PropertiesWithJavaConfig.PROPERTIES;
 import com.smhu.order.Order;
 import com.smhu.order.OrderDetail;
 import com.smhu.status.Status;
@@ -33,6 +34,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
@@ -45,6 +47,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class GototheSupermarketHelpingYouApplication {
 
     final String ORDER_RELEASE_CONFIG_FILE_PATH = "order-release.properties";
+    final String APPLICATION_CONFIG_FILE_PATH = "application.properties";
 
     MainService service;
     IMain mainListener;
@@ -62,7 +65,16 @@ public class GototheSupermarketHelpingYouApplication {
         SpringApplication.run(GototheSupermarketHelpingYouApplication.class, args);
     }
 
+    private void initDefaultProperties() {
+        try {
+            PropertiesWithJavaConfig.PROPERTIES.load(new ClassPathResource(APPLICATION_CONFIG_FILE_PATH).getInputStream());
+        } catch (IOException e) {
+            Logger.getLogger(GototheSupermarketHelpingYouApplication.class.getName()).log(Level.SEVERE, "Init Default Properties:{0}", e.getMessage());
+        }
+    }
+    
     public void init() {
+        initDefaultProperties();
         service = new MainService();
         statusListener = new StatusController().getStatusListener();
         try {
@@ -104,7 +116,7 @@ public class GototheSupermarketHelpingYouApplication {
                 listOrderIsDone.forEach(order -> OrderController.mapOrderIsDone.put(order.getId(), order));
             }
         } catch (ClassNotFoundException | SQLException e) {
-            Logger.getLogger(GototheSupermarketHelpingYouApplication.class.getName()).log(Level.SEVERE, e.getMessage());
+            Logger.getLogger(GototheSupermarketHelpingYouApplication.class.getName()).log(Level.SEVERE, "Init: {0}", e.getMessage());
         }
 
         try {
@@ -122,14 +134,14 @@ public class GototheSupermarketHelpingYouApplication {
                 }
             }
         } catch (IOException e) {
-            Logger.getLogger(GototheSupermarketHelpingYouApplication.class.getName()).log(Level.SEVERE, e.getMessage());
+            Logger.getLogger(GototheSupermarketHelpingYouApplication.class.getName()).log(Level.SEVERE, "Load Properties Mechanism Release Order: {0}", e.getMessage());
         }
     }
 
     class MainService implements IMain {
 
         public Properties loadFileConfig(String path) throws IOException {
-            return new PropertiesWithJavaConfig(path).getProperties();
+            return PropertiesWithJavaConfig.getProperties(path);
         }
 
         @Override

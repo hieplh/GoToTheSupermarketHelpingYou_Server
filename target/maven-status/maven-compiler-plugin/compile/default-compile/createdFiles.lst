@@ -9,9 +9,9 @@ com\smhu\controller\OrderController$OrderService.class
 com\smhu\order\Order.class
 com\smhu\entity\Market.class
 com\smhu\helper\ExtractElementDistanceMatrixApi.class
-com\smhu\response\customer\OrderCustomer.class
 com\smhu\account\Account.class
 com\smhu\controller\ShipperController$ShipperService.class
+com\smhu\iface\ITransaction.class
 com\smhu\response\LogMsg.class
 com\smhu\comparator\SortByHighActive.class
 com\smhu\order\Evidence.class
@@ -24,6 +24,7 @@ com\smhu\controller\HistoryController.class
 com\smhu\google\matrixobj\DistanceMatrixObject.class
 com\smhu\controller\FoodController$FoodService.class
 com\smhu\iface\IMarket.class
+com\smhu\transaction\Transaction.class
 com\smhu\google\DistanceMatrixApi.class
 com\smhu\controller\SystemTimeController$SystemTimeService.class
 com\smhu\order\OrderDetail.class
@@ -33,6 +34,8 @@ com\smhu\url\UrlConnection.class
 com\smhu\SwaggerConfig$1.class
 com\smhu\GototheSupermarketHelpingYouApplication.class
 com\smhu\controller\AccountController$AccountService.class
+com\smhu\helper\SyncHelper.class
+com\smhu\controller\TransactionController.class
 com\smhu\response\shipper\OrderShipper.class
 com\smhu\food\Food.class
 com\smhu\utils\DBUtils.class
@@ -44,15 +47,19 @@ com\smhu\iface\IShipper.class
 com\smhu\system\SystemTime.class
 com\smhu\history\History.class
 com\smhu\controller\MarketController$MarketService.class
+com\smhu\response\customer\OrderResponseCustomer.class
+com\smhu\controller\TransactionController$TransactionService.class
 com\smhu\iface\IStatus.class
 com\smhu\response\shipper\OrderDelivery.class
 com\smhu\iface\IAccount.class
 com\smhu\account\Shipper.class
 com\smhu\controller\StatusController.class
+com\smhu\response\shipper\OrderDoneDelivery.class
 com\smhu\controller\DashboardController$DashboardService.class
 com\smhu\controller\TestController.class
 com\smhu\listener\ContextListener.class
 com\smhu\food\SaleOff.class
+com\smhu\request\customer\OrderRequestCustomer.class
 com\smhu\response\moderator\OrderOverall.class
 com\smhu\controller\OrderController.class
 com\smhu\controller\StatusController$StatusService.class

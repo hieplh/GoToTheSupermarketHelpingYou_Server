@@ -3,6 +3,7 @@ package com.smhu.controller;
 import com.smhu.GototheSupermarketHelpingYouApplication;
 import com.smhu.account.Shipper;
 import com.smhu.iface.IOrder;
+import com.smhu.schedule.Notify;
 import com.smhu.system.SystemTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -81,5 +82,18 @@ public class TestController {
         IOrder orderListener = new OrderController().getOrderListener();
         orderListener.scanOrdesrReleaseToShippers();
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+    
+    @GetMapping("/on_off_scan")
+    public ResponseEntity<?> enableScan() {
+        String s;
+        if (Notify.ENABLE_SCAN_SCHEDULE) {
+            Notify.ENABLE_SCAN_SCHEDULE = false;
+            s = "Scan is Off";
+        } else {
+            Notify.ENABLE_SCAN_SCHEDULE = true;
+            s = "Scan is on";
+        }
+        return new ResponseEntity<>(s, HttpStatus.OK);
     }
 }

@@ -64,9 +64,11 @@ public class ShipperController {
             }
             List<OrderDelivery> list = OrderController.mapOrderDeliveryForShipper.getOrDefault(shipperId, null);
             if (list != null) {
+                System.out.println("Shipper = " + shipperId + " is get Orders");
                 for (OrderDelivery orderDelivery : list) {
                     System.out.println(orderDelivery);
                 }
+                System.out.println("");
             }
             return new ResponseEntity<>(OrderController.mapOrderDeliveryForShipper.getOrDefault(shipperId, null), HttpStatus.OK);
         } catch (Exception e) {
