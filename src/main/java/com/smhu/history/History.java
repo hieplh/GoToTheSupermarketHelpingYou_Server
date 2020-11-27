@@ -10,6 +10,7 @@ public class History {
     private String marketName;
     private String note;
     private String shipper;
+    private int status;
     private Date createDate;
     private Time createTime;
     private Time receiveTime;
@@ -21,12 +22,13 @@ public class History {
     public History() {
     }
 
-    public History(String id, String addressDelivery, String marketName, String note, String shipper, Date createDate, Time createTime, Time receiveTime, Time deliveryTime, double costShopping, double costDelivery, double totalCost) {
+    public History(String id, String addressDelivery, String marketName, String note, String shipper, int status, Date createDate, Time createTime, Time receiveTime, Time deliveryTime, double costShopping, double costDelivery, double totalCost) {
         this.id = id;
         this.addressDelivery = addressDelivery;
         this.marketName = marketName;
         this.note = note;
         this.shipper = shipper;
+        this.status = status;
         this.createDate = createDate;
         this.createTime = createTime;
         this.receiveTime = receiveTime;
@@ -74,6 +76,14 @@ public class History {
 
     public void setShipper(String shipper) {
         this.shipper = shipper;
+    }
+
+    public int getStatus() {
+        return status;
+    }
+
+    public void setStatus(int status) {
+        this.status = status;
     }
 
     public Date getCreateDate() {

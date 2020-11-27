@@ -64,7 +64,7 @@ public class ShipperController {
             }
             List<OrderDelivery> list = OrderController.mapOrderDeliveryForShipper.getOrDefault(shipperId, null);
             if (list != null) {
-                System.out.println("Shipper = " + shipperId + " is get Orders");
+                System.out.println("Shipper: " + shipperId + " received Orders");
                 for (OrderDelivery orderDelivery : list) {
                     System.out.println(orderDelivery);
                 }
@@ -167,6 +167,14 @@ public class ShipperController {
             }
         }
 
+        @Override
+        public void checkWalletShipperAccount(Shipper shipper) {
+            if (shipper.getWallet() >= 0) {
+                return;
+            }
+            removeShipper(shipper.getId());
+        }
+        
         Shipper getAvailableShipperAccount(String id) {
             return mapAvailableShipper.getOrDefault(id, null);
         }
@@ -175,5 +183,13 @@ public class ShipperController {
             return mapInProgressShipper.getOrDefault(id, null);
         }
 
+        boolean removeShipper(String id) {
+            if (mapAvailableShipper.containsKey(id)) {
+                mapAvailableShipper.remove(id);
+            } else {
+                mapInProgressShipper.remove(id);
+            }
+            return true;
+        }
     }
 }

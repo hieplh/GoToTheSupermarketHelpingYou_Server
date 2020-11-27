@@ -2,7 +2,7 @@ package com.smhu.google.matrixobj;
 
 import com.google.gson.annotations.SerializedName;
 
-public class DistanceMatrixObject {
+public class MatrixObject {
 
     @SerializedName("destination_addresses")
     private String[] destinationAddr;

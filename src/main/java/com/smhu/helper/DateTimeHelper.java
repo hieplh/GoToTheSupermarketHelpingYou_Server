@@ -7,7 +7,7 @@ import java.time.LocalTime;
 
 public class DateTimeHelper {
 
-    private int parseTimeToMinute(LocalTime localTime) {
+    public int parseTimeToMinute(LocalTime localTime) {
         return localTime != null ? localTime.getHour() * 60 + localTime.getMinute() : 5;
     }
 

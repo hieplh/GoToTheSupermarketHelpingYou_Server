@@ -2,8 +2,8 @@ package com.smhu.controller;
 
 import com.smhu.GototheSupermarketHelpingYouApplication;
 import com.smhu.account.Shipper;
-import com.smhu.iface.IOrder;
-import com.smhu.schedule.Notify;
+import com.smhu.core.CoreFunctions;
+import com.smhu.schedule.Scan;
 import com.smhu.system.SystemTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -77,23 +77,37 @@ public class TestController {
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
-    @GetMapping("/scan")
-    public ResponseEntity<?> scanOrder() {
-        IOrder orderListener = new OrderController().getOrderListener();
-        orderListener.scanOrdesrReleaseToShippers();
-        return new ResponseEntity<>(HttpStatus.OK);
-    }
-    
     @GetMapping("/on_off_scan")
     public ResponseEntity<?> enableScan() {
         String s;
-        if (Notify.ENABLE_SCAN_SCHEDULE) {
-            Notify.ENABLE_SCAN_SCHEDULE = false;
+        if (Scan.ENABLE_SCAN_SCHEDULE) {
+            Scan.ENABLE_SCAN_SCHEDULE = false;
             s = "Scan is Off";
         } else {
-            Notify.ENABLE_SCAN_SCHEDULE = true;
+            Scan.ENABLE_SCAN_SCHEDULE = true;
             s = "Scan is on";
         }
         return new ResponseEntity<>(s, HttpStatus.OK);
+    }
+    
+//    @GetMapping("/scan")
+//    public ResponseEntity<?> scanOrder() {
+//        IOrder orderListener = new OrderController().getOrderListener();
+//        orderListener.scanOrdesrReleaseToShippers();
+//        return new ResponseEntity<>(HttpStatus.OK);
+//    }
+    
+    @GetMapping("/new_scan_shipper")
+    public ResponseEntity<?> scanShipperNew() {
+        CoreFunctions coreFunctions = new CoreFunctions();
+        coreFunctions.scanShippers();
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+    
+    @GetMapping("/new_scan_order")
+    public ResponseEntity<?> scanOrderNew() {
+        CoreFunctions coreFunctions = new CoreFunctions();
+        coreFunctions.scanOrder();
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 }

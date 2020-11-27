@@ -1,13 +1,13 @@
 package com.smhu.helper;
 
-import com.smhu.google.matrixobj.DistanceMatrixObject;
+import com.smhu.google.matrixobj.MatrixObject;
 import com.smhu.google.matrixobj.ElementObject;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ExtractElementDistanceMatrixApi {
 
-    public List<ElementObject> getListElements(DistanceMatrixObject obj) {
+    public List<ElementObject> getListElements(MatrixObject obj) {
         return obj.getRows()[0].getElements();
     }
 

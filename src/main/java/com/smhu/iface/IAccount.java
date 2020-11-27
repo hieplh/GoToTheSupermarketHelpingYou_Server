@@ -1,10 +1,33 @@
 package com.smhu.iface;
 
+import com.smhu.account.Account;
+import com.smhu.account.Address;
+import java.io.UnsupportedEncodingException;
+import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Map;
 
 public interface IAccount {
 
+    public String getEncryptionPassword(String username, String type) throws SQLException, ClassNotFoundException;
+    
+    public String encryptSHA(String source) throws NoSuchAlgorithmException, UnsupportedEncodingException;
+    
+    public int getCountAccounts(String role) throws SQLException, ClassNotFoundException;
+    
+    public int getCountAccounts(String role, String search) throws SQLException, ClassNotFoundException;
+    
+    public Object getAccountByUsername(String username, String password, String type) throws SQLException, ClassNotFoundException;
+    
+    public List<Address> getAddressOfAccount(String accountId) throws ClassNotFoundException, SQLException;
+    
+    public List<? super Account> getAccountBySearch(String role, String search, String page) throws SQLException, ClassNotFoundException;
+    
+    public List<? super Account> getAccounts(String type, String page) throws SQLException, ClassNotFoundException;
+    
+    public int deleteAccount(String accountId, boolean flag) throws ClassNotFoundException, SQLException;
+    
     public Map<String, String> getRoles() throws SQLException, ClassNotFoundException;
     
     public Object getAccountById(String id, String type) throws SQLException, ClassNotFoundException;

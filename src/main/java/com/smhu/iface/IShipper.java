@@ -21,4 +21,6 @@ public interface IShipper {
     public int updateNumDeliveryOfShipper(String shipperId, int num) throws ClassNotFoundException, SQLException;
     
     public int updateNumCancelOfShipper(String shipperId, int num) throws ClassNotFoundException, SQLException;
+    
+    public void checkWalletShipperAccount(Shipper shipper);
 }

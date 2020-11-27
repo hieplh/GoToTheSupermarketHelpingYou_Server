@@ -11,7 +11,8 @@ public class Shipper extends Account {
     private int maxOrder;
     private String lat;
     private String lng;
-    
+    private double rating;
+
     @JsonIgnore
     private String tokenFCM;
 
@@ -23,7 +24,7 @@ public class Shipper extends Account {
                 account.getEmail(), account.getPhone(), account.getDob(), account.getRole());
     }
 
-    public Shipper(Account account, int numDelivery, int numCancel, int maxOrder, double wallet, String lat, String lng, String tokenFCM) {
+    public Shipper(Account account, int numDelivery, int numCancel, int maxOrder, double wallet, double rating, String lat, String lng, String tokenFCM) {
         super(account.getId(), account.getUsername(), account.getFirstName(), account.getMiddleName(), account.getLastName(),
                 account.getEmail(), account.getPhone(), account.getDob(), account.getRole());
         this.maxOrder = maxOrder;
@@ -32,6 +33,7 @@ public class Shipper extends Account {
         this.wallet = wallet;
         this.lat = lat;
         this.lng = lng;
+        this.rating = rating;
         this.tokenFCM = tokenFCM;
     }
 
@@ -83,6 +85,14 @@ public class Shipper extends Account {
         this.lng = lng;
     }
 
+    public double getRating() {
+        return rating;
+    }
+
+    public void setRating(double rating) {
+        this.rating = rating;
+    }
+
     public String getTokenFCM() {
         return tokenFCM;
     }
@@ -93,7 +103,7 @@ public class Shipper extends Account {
 
     @Override
     public String toString() {
-        return "Shipper{" + "id=" + this.getId() + ", lat=" + lat + ", lng=" + lng + ", tokenFCM=" + tokenFCM + '}';
+        return "Shipper{" + "id=" + this.getId() + ", lat=" + lat + ", lng=" + lng + ", rating=" + rating + ", tokenFCM=" + tokenFCM + '}';
     }
 
     @Override

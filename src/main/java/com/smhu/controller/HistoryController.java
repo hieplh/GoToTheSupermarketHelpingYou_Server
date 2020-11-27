@@ -74,39 +74,21 @@ public class HistoryController {
                 con = DBUtils.getConnection();
                 if (con != null) {
 
-                    StringBuilder sql = new StringBuilder();
-                    sql.append("SELECT O.ID, O.CREATED_DATE, O.CREATED_TIME, O.TIME_DELIVERY, O.LAST_UPDATE, O.ADDRESS_DELIVERY, O.SHIPPER, \n"
-                            + "M.NAME, O.NOTE, O.COST_DELIVERY, O.COST_SHOPPING, O.TOTAL_COST")
-                            .append("\n");
-                    sql.append("FROM ORDERS O\n"
-                            + "JOIN MARKET M\n"
-                            + "ON O.MARKET = M.ID")
-                            .append("\n");
+                    String sql;
                     switch (type.toUpperCase()) {
                         case CUSTOMER:
-                            sql.append("WHERE CUST = ?")
-                                    .append("\n");
+                            sql = "EXEC GET_HISTORY_CUSTOMER_BY_ID ?, ?, ?";
                             break;
                         case SHIPPER:
-                            sql.append("WHERE SHIPPER = ?")
-                                    .append("\n");
+                            sql = "EXEC GET_HISTORY_SHIPPER_BY_ID ?, ?, ?";
                             break;
                         default:
                             return null;
                     }
-                    sql.append("AND STATUS = ?")
-                            .append("\n");
-
-                    sql.append("ORDER BY CREATED_DATE DESC, CREATED_TIME DESC")
-                            .append("\n");
-                    sql.append("OFFSET ? ROWS")
-                            .append("\n");
-                    sql.append("FETCH NEXT " + ROWS + " ROWS ONLY")
-                            .append("\n");
-                    stmt = con.prepareStatement(sql.toString());
+                    stmt = con.prepareStatement(sql);
                     stmt.setString(1, id);
-                    stmt.setInt(2, status);
-                    stmt.setInt(3, page);
+                    stmt.setInt(2, page);
+                    stmt.setInt(3, ROWS);
                     rs = stmt.executeQuery();
                     while (rs.next()) {
                         if (list == null) {
@@ -120,6 +102,7 @@ public class HistoryController {
                         history.setDeliveryTime(rs.getTime("LAST_UPDATE"));
                         history.setAddressDelivery(rs.getString("ADDRESS_DELIVERY"));
                         history.setShipper(rs.getString("SHIPPER"));
+                        history.setStatus(rs.getInt("STATUS"));
                         history.setMarketName(rs.getString("NAME"));
                         history.setNote(rs.getString("NOTE"));
                         history.setCostDelivery(rs.getDouble("COST_DELIVERY"));

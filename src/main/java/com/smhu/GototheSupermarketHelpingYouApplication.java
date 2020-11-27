@@ -5,15 +5,17 @@ import com.smhu.controller.MarketController;
 import com.smhu.controller.OrderController;
 import com.smhu.controller.ShipperController;
 import com.smhu.controller.StatusController;
+import com.smhu.core.CoreFunctions;
+import com.smhu.dao.AccountDAO;
 import com.smhu.helper.PropertiesWithJavaConfig;
 import com.smhu.iface.IMain;
 import com.smhu.iface.IStatus;
 import com.smhu.entity.Market;
-import static com.smhu.helper.PropertiesWithJavaConfig.PROPERTIES;
 import com.smhu.order.Order;
 import com.smhu.order.OrderDetail;
 import com.smhu.status.Status;
 import com.smhu.utils.DBUtils;
+
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.Date;
@@ -30,6 +32,7 @@ import java.util.TimeZone;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -75,6 +78,7 @@ public class GototheSupermarketHelpingYouApplication {
     
     public void init() {
         initDefaultProperties();
+        CoreFunctions core = new CoreFunctions();
         service = new MainService();
         statusListener = new StatusController().getStatusListener();
         try {
@@ -100,13 +104,15 @@ public class GototheSupermarketHelpingYouApplication {
                     MarketController.mapMarket.put(market.getId(), market);
                 });
             }
+            core.initMapFilter();
 
             List<Order> listOrdersInQueue = service.loadOrder(date, String.valueOf(statusListener.getStatusIsPaidOrder()));
             if (listOrdersInQueue != null) {
                 service.loadOrderDetail(listOrdersInQueue);
-                listOrdersInQueue.forEach(order
-                        -> OrderController.mapOrderInQueue.put(order.getId(), order)
-                );
+                for (Order order : listOrdersInQueue) {
+                    OrderController.mapOrderInQueue.put(order.getId(), order);
+                    core.filterOrder(order);
+                }
                 //service.loadOrderInProcess();
             }
 
@@ -146,7 +152,7 @@ public class GototheSupermarketHelpingYouApplication {
 
         @Override
         public Map<String, String> loadRoles() throws SQLException, ClassNotFoundException {
-            return new AccountController().getAccountListener().getRoles();
+            return new AccountDAO().getRoles();
         }
 
         @Override

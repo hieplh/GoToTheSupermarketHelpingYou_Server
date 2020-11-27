@@ -7,17 +7,18 @@ import com.smhu.GototheSupermarketHelpingYouApplication;
 import com.smhu.account.Account;
 import com.smhu.account.Customer;
 import com.smhu.account.Shipper;
-import com.smhu.account.ShipperAlter;
-import com.smhu.comparator.SortByHighActive;
 import com.smhu.comparator.SortByLowActive;
+import com.smhu.core.CoreFunctions;
+import com.smhu.dao.AccountDAO;
+import com.smhu.dao.OrderDAO;
 import com.smhu.google.Firebase;
-import com.smhu.google.matrixobj.DistanceMatrixObject;
+import com.smhu.google.matrixobj.MatrixObject;
 import com.smhu.google.matrixobj.ElementObject;
-import com.smhu.helper.DateTimeHelper;
 import com.smhu.helper.ExtractElementDistanceMatrixApi;
 import com.smhu.helper.GsonHelper;
 import com.smhu.helper.SyncHelper;
 import com.smhu.iface.IAccount;
+import com.smhu.iface.ICore;
 import com.smhu.iface.IMain;
 import com.smhu.iface.IOrder;
 import com.smhu.iface.IShipper;
@@ -32,17 +33,11 @@ import com.smhu.response.moderator.OrderOverall;
 import com.smhu.response.shipper.OrderDelivery;
 import com.smhu.response.shipper.OrderDoneDelivery;
 import com.smhu.response.shipper.OrderShipper;
-import com.smhu.system.SystemTime;
 import com.smhu.url.UrlConnection;
-import com.smhu.utils.DBUtils;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Time;
 
@@ -97,12 +92,13 @@ public class OrderController {
 
     private final OrderService service;
 
-    private final IOrder orderListener;
+    private final IOrder dao;
     private final IShipper shipperListener;
     private final IStatus statusListener;
     private final IMain mainListener;
     private final IAccount accountListener;
     private final ITransaction transactionListener;
+    private final ICore coreListener;
 
     private final String CUSTOMER = "CUSTOMER";
     private final String STAFF = "STAFF";
@@ -110,18 +106,21 @@ public class OrderController {
 
     public OrderController() {
         service = new OrderService();
-        orderListener = new OrderService();
+
         statusListener = new StatusController().getStatusListener();
         mainListener = new GototheSupermarketHelpingYouApplication().getMainListener();
         shipperListener = new ShipperController().getShipperListener();
-        accountListener = new AccountController().getAccountListener();
         transactionListener = new TransactionController().getTransactionListener();
+        coreListener = new CoreFunctions();
+
+        dao = new OrderDAO();
+        accountListener = new AccountDAO();
     }
 
     @GetMapping("order/{type}/{id}")
     public ResponseEntity<?> getOrderById(@PathVariable("id") String id, @PathVariable("type") String type) {
         try {
-            Order order = service.getOrderById(id, type);
+            Order order = dao.getOrderById(id, type);
             if (order == null) {
                 return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
             }
@@ -141,7 +140,7 @@ public class OrderController {
                     if (order.getAuthor() != null) {
                         orderStaff.setAuthor((Account) accountListener.getAccountById(order.getAuthor(), STAFF));
                     }
-                    orderStaff.setAlters(service.getListShipperAlter(id));
+                    orderStaff.setAlters(dao.getListShipperAlter(id));
                     return new ResponseEntity<>(orderStaff, HttpStatus.OK);
                 default:
                     return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
@@ -224,12 +223,12 @@ public class OrderController {
             order.setTimeDelivery(orderReceive.getTimeDelivery());
             order.setDetails(orderReceive.getDetails());
 
-            result = service.insertOrder(order);
+            result = dao.insertOrder(order);
 
             if (result == null) {
                 return new ResponseEntity<>(new ResponseMsg("Insert new order failed"), HttpStatus.INTERNAL_SERVER_ERROR);
             }
-            if (service.insertOrderDetail(result, order.getDetails()) == null) {
+            if (dao.insertOrderDetail(result, order.getDetails()) == null) {
                 return new ResponseEntity<>(new ResponseMsg("Insert new order detail failed"), HttpStatus.INTERNAL_SERVER_ERROR);
             } else {
                 int count = 0;
@@ -298,6 +297,10 @@ public class OrderController {
                     status = order.getStatus() + 1;
                 }
 
+                order.setStatus(status);
+                order.setLastUpdate(new Time(new Date().getTime()));
+                dao.updatetOrder(order);
+
                 if (status == tmpStatus) {
                     Order orderDoneObj = mapOrderInProgress.remove(order.getId());
                     mapOrderIsDone.put(orderDoneObj.getId(), orderDoneObj);
@@ -305,11 +308,13 @@ public class OrderController {
                     if (shipper == null) {
                         shipper = shipperListener.getShipper(order.getShipper());
                     }
-                    double totalReceivedCost = service.getTotalItemsCost(orderDoneObj) + orderDoneObj.getCostShopping();
+                    double totalReceivedCost = orderDoneObj.getCostShopping() + orderDoneObj.getCostDelivery();
                     transactionListener.updateDeliveryTransaction(shipper.getId(), totalReceivedCost, status,
                             orderDoneObj.getId());
                     accountListener.updateWalletAccount(shipper.getId(), totalReceivedCost);
 
+                    shipper.setNumDelivery(shipper.getNumDelivery() + 1);
+                    shipperListener.updateNumDeliveryOfShipper(shipper.getId(), 1);
                     if (listVerificationResults == null) {
                         listVerificationResults = new ArrayList();
                     }
@@ -320,34 +325,28 @@ public class OrderController {
                     }
                     listResults.add(sync.syncOrderSystemToOrderShipper(order));
                 }
-
-                order.setStatus(status);
-                order.setLastUpdate(new Time(new Date().getTime()));
-                service.updatetOrder(order);
             } catch (SQLException | ClassNotFoundException e) {
                 Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
                 return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
             }
         } // end for
+
         if (isFirstAcceptOrder) {
             mapOrderDeliveryForShipper.remove(shipper.getId());
         } else if (orderIsDone) {
-            int numOrderReceived = listOrders.size();
-            shipper.setNumDelivery(shipper.getNumDelivery() + numOrderReceived);
-            shipperListener.changeStatusOfShipper(shipper.getId());
-            try {
-                shipperListener.updateNumDeliveryOfShipper(shipper.getId(), numOrderReceived);
-            } catch (SQLException | ClassNotFoundException e) {
-                Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
+            if (!service.checkShipperIsInProgress(shipper.getId())) {
+                shipperListener.changeStatusOfShipper(shipper.getId());
+                return new ResponseEntity<>(HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(listVerificationResults, HttpStatus.OK);
             }
-            return new ResponseEntity<>(listVerificationResults, HttpStatus.OK);
         }
         return new ResponseEntity<>(listResults, HttpStatus.OK);
     }
 
     @GetMapping("switch/{orderId}/{authorId}")
     public ResponseEntity<?> changeShipper(@PathVariable("orderId") String orderId, @PathVariable("authorId") String authorId) {
-        DistanceMatrixObject distanceObj;
+        MatrixObject distanceObj;
         List<Shipper> listShipper = service.getShippers(new SortByLowActive());
         if (listShipper.isEmpty()) {
             return new ResponseEntity<>(null, HttpStatus.OK);
@@ -374,8 +373,8 @@ public class OrderController {
                             if (distance <= range) {
                                 order.setShipper(newShipper.getId());
                                 order.setLastUpdate(new Time(new Date().getTime()));
-                                service.updatetOrder(order);
-                                service.insertAlterShipper(orderId, oldShipper.getId(), newShipper.getId(), authorId);
+                                dao.updatetOrder(order);
+                                dao.insertAlterShipper(orderId, oldShipper.getId(), newShipper.getId(), authorId);
                                 it.remove();
 
                                 // wait process new shipper meet old shipper
@@ -419,10 +418,11 @@ public class OrderController {
 
                 String result = null;
                 try {
-                    order.setAuthor(accountId);
-                    order.setLastUpdate(new Time(new Date().getTime()));
                     order.setStatus(order.getStatus() * -1);
-                    result = service.CancelOrder(order);
+                    order.setLastUpdate(new Time(new Date().getTime()));
+                    order.setAuthor(accountId);
+
+                    result = dao.CancelOrder(order);
                 } catch (ClassNotFoundException | SQLException e) {
                     Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
                 }
@@ -444,32 +444,48 @@ public class OrderController {
                 return new ResponseEntity<>(new ResponseMsg("Order_id: " + result + ", is canceled"), HttpStatus.OK);
             case SHIPPER:
                 order = mapOrderInProgress.remove(orderId);
+                if (order == null) {
+                    return new ResponseEntity<>(HttpStatus.NOT_FOUND.toString(), HttpStatus.NOT_FOUND);
+                }
+
                 int status = order.getStatus() * -1;
                 order.setStatus(status);
-                mapOrderIsCancelInQueue.put(order.getId(), order);
+                order.setLastUpdate(new Time(new Date().getTime()));
+                order.setAuthor(accountId);
+                order.setRefundCost(order.getTotalCost());
+                //mapOrderIsCancelInQueue.put(order.getId(), order);
+
+                double chargeCost = order.getCostShopping() * -1;
 
                 Shipper shipper = shipperListener.getShipper(accountId);
                 shipper.setNumCancel(shipper.getNumCancel() + 1);
+                shipper.setWallet(shipper.getWallet() + chargeCost);
                 try {
-                    double chargeCost = order.getCostShopping() * -1;
                     shipperListener.updateNumCancelOfShipper(accountId, 1);
                     accountListener.updateWalletAccount(shipper.getId(), chargeCost);
                     transactionListener.updateDeliveryTransaction(shipper.getId(), chargeCost, status, order.getId());
+
+                    transactionListener.updateRefundTransaction(order.getCust(), order.getTotalCost(), status, orderId);
+                    accountListener.updateWalletAccount(order.getCust(), order.getTotalCost());
+
+                    if (!service.checkShipperIsInProgress(shipper.getId())) {
+                        shipperListener.changeStatusOfShipper(shipper.getId());
+                    }
+                    shipperListener.checkWalletShipperAccount(shipper);
+                    dao.CancelOrder(order);
                 } catch (SQLException | ClassNotFoundException e) {
                     Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
                 }
+//                return new ResponseEntity<>(new ResponseMsg("Your cancel request, order_id: " + order.getId()
+//                        + ", is processing"), HttpStatus.OK);
                 return new ResponseEntity<>(new ResponseMsg("Your cancel request, order_id: " + order.getId()
-                        + ", is processing"), HttpStatus.OK);
+                        + ", is canceled"), HttpStatus.OK);
             default:
                 return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
         }
     }
 
-    public IOrder getOrderListener() {
-        return orderListener;
-    }
-
-    class OrderService implements IOrder {
+    class OrderService {
 
         Order checkOrderIsInProgress(OrderShipper order) {
             return OrderController.mapOrderInProgress.values()
@@ -477,6 +493,19 @@ public class OrderController {
                     .filter(o -> order.getId().equals(o.getId()))
                     .findFirst()
                     .orElse(null);
+        }
+
+        boolean checkShipperIsInProgress(String shipperId) {
+            List<String> tmp = mapOrderInProgress.keySet().stream().collect(Collectors.toList());
+            for (String id : tmp) {
+                Order order = mapOrderInProgress.get(id);
+                if (order != null) {
+                    if (shipperId.equals(order.getShipper())) {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         String generateId(OrderRequestCustomer obj) {
@@ -493,290 +522,54 @@ public class OrderController {
 
         void addOrderInqueue(Order order) {
             mapOrderInQueue.put(order.getId(), order);
+            coreListener.filterOrder(order);
         }
 
-        double getTotalItemsCost(Order order) {
-            double total = 0;
-            for (OrderDetail detail : order.getDetails()) {
-                total += detail.getPricePaid();
+        List<Shipper> getShippers(Comparator comparator) {
+            List<Shipper> list = new ArrayList<>();
+            for (Map.Entry<String, Shipper> entry : ShipperController.mapAvailableShipper.entrySet()) {
+                list.add(entry.getValue());
             }
-            return total;
-        }
+            list.sort(comparator);
 
-        Order getOrderById(String orderId, String type) throws SQLException, ClassNotFoundException {
-            Connection con = null;
-            PreparedStatement stmt = null;
-            ResultSet rs = null;
-            Order order = null;
-
-            try {
-                con = DBUtils.getConnection();
-                if (con != null) {
-                    String sql = "SELECT *\n"
-                            + "FROM GET_ORDER_BY_ID\n"
-                            + "WHERE ID = ?";
-                    stmt = con.prepareStatement(sql);
-                    stmt.setString(1, orderId);
-                    rs = stmt.executeQuery();
-                    if (rs.next()) {
-                        order = new Order();
-                        order.setId(rs.getString("ID"));
-                        if (type.toUpperCase().equals(STAFF)) {
-                            order.setCust(rs.getString("CUST"));
-                        } else {
-                            order.setCust(rs.getString("CUST_NAME"));
-                        }
-                        order.setAddressDelivery(rs.getString("ADDRESS_DELIVERY"));
-                        order.setNote(rs.getString("NOTE"));
-                        if (type.toUpperCase().equals(STAFF)) {
-                            order.setMarket(rs.getString("MARKET"));
-                        } else {
-                            order.setMarket(rs.getString("MARKET_NAME"));
-                        }
-
-                        if (type.toUpperCase().equals(STAFF)) {
-                            order.setShipper(rs.getString("SHIPPER"));
-                        } else {
-                            order.setShipper(rs.getString("SHIPPER_NAME"));
-                        }
-                        order.setCreateDate(rs.getDate("CREATED_DATE"));
-                        order.setCreateTime(rs.getTime("CREATED_TIME"));
-                        order.setStatus(rs.getInt("STATUS"));
-                        order.setAuthor(rs.getString("AUTHOR"));
-                        order.setReasonCancel(rs.getString("REASON_CANCEL"));
-                        order.setCostShopping(rs.getDouble("COST_SHOPPING"));
-                        order.setCostDelivery(rs.getDouble("COST_DELIVERY"));
-                        order.setTotalCost(rs.getDouble("TOTAL_COST"));
-                        order.setRefundCost(rs.getDouble("REFUND_COST"));
-                        order.setDateDelivery(rs.getDate("DATE_DELIVERY"));
-                        order.setTimeDelivery(rs.getTime("TIME_DELIVERY"));
-                    }
-                }
-            } finally {
-                if (rs != null) {
-                    rs.close();
-                }
-                if (stmt != null) {
-                    stmt.close();
-                }
-                if (con != null) {
-                    con.close();
-                }
-            }
-            return order;
-        }
-
-        List<ShipperAlter> getListShipperAlter(String orderId) throws SQLException, ClassNotFoundException {
-            Connection con = null;
-            PreparedStatement stmt = null;
-            ResultSet rs = null;
-            List<ShipperAlter> list = null;
-
-            try {
-                con = DBUtils.getConnection();
-                if (con != null) {
-                    String sql = "SELECT *\n"
-                            + "FROM SHIPPER_ALTER\n"
-                            + "WHERE DH = ?";
-                    stmt = con.prepareStatement(sql);
-                    stmt.setString(1, orderId);
-                    rs = stmt.executeQuery();
-                    while (rs.next()) {
-                        if (list == null) {
-                            list = new ArrayList<>();
-                        }
-                        list.add(new ShipperAlter(rs.getString("ID"),
-                                (Shipper) accountListener.getAccountById(rs.getString("ORIGINAL"), SHIPPER),
-                                (Shipper) accountListener.getAccountById(rs.getString("ALTERNATIVE"), SHIPPER),
-                                (Account) accountListener.getAccountById(rs.getString("AUTHOR"), STAFF),
-                                rs.getDate("CREATE_DATE"),
-                                rs.getTime("CREATE_TIME")));
-                    }
-                }
-            } finally {
-                if (rs != null) {
-                    rs.close();
-                }
-                if (stmt != null) {
-                    stmt.close();
-                }
-                if (con != null) {
-                    con.close();
-                }
+            for (Shipper shipper : list) {
+                System.out.println(shipper);
             }
             return list;
         }
 
-        String insertAlterShipper(String orderId, String oldShipper, String newShipper, String author) throws SQLException, ClassNotFoundException {
-            Connection con = null;
-            PreparedStatement stmt = null;
-
-            try {
-                con = DBUtils.getConnection();
-                if (con != null) {
-                    String sql = "INSERT INTO SHIPPER_ALTER (ID, ORIGINAL, ALTERNATIVE, CREATE_DATE, CREATE_TIME, AUTHOR, DH)\n"
-                            + "VALUES (?, ?, ?, ?, ?, ?, ?)";
-                    stmt = con.prepareStatement(sql);
-                    stmt.setString(1, author + orderId);
-                    stmt.setString(2, oldShipper);
-                    stmt.setString(3, newShipper);
-                    stmt.setDate(4, new java.sql.Date(new Date().getTime()));
-                    stmt.setTime(5, new Time(new Date().getTime()));
-                    stmt.setString(6, author);
-                    stmt.setString(7, orderId);
-                    return stmt.executeUpdate() > 0 ? author + orderId : null;
-                }
-            } finally {
-                if (stmt != null) {
-                    stmt.close();
-                }
-                if (con != null) {
-                    con.close();
-                }
-            }
-            return null;
+        int getTheShortesDistanceInMechanism() {
+            TreeMap<Integer, Integer> sortMechanismReleaseOrder = new TreeMap<>(mapMechanismReleaseOrder);
+            return sortMechanismReleaseOrder.get(sortMechanismReleaseOrder.firstKey());
         }
 
-        String insertOrder(Order order) throws SQLException, ClassNotFoundException {
-            Connection con = null;
-            PreparedStatement stmt = null;
-
-            try {
-                con = DBUtils.getConnection();
-                if (con != null) {
-                    String sql = "INSERT INTO ORDERS (ID, CUST, ADDRESS_DELIVERY, MARKET, NOTE, \n"
-                            + "COST_SHOPPING, COST_DELIVERY, TOTAL_COST, REFUND_COST,\n"
-                            + "CREATED_DATE, CREATED_TIME, LAST_UPDATE, STATUS,  \n"
-                            + "DATE_DELIVERY, TIME_DELIVERY)\n"
-                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                    stmt = con.prepareStatement(sql);
-                    stmt.setString(1, order.getId());
-                    stmt.setString(2, order.getCust());
-                    stmt.setString(3, order.getAddressDelivery());
-                    stmt.setString(4, order.getMarket());
-                    stmt.setString(5, order.getNote());
-
-                    stmt.setDouble(6, order.getCostShopping());
-                    stmt.setDouble(7, order.getCostDelivery());
-                    stmt.setDouble(8, order.getTotalCost());
-                    stmt.setDouble(9, order.getRefundCost());
-
-                    stmt.setDate(10, order.getCreateDate());
-                    stmt.setTime(11, order.getCreateTime());
-                    stmt.setTime(12, order.getLastUpdate());
-                    stmt.setInt(13, order.getStatus());
-
-                    stmt.setDate(14, order.getDateDelivery());
-                    stmt.setTime(15, order.getTimeDelivery());
-                    return stmt.executeUpdate() > 0 ? order.getId() : null;
-                }
-            } finally {
-                if (stmt != null) {
-                    stmt.close();
-                }
-                if (con != null) {
-                    con.close();
-                }
-            }
-            return null;
+        int getTheLongestDistanceInMechanism() {
+            TreeMap<Integer, Integer> sortMechanismReleaseOrder = new TreeMap<>(mapMechanismReleaseOrder);
+            return sortMechanismReleaseOrder.get(sortMechanismReleaseOrder.lastKey());
         }
 
-        int[] insertOrderDetail(String idOrder, List<OrderDetail> details) throws SQLException, ClassNotFoundException {
-            Connection con = null;
-            PreparedStatement stmt = null;
-
-            try {
-                con = DBUtils.getConnection();
-                if (con != null) {
-                    String sql = "INSERT INTO ORDER_DETAIL (ID, FOOD, ORIGINAL_PRICE, SALE_OFF, PAID_PRICE, WEIGHT, DH)\n"
-                            + "VALUES (?, ?, ?, ?, ?, ?, ?)";
-                    stmt = con.prepareStatement(sql);
-
-                    int count = 0;
-                    for (OrderDetail detail : details) {
-                        stmt.setString(1, idOrder + String.valueOf(++count));
-                        stmt.setString(2, detail.getFoodId());
-                        stmt.setDouble(3, detail.getPriceOriginal());
-                        stmt.setInt(4, detail.getSaleOff());
-                        stmt.setDouble(5, detail.getPricePaid());
-                        stmt.setDouble(6, detail.getWeight());
-                        stmt.setString(7, idOrder);
-                        stmt.addBatch();
-                    }
-                    int[] arr = stmt.executeBatch();
-                    con.commit();
-                    return arr;
-                }
-            } finally {
-                if (stmt != null) {
-                    stmt.close();
-                }
-                if (con != null) {
-                    con.close();
-                }
-            }
-            return null;
+        MatrixObject getDistanceMatrixObject(String[] source, String[] destination) throws IOException {
+            UrlConnection url = new UrlConnection();
+            return GsonHelper.gson.fromJson(new InputStreamReader(
+                    url.openConnectionFromSourceToDestination(source, destination), "utf-8"),
+                    MatrixObject.class);
         }
 
-        String updatetOrder(Order order) throws SQLException, ClassNotFoundException {
-            Connection con = null;
-            PreparedStatement stmt = null;
-
-            try {
-                con = DBUtils.getConnection();
-                if (con != null) {
-
-                    String sql = "UPDATE ORDERS SET SHIPPER = ?, STATUS = ?, LAT = ?, LNG = ?, LAST_UPDATE = ?\n"
-                            + "WHERE ID = ?";
-                    stmt = con.prepareStatement(sql);
-                    stmt.setString(1, order.getShipper());
-                    stmt.setInt(2, order.getStatus());
-                    stmt.setString(3, order.getLat());
-                    stmt.setString(4, order.getLng());
-                    stmt.setTime(5, order.getLastUpdate());
-                    stmt.setString(6, order.getId());
-                    return stmt.executeUpdate() > 0 ? order.getId() : null;
-                }
-            } finally {
-                if (stmt != null) {
-                    stmt.close();
-                }
-                if (con != null) {
-                    con.close();
-                }
-            }
-            return null;
+        MatrixObject getDistanceMatrixObject(String[] source, Set<String[]> destination) throws IOException {
+            UrlConnection url = new UrlConnection();
+            return GsonHelper.gson.fromJson(new InputStreamReader(
+                    url.openConnectionFromSourceToDestination(source, destination), "utf-8"),
+                    MatrixObject.class);
         }
 
-        String CancelOrder(Order order) throws SQLException, ClassNotFoundException {
-            Connection con = null;
-            PreparedStatement stmt = null;
-
-            try {
-                con = DBUtils.getConnection();
-                if (con != null) {
-
-                    String sql = "UPDATE ORDERS SET STATUS = ?, AUTHOR = ?, REASON_CANCEL = ?, LAST_UPDATE = ?\n"
-                            + "WHERE ID = ?";
-                    stmt = con.prepareStatement(sql);
-                    stmt.setInt(1, order.getStatus());
-                    stmt.setString(2, order.getAuthor());
-                    stmt.setString(3, order.getReasonCancel());
-                    stmt.setTime(4, order.getLastUpdate());
-                    stmt.setString(5, order.getId());
-                    return stmt.executeUpdate() > 0 ? order.getId() : null;
-                }
-            } finally {
-                if (stmt != null) {
-                    stmt.close();
-                }
-                if (con != null) {
-                    con.close();
-                }
-            }
-            return null;
+        MatrixObject getDistanceMatrixObject(String[] source, List<String> destination) throws IOException {
+            UrlConnection url = new UrlConnection();
+            return GsonHelper.gson.fromJson(new InputStreamReader(
+                    url.openConnectionFromSourceToDestination(source, destination), "utf-8"),
+                    MatrixObject.class);
         }
 
+        /*
         private String splitLocation(String location) {
             return location.split("\\.")[0];
         }
@@ -798,37 +591,6 @@ public class OrderController {
                 }
             }
             return index;
-        }
-
-        private int getTheShortesDistanceInMechanism() {
-            TreeMap<Integer, Integer> sortMechanismReleaseOrder = new TreeMap<>(mapMechanismReleaseOrder);
-            return sortMechanismReleaseOrder.get(sortMechanismReleaseOrder.firstKey());
-        }
-
-        private int getTheLongestDistanceInMechanism() {
-            TreeMap<Integer, Integer> sortMechanismReleaseOrder = new TreeMap<>(mapMechanismReleaseOrder);
-            return sortMechanismReleaseOrder.get(sortMechanismReleaseOrder.lastKey());
-        }
-
-        private DistanceMatrixObject getDistanceMatrixObject(String[] source, String[] destination) throws IOException {
-            UrlConnection url = new UrlConnection();
-            return GsonHelper.gson.fromJson(new InputStreamReader(
-                    url.openConnectionFromSourceToDestination(source, destination), "utf-8"),
-                    DistanceMatrixObject.class);
-        }
-
-        private DistanceMatrixObject getDistanceMatrixObject(String[] source, Set<String[]> destination) throws IOException {
-            UrlConnection url = new UrlConnection();
-            return GsonHelper.gson.fromJson(new InputStreamReader(
-                    url.openConnectionFromSourceToDestination(source, destination), "utf-8"),
-                    DistanceMatrixObject.class);
-        }
-
-        private DistanceMatrixObject getDistanceMatrixObject(String[] source, List<String> destination) throws IOException {
-            UrlConnection url = new UrlConnection();
-            return GsonHelper.gson.fromJson(new InputStreamReader(
-                    url.openConnectionFromSourceToDestination(source, destination), "utf-8"),
-                    DistanceMatrixObject.class);
         }
 
         private int getTimeShopping(List<OrderDetail> list) {
@@ -904,7 +666,7 @@ public class OrderController {
         }
 
         private Map<long[], List<Order>> filterOrderNearShipper(Map<String[], List<Order>> ordersLocation,
-                DistanceMatrixObject distanceObj) {
+                MatrixObject distanceObj) {
             ExtractElementDistanceMatrixApi extract = new ExtractElementDistanceMatrixApi();
             List<ElementObject> listElments = extract.getListElements(distanceObj);
             List<String> listDistanceValue = extract.getListDistance(listElments, "value");
@@ -930,7 +692,7 @@ public class OrderController {
         }
 
         private Map<Order, int[]> filterOrderOnTimeToRelease(Map<long[], List<Order>> mapOrderNearShipper,
-                DistanceMatrixObject matrixMarketToDestinationObj) {
+                MatrixObject matrixMarketToDestinationObj) {
             ExtractElementDistanceMatrixApi extract = new ExtractElementDistanceMatrixApi();
             List<ElementObject> listElments = extract.getListElements(matrixMarketToDestinationObj);
             List<String> listDistanceValue = extract.getListDistance(listElments, "value");
@@ -950,19 +712,6 @@ public class OrderController {
                 }
             });
             return map;
-        }
-
-        private List<Shipper> getShippers(Comparator comparator) {
-            List<Shipper> list = new ArrayList<>();
-            for (Map.Entry<String, Shipper> entry : ShipperController.mapAvailableShipper.entrySet()) {
-                list.add(entry.getValue());
-            }
-            list.sort(comparator);
-
-            for (Shipper shipper : list) {
-                System.out.println(shipper);
-            }
-            return list;
         }
 
         private void preProcessOrderRelease(Shipper shipper, Map<Order, Integer> map) {
@@ -1001,7 +750,7 @@ public class OrderController {
             if (mapOrderInQueue.isEmpty()) {
                 return;
             }
-            DistanceMatrixObject distanceObj;
+            MatrixObject distanceObj;
             List<Shipper> listShipper = getShippers(new SortByHighActive());
 
             synchronized (listShipper) {
@@ -1058,5 +807,6 @@ public class OrderController {
             }
             System.out.println("");
         }
+         */
     }
 }
