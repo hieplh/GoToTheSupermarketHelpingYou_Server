@@ -3,27 +3,18 @@ package com.smhu.controller;
 import com.smhu.account.Account;
 import com.smhu.account.AccountLogin;
 import com.smhu.account.AccountUpdateWallet;
-import com.smhu.account.Address;
 import com.smhu.account.Customer;
 import com.smhu.account.Shipper;
 import com.smhu.dao.AccountDAO;
+import com.smhu.dao.ShipperDAO;
 import com.smhu.iface.IAccount;
 import com.smhu.iface.IShipper;
 import com.smhu.iface.ITransaction;
 import com.smhu.response.ResponseMsg;
-import com.smhu.utils.DBUtils;
 
 import java.io.UnsupportedEncodingException;
-
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,7 +48,7 @@ public class AccountController {
 
     public AccountController() {
         service = new AccountDAO();
-        shipperListener = new ShipperController().getShipperListener();
+        shipperListener = new ShipperDAO();
     }
 
     @CrossOrigin

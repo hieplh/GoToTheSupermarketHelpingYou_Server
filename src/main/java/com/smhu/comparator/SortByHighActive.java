@@ -30,7 +30,13 @@ public class SortByHighActive implements Comparator<String> {
     @Override
     public int compare(String s1, String s2) {
         Shipper shipper1 = ShipperController.mapAvailableShipper.get(s1);
+        if (shipper1 == null) {
+            return 1;
+        }
         Shipper shipper2 = ShipperController.mapAvailableShipper.get(s2);
+        if (shipper2 == null) {
+            return -1;
+        }
 
         double rating1 = shipper1.getRating();
         double rating2 = shipper2.getRating();

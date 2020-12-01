@@ -26,28 +26,30 @@ public class TestController {
             OrderController.mapOrderIsWaitingAccept.clear();
         }
 
+        if (!OrderController.mapOrderDeliveryForShipper.isEmpty()) {
+            OrderController.mapOrderDeliveryForShipper.clear();
+        }
+        
         if (!OrderController.mapCountOrderRelease.isEmpty()) {
             OrderController.mapCountOrderRelease.clear();
         }
 
-//        if (!OrderController.mapOrderInProgress.isEmpty()) {
-//            OrderController.mapOrderInProgress.clear();
-//        }
+        if (!OrderController.mapOrderInProgress.isEmpty()) {
+            OrderController.mapOrderInProgress.clear();
+        }
+        
         if (!OrderController.mapOrdersShipperReject.isEmpty()) {
             OrderController.mapOrdersShipperReject.clear();
-        }
-
-        if (!OrderController.mapOrderDeliveryForShipper.isEmpty()) {
-            OrderController.mapOrderDeliveryForShipper.clear();
         }
 
         if (!OrderController.mapOrderIsDone.isEmpty()) {
             OrderController.mapOrderIsDone.clear();
         }
 
-//        if (!OrderController.mapOrderIsCancelInQueue.isEmpty()) {
-//            OrderController.mapOrderIsCancelInQueue.clear();
-//        }
+        if (!OrderController.mapOrderIsCancelInQueue.isEmpty()) {
+            OrderController.mapOrderIsCancelInQueue.clear();
+        }
+        
         if (!OrderController.mapOrderIsCancel.isEmpty()) {
             OrderController.mapOrderIsCancel.clear();
         }
@@ -56,6 +58,9 @@ public class TestController {
 //            ShipperController.listAvailableShipper.clear();
 //        }
 //
+        if (!ShipperController.mapShipperOrdersInProgress.isEmpty()) {
+            ShipperController.mapShipperOrdersInProgress.clear();
+        }
         List<String> keyRemoved = new ArrayList<>(ShipperController.mapInProgressShipper.keySet());
         for (String key : keyRemoved) {
             Shipper shipper = ShipperController.mapInProgressShipper.remove(key);
@@ -90,20 +95,32 @@ public class TestController {
         return new ResponseEntity<>(s, HttpStatus.OK);
     }
     
+    @GetMapping("/on_off_remote")
+    public ResponseEntity<?> enableRemote() {
+        String s;
+        if (Scan.ENABLE_REMOTE_SCHEDULE) {
+            Scan.ENABLE_REMOTE_SCHEDULE = false;
+            s = "Remote is Off";
+        } else {
+            Scan.ENABLE_REMOTE_SCHEDULE = true;
+            s = "Remote is on";
+        }
+        return new ResponseEntity<>(s, HttpStatus.OK);
+    }
+
 //    @GetMapping("/scan")
 //    public ResponseEntity<?> scanOrder() {
 //        IOrder orderListener = new OrderController().getOrderListener();
 //        orderListener.scanOrdesrReleaseToShippers();
 //        return new ResponseEntity<>(HttpStatus.OK);
 //    }
-    
     @GetMapping("/new_scan_shipper")
     public ResponseEntity<?> scanShipperNew() {
         CoreFunctions coreFunctions = new CoreFunctions();
         coreFunctions.scanShippers();
         return new ResponseEntity<>(HttpStatus.OK);
     }
-    
+
     @GetMapping("/new_scan_order")
     public ResponseEntity<?> scanOrderNew() {
         CoreFunctions coreFunctions = new CoreFunctions();

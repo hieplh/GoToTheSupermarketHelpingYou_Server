@@ -121,6 +121,13 @@ public class GototheSupermarketHelpingYouApplication {
                 service.loadOrderDetail(listOrderIsDone);
                 listOrderIsDone.forEach(order -> OrderController.mapOrderIsDone.put(order.getId(), order));
             }
+            
+            List<Order> listOrdersIsCancel = service.loadOrder(date, "-%");
+            if (listOrdersIsCancel != null) {
+                for (Order order : listOrdersIsCancel) {
+                    OrderController.mapOrderIsCancel.put(order.getId(), order);
+                }
+            }
         } catch (ClassNotFoundException | SQLException e) {
             Logger.getLogger(GototheSupermarketHelpingYouApplication.class.getName()).log(Level.SEVERE, "Init: {0}", e.getMessage());
         }

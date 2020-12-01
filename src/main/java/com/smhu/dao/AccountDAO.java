@@ -587,4 +587,56 @@ public class AccountDAO implements IAccount {
         }
         return 0;
     }
+    
+    @Override
+    public int updateNumSuccess(String accountId, int num) throws ClassNotFoundException, SQLException {
+        Connection con = null;
+        PreparedStatement stmt = null;
+
+        try {
+            con = DBUtils.getConnection();
+            if (con != null) {
+
+                String sql = "EXEC UPDATE_NUM_SUCCESS ?, ?";
+                stmt = con.prepareStatement(sql);
+                stmt.setString(1, accountId);
+                stmt.setInt(2, num);
+                return stmt.executeUpdate() > 0 ? 1 : 0;
+            }
+        } finally {
+            if (stmt != null) {
+                stmt.close();
+            }
+            if (con != null) {
+                con.close();
+            }
+        }
+        return 0;
+    }
+
+    @Override
+    public int updateNumCancel(String accountId, int num) throws ClassNotFoundException, SQLException {
+        Connection con = null;
+        PreparedStatement stmt = null;
+
+        try {
+            con = DBUtils.getConnection();
+            if (con != null) {
+
+                String sql = "EXEC UPDATE_NUM_CANCEL ?, ?";
+                stmt = con.prepareStatement(sql);
+                stmt.setString(1, accountId);
+                stmt.setInt(2, num);
+                return stmt.executeUpdate() > 0 ? 1 : 0;
+            }
+        } finally {
+            if (stmt != null) {
+                stmt.close();
+            }
+            if (con != null) {
+                con.close();
+            }
+        }
+        return 0;
+    }
 }

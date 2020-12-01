@@ -61,27 +61,6 @@ public class TransactionController {
         private final String DELIVERY = "DELIVERY";
         private final String REFUND = "REFUND";
 
-        private String generateId(String id, String type) {
-            switch (type) {
-                case RECHARGE:
-                    LocalTime time = LocalTime.now(ZoneId.of("GMT+7"));
-                    Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"), new Locale("vi", "vn"));
-                    return "TC" + id
-                            + String.valueOf(cal.get(Calendar.YEAR))
-                            + String.valueOf(cal.get(Calendar.MONTH) + 1)
-                            + String.valueOf(cal.get(Calendar.DAY_OF_MONTH))
-                            + String.valueOf(time.getHour())
-                            + String.valueOf(time.getMinute())
-                            + String.valueOf(time.getSecond());
-                case DELIVERY:
-                    return "TS" + id;
-                case REFUND:
-                    return "TC" + id;
-                default:
-                    return null;
-            }
-        }
-
         private String generateId(String id, int status, String type) {
             switch (type) {
                 case RECHARGE:
@@ -95,9 +74,9 @@ public class TransactionController {
                             + String.valueOf(time.getMinute())
                             + String.valueOf(time.getSecond());
                 case DELIVERY:
-                    return "T" + status + id;
+                    return "TD" + status + id;
                 case REFUND:
-                    return "TC" + id;
+                    return "TR" + id;
                 default:
                     return null;
             }
@@ -156,7 +135,7 @@ public class TransactionController {
                     String sql = "INSERT INTO TRANSACTIONS (ID, ACCOUNT, AMOUNT, AUTHOR, CREATE_DATE, CREATE_TIME, STATUS)\n"
                             + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
                     stmt = con.prepareStatement(sql);
-                    stmt.setString(1, generateId(authorId, RECHARGE));
+                    stmt.setString(1, generateId(authorId, -1, RECHARGE));
                     stmt.setString(2, authorId);
                     stmt.setDouble(3, amount);
                     stmt.setString(4, authorId);

@@ -33,4 +33,8 @@ public interface IAccount {
     public Object getAccountById(String id, String type) throws SQLException, ClassNotFoundException;
     
     public int updateWalletAccount(String accountId, double amount) throws ClassNotFoundException, SQLException;
+    
+    public int updateNumSuccess(String accountId, int num) throws ClassNotFoundException, SQLException;
+    
+    public int updateNumCancel(String accountId, int num) throws ClassNotFoundException, SQLException;
 }

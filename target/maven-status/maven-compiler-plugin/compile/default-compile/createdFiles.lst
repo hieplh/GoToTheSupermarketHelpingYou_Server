@@ -13,7 +13,6 @@ com\smhu\dao\OrderDAO.class
 com\smhu\entity\Market.class
 com\smhu\helper\ExtractElementDistanceMatrixApi.class
 com\smhu\account\Account.class
-com\smhu\controller\ShipperController$ShipperService.class
 com\smhu\iface\ITransaction.class
 com\smhu\response\LogMsg.class
 com\smhu\comparator\SortByHighActive.class

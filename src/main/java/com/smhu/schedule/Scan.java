@@ -10,24 +10,29 @@ import org.springframework.stereotype.Component;
 public class Scan {
 
     public static boolean ENABLE_SCAN_SCHEDULE = false;
-    private final ICore coreListener;
+    public static boolean ENABLE_REMOTE_SCHEDULE = false;
+
+    final ICore coreListener;
+    final SystemTime systemTime;
 
     public Scan() {
         coreListener = new CoreFunctions();
+        systemTime = new SystemTime();
     }
 
 //    @Scheduled(fixedRate = 15 * 1000)
     public void removeOrder() {
-        SystemTime systemTime = new SystemTime();
-        systemTime.checkOrderOutOfTimeRelease();
+        if (ENABLE_REMOTE_SCHEDULE) {
+            systemTime.checkOrderOutOfTimeRelease();
+        }
     }
-    
-    @Scheduled(fixedRate = 3 * 1000)
+
+    @Scheduled(fixedDelay = 3 * 1000)
     public void scanShipper() {
         coreListener.scanShippers();
     }
-    
-    @Scheduled(fixedRate = 20 * 1000)
+
+    @Scheduled(fixedDelay = 20 * 1000)
     public void scanOrder() {
         if (ENABLE_SCAN_SCHEDULE) {
             coreListener.scanOrder();

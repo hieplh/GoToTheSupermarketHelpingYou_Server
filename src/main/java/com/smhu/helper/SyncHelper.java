@@ -1,7 +1,7 @@
 package com.smhu.helper;
 
 import com.smhu.controller.MarketController;
-import com.smhu.controller.ShipperController;
+import com.smhu.dao.ShipperDAO;
 import com.smhu.iface.IShipper;
 import com.smhu.order.Order;
 import com.smhu.order.OrderDetail;
@@ -12,7 +12,7 @@ import com.smhu.response.shipper.OrderShipper;
 public class SyncHelper {
 
     public OrderResponseCustomer syncOrderSystemToOrderResponseCustomer(Order order) {
-        IShipper shipperListener = new ShipperController().getShipperListener();
+        IShipper shipperListener = new ShipperDAO();
 
         OrderResponseCustomer obj = new OrderResponseCustomer();
         obj.setId(order.getId());
