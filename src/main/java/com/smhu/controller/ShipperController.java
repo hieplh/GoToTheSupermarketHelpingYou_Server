@@ -43,7 +43,6 @@ public class ShipperController {
             shipper.setLat(lat);
             shipper.setLng(lng);
             shipper.setTokenFCM(token);
-            System.out.println(shipper);
             return new ResponseEntity<>(HttpStatus.OK);
         } catch (Exception e) {
             Logger.getLogger(ShipperController.class.getName()).log(Level.SEVERE, "Set current location: {0}", e.getMessage());
@@ -69,7 +68,7 @@ public class ShipperController {
             return new ResponseEntity<>(OrderController.mapOrderDeliveryForShipper.getOrDefault(shipperId, null), HttpStatus.OK);
         } catch (Exception e) {
             Logger.getLogger(ShipperController.class.getName()).log(Level.SEVERE, "Get release orders: {0}", e.getMessage());
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

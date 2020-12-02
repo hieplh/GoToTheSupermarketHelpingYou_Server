@@ -43,9 +43,9 @@ public class SystemTime {
 
 //    @Scheduled(fixedDelay = 13 * 1000)
     public void checkOrderOutOfTimeRelease() {
-        System.out.println("");
         System.out.println("Check Order Out Of Time Release");
 
+        List<String> rejectedShippers = null;
         Iterator<Order> iterator = OrderController.mapOrderIsWaitingAccept.keySet().iterator();
         while (iterator.hasNext()) {
             try {
@@ -56,20 +56,19 @@ public class SystemTime {
                     List<String> list = OrderController.mapOrdersShipperReject.get(order.getShipper());
                     if (list == null) {
                         list = new ArrayList<>();
+                        OrderController.mapOrdersShipperReject.put(shipper.getId(), list);
                     }
                     System.out.println(order);
-                    if (order.getShipper() != null) {
-                        synchronized (ShipperController.mapInProgressShipper) {
-                            if (ShipperController.mapInProgressShipper.containsKey(order.getShipper())) {
-                                shipperListener.changeStatusOfShipper(order.getShipper());
-                            }
-                        }
+
+                    if (rejectedShippers == null) {
+                        rejectedShippers = new ArrayList();
+                    }
+                    if (!rejectedShippers.contains(shipper.getId())) {
+                        rejectedShippers.add(shipper.getId());
                     }
 
                     list.add(order.getId());
-                    OrderController.mapOrdersShipperReject.put(shipper.getId(), list);
                     OrderController.mapOrderDeliveryForShipper.remove(shipper.getId());
-                    OrderController.mapOrderInQueue.put(order.getId(), order);
 
                     List<String> listOrderBelongToShipper = ShipperController.mapShipperOrdersInProgress.get(order.getShipper());
                     listOrderBelongToShipper.remove(order.getId());
@@ -88,5 +87,16 @@ public class SystemTime {
                 Logger.getLogger(SystemTime.class.getName()).log(Level.SEVERE, e.getMessage());
             }
         }
+
+        if (rejectedShippers != null) {
+            synchronized (ShipperController.mapAvailableShipper) {
+                for (String id : rejectedShippers) {
+                    if (ShipperController.mapInProgressShipper.containsKey(id)) {
+                        shipperListener.changeStatusOfShipper(id);
+                    }
+                }
+            }
+        }
+        System.out.println("");
     }
 }

@@ -433,7 +433,11 @@ public class OrderController {
             return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
         }
         Shipper shipper = shipperListener.getShipper(order.getShipper());
-        return new ResponseEntity<>(new String[]{shipper.getLat(), shipper.getLng()}, HttpStatus.OK);
+        
+        Map<String, String> map = new HashMap();
+        map.put("lat", shipper.getLat());
+        map.put("lng", shipper.getLng());
+        return new ResponseEntity<>(map, HttpStatus.OK);
     }
 
     @DeleteMapping("delete/{orderId}/{type}/{personId}")
@@ -626,7 +630,6 @@ public class OrderController {
         }
 
         void addOrderInqueue(Order order) {
-            mapOrderInQueue.put(order.getId(), order);
             coreListener.filterOrder(order);
         }
 

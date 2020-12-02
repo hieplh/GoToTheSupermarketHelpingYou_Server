@@ -20,7 +20,7 @@ public class Scan {
         systemTime = new SystemTime();
     }
 
-//    @Scheduled(fixedRate = 15 * 1000)
+    @Scheduled(fixedDelay = 15 * 1000)
     public void removeOrder() {
         if (ENABLE_REMOTE_SCHEDULE) {
             systemTime.checkOrderOutOfTimeRelease();
