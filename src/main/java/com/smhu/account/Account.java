@@ -14,7 +14,7 @@ public class Account {
     private String phone;
     private Date dob;
     private String role;
-    
+
     public Account() {
     }
 

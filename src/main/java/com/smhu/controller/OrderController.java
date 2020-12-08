@@ -89,6 +89,7 @@ public class OrderController {
     public final static Map<String, Integer> mapCountOrderRelease = new HashMap<>();
 
     public final static Map<String, Order> mapOrderInProgress = new HashMap<>();
+    public final static Map<String, List<Order>> mapOrderWaitingAfterShopping = new HashMap<>();
     public final static Map<String, Order> mapOrderIsDone = new HashMap<>();
 
     public final static Map<String, List<String>> mapOrdersShipperReject = new HashMap<>();
@@ -255,16 +256,19 @@ public class OrderController {
 
     @PutMapping("/orders/update")
     public ResponseEntity<?> updatetOrder(@RequestBody List<OrderShipper> listOrders) {
+        SyncHelper sync = new SyncHelper();
+
         List<OrderShipper> listResults = null;
         List<OrderDoneDelivery> listVerificationResults = null;
-        SyncHelper sync = new SyncHelper();
-        Shipper shipper = null;
+        Shipper shipper = service.getShipper(listOrders.get(0));
 
         int status;
         int numCancel = 0;
-
         boolean isFirstAcceptOrder = false;
         boolean orderIsDone = false;
+
+        List<Order> listOrdersWaitingAfterShopping = service.checkOrdersWaitingAfterShoppingOfShipper(listOrders);
+
         for (OrderShipper orderInProcess : listOrders) {
             if (mapOrderIsCancel.containsKey(orderInProcess.getId())) {
                 numCancel++;
@@ -289,9 +293,6 @@ public class OrderController {
                             return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
                         }
 
-                        if (shipper == null) {
-                            shipper = shipperListener.getShipper(orderWaitAccept.getShipper());
-                        }
                         isFirstAcceptOrder = true;
                         mapOrderIsWaitingAccept.remove(orderWaitAccept);
                         mapCountOrderRelease.remove(orderWaitAccept.getId());
@@ -306,53 +307,39 @@ public class OrderController {
                         return new ResponseEntity<>(new ResponseMsg("Đơn hàng của bạn đã hoàn thành hoặc bị hủy"), HttpStatus.NOT_FOUND);
                     }
                 } else {
-                    try {
-                        int tmpStatus = statusListener.getStatusIsDoneOrder();
-                        if (!String.valueOf(order.getStatus()).matches("2\\d")) {
-                            status = statusListener.getStatusIsAccept();
-                        } else {
-                            status = order.getStatus() + 1;
+                    if (!String.valueOf(order.getStatus()).matches("2\\d")) {
+                        status = statusListener.getStatusIsAccept();
+                    } else {
+                        status = order.getStatus() + 1;
+                    }
+                    int statusIsDone = statusListener.getStatusIsDoneOrder();
+
+                    if (listOrdersWaitingAfterShopping != null) {
+                        if (listOrdersWaitingAfterShopping.contains(order)) {
+                            service.updateOrder(shipper, order, status);
                         }
+                    } else {
+                        service.updateOrder(shipper, order, status);
+                    }
 
-                        order.setStatus(status);
-                        order.setLastUpdate(new Time(new Date().getTime()));
-                        if (status == tmpStatus) {
-                            if (shipper == null) {
-                                shipper = shipperListener.getShipper(order.getShipper());
+                    if (status == statusIsDone) {
+                        if (listOrdersWaitingAfterShopping == null) {
+                            try {
+                                orderIsDone = true;
+                                if (listVerificationResults == null) {
+                                    listVerificationResults = new ArrayList();
+                                }
+                                service.executeOrderIsDone(shipper, order, status, sync);
+                            } catch (ClassNotFoundException | SQLException e) {
+                                Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, "Update Order - Done: {0}", e.getMessage());
+                                return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
                             }
-                            order.setLat(shipper.getLat());
-                            order.setLng(shipper.getLng());
                         }
-                        dao.updatetOrder(order);
-
-                        if (status == tmpStatus) {
-                            Order orderDoneObj = mapOrderInProgress.remove(order.getId());
-                            mapOrderIsDone.put(orderDoneObj.getId(), orderDoneObj);
-
-                            orderIsDone = true;
-                            service.remoteOrderBelongToShipper(shipper, orderDoneObj);
-
-                            double totalReceivedCost = orderDoneObj.getCostShopping() + orderDoneObj.getCostDelivery();
-                            transactionListener.updateDeliveryTransaction(shipper.getId(), totalReceivedCost, status,
-                                    orderDoneObj.getId());
-                            accountListener.updateWalletAccount(shipper.getId(), totalReceivedCost);
-                            accountListener.updateNumSuccess(orderDoneObj.getCust(), 1);
-
-                            shipper.setNumDelivery(shipper.getNumDelivery() + 1);
-                            shipperListener.updateNumSuccess(shipper.getId(), 1);
-                            if (listVerificationResults == null) {
-                                listVerificationResults = new ArrayList();
-                            }
-                            listVerificationResults.add(sync.syncOrderSystemToOrderDoneDelivery(orderDoneObj));
-                        } else {
-                            if (listResults == null) {
-                                listResults = new ArrayList<>();
-                            }
-                            listResults.add(sync.syncOrderSystemToOrderShipper(order));
+                    } else {
+                        if (listResults == null) {
+                            listResults = new ArrayList<>();
                         }
-                    } catch (SQLException | ClassNotFoundException e) {
-                        Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, "OrderController - Update Order: {0}", e.getMessage());
-                        return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+                        listResults.add(sync.syncOrderSystemToOrderShipper(order));
                     }
                 } // end if check boolean isHasOrderIsCancel
             } // end if mapOrderIsCancel
@@ -365,6 +352,8 @@ public class OrderController {
 
         if (isFirstAcceptOrder) {
             mapOrderDeliveryForShipper.remove(shipper.getId());
+        } else if (listOrdersWaitingAfterShopping != null) {
+            mapOrderWaitingAfterShopping.remove(shipper.getId());
         } else if (orderIsDone) {
             if (mapShipperOrdersInProgress.get(shipper.getId()).isEmpty()) {
                 shipperListener.changeStatusOfShipper(shipper.getId());
@@ -433,7 +422,7 @@ public class OrderController {
             return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
         }
         Shipper shipper = shipperListener.getShipper(order.getShipper());
-        
+
         Map<String, String> map = new HashMap();
         map.put("lat", shipper.getLat());
         map.put("lng", shipper.getLng());
@@ -600,6 +589,10 @@ public class OrderController {
                     .orElse(null);
         }
 
+        List<Order> checkOrdersWaitingAfterShoppingOfShipper(List<OrderShipper> listOrders) {
+            return mapOrderWaitingAfterShopping.get(listOrders.get(0).getShipper());
+        }
+
         void remoteOrderBelongToShipper(Shipper shipper, Order order) {
             List<String> list = mapShipperOrdersInProgress.get(shipper.getId());
             if (list == null) {
@@ -644,6 +637,10 @@ public class OrderController {
                 System.out.println(shipper);
             }
             return list;
+        }
+
+        Shipper getShipper(OrderShipper order) {
+            return shipperListener.getShipper(order.getShipper());
         }
 
         int getTheShortesDistanceInMechanism() {
@@ -702,6 +699,36 @@ public class OrderController {
                     }
                 }
             }
+        }
+
+        OrderDoneDelivery executeOrderIsDone(Shipper shipper, Order order, int status, SyncHelper sync) throws ClassNotFoundException, SQLException {
+            Order orderDoneObj = mapOrderInProgress.remove(order.getId());
+            mapOrderIsDone.put(orderDoneObj.getId(), orderDoneObj);
+            service.remoteOrderBelongToShipper(shipper, orderDoneObj);
+
+            double totalReceivedCost = orderDoneObj.getCostShopping() + orderDoneObj.getCostDelivery();
+            transactionListener.updateDeliveryTransaction(shipper.getId(), totalReceivedCost,
+                    status, orderDoneObj.getId());
+            accountListener.updateWalletAccount(shipper.getId(), totalReceivedCost);
+            accountListener.updateNumSuccess(orderDoneObj.getCust(), 1);
+
+            shipper.setNumDelivery(shipper.getNumDelivery() + 1);
+            shipperListener.updateNumSuccess(shipper.getId(), 1);
+
+            return sync.syncOrderSystemToOrderDoneDelivery(orderDoneObj);
+        }
+
+        String updateOrder(Shipper shipper, Order order, int status) {
+            try {
+                order.setStatus(status);
+                order.setLat(shipper.getLat());
+                order.setLng(shipper.getLng());
+                order.setLastUpdate(new Time(new Date().getTime()));
+                return dao.updatetOrder(order);
+            } catch (SQLException | ClassNotFoundException e) {
+                Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, "OrderController - Update Order: {0}", e.getMessage());
+            }
+            return null;
         }
         /*
         private String splitLocation(String location) {

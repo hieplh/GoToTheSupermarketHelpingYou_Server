@@ -1,16 +1,17 @@
 package com.smhu.response.shipper;
 
-import com.smhu.entity.Market;
+import com.smhu.market.Market;
 import com.smhu.order.OrderDetail;
 import java.sql.Date;
 import java.sql.Time;
 import java.util.List;
+import java.util.Map;
 
 public class OrderShipper {
 
     private String id;
     private String cust;
-    private String addressDelivery;
+    private Map<String, String> addressDelivery;
     private Market market;
     private String note;
     private String shipper;
@@ -25,7 +26,7 @@ public class OrderShipper {
     public OrderShipper() {
     }
 
-    public OrderShipper(String id, String cust, String addressDelivery, Market market, String note, String shipper, int status,
+    public OrderShipper(String id, String cust, Map<String, String> addressDelivery, Market market, String note, String shipper, int status,
             double costShopping, double costDelivery, double totalCost,
             Date dateDelivery, Time timeDelivery, List<OrderDetail> details) {
         this.id = id;
@@ -51,7 +52,7 @@ public class OrderShipper {
         return cust;
     }
 
-    public String getAddressDelivery() {
+    public Map<String, String> getAddressDelivery() {
         return addressDelivery;
     }
 
@@ -103,7 +104,7 @@ public class OrderShipper {
         this.cust = cust;
     }
 
-    public void setAddressDelivery(String addressDelivery) {
+    public void setAddressDelivery(Map<String, String> addressDelivery) {
         this.addressDelivery = addressDelivery;
     }
 

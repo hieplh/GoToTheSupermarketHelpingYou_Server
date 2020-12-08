@@ -1,16 +1,14 @@
 package com.smhu.callable;
 
 import com.smhu.controller.MarketController;
-import com.smhu.entity.Market;
+import com.smhu.market.Market;
 import com.smhu.google.matrixobj.ElementObject;
 import com.smhu.google.matrixobj.MatrixObject;
 import com.smhu.helper.ExtractElementDistanceMatrixApi;
-import com.smhu.helper.GsonHelper;
+import com.smhu.helper.MatrixObjBuilder;
 import com.smhu.order.Order;
-import com.smhu.url.UrlConnection;
 
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -45,20 +43,6 @@ public class TimeDelivery<T> implements Callable<T> {
         return list;
     }
 
-    private MatrixObject getMatrixObject(String source, List<String> destination) throws IOException {
-        UrlConnection url = new UrlConnection();
-        return GsonHelper.gson.fromJson(new InputStreamReader(
-                url.openConnectionFromSourceToDestination(source, destination), "utf-8"),
-                MatrixObject.class);
-    }
-
-    private MatrixObject getMatrixObject(String[] source, List<String> destination) throws IOException {
-        UrlConnection url = new UrlConnection();
-        return GsonHelper.gson.fromJson(new InputStreamReader(
-                url.openConnectionFromSourceToDestination(source, destination), "utf-8"),
-                MatrixObject.class);
-    }
-
     private void swap(List<Order> listOrders, int swap1, int swap2) {
         if (swap1 == swap2) {
             return;
@@ -74,10 +58,10 @@ public class TimeDelivery<T> implements Callable<T> {
         ExtractElementDistanceMatrixApi extract = new ExtractElementDistanceMatrixApi();
         if (count > 0) {
             Order order = listOrders.get(count - 1);
-            matrixObj = getMatrixObject(order.getAddressDelivery(), getListPhysicalAddresses(listOrders.subList(count, listOrders.size())));
+            matrixObj = MatrixObjBuilder.getMatrixObject(order.getAddressDelivery(), getListPhysicalAddresses(listOrders.subList(count, listOrders.size())));
         } else {
             Market market = MarketController.mapMarket.get(listOrders.get(count).getMarket());
-            matrixObj = getMatrixObject(new String[]{market.getLat(), market.getLng()}, getListPhysicalAddresses(listOrders));
+            matrixObj = MatrixObjBuilder.getMatrixObject(new String[]{market.getLat(), market.getLng()}, getListPhysicalAddresses(listOrders));
         }
 
         List<ElementObject> listElements = extract.getListElements(matrixObj);

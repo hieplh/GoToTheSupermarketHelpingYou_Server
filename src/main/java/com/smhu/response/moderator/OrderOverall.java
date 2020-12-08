@@ -3,7 +3,7 @@ package com.smhu.response.moderator;
 import com.smhu.account.Account;
 import com.smhu.account.Shipper;
 import com.smhu.account.ShipperAlter;
-import com.smhu.entity.Market;
+import com.smhu.market.Market;
 import com.smhu.order.Evidence;
 import com.smhu.order.Order;
 import com.smhu.order.OrderDetail;

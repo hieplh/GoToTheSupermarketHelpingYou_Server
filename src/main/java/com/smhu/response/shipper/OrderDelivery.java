@@ -1,25 +1,17 @@
 package com.smhu.response.shipper;
 
-import com.smhu.controller.MarketController;
-import com.smhu.entity.Market;
-import com.smhu.order.Order;
+import com.smhu.market.Market;
 import com.smhu.order.OrderDetail;
 import java.sql.Date;
 import java.sql.Time;
 import java.util.List;
+import java.util.Map;
 
 public class OrderDelivery {
 
-//    @SerializedName("destination")
-//    private String destination; // address delivery
-//
-//    @SerializedName("value")
-//    private int value; // int 14300
-//    @SerializedName("order")
-//    private OrderShipper order;
     private String id;
     private String cust;
-    private String addressDelivery;
+    private Map<String, String> addressDelivery;
     private Market market;
     private String note;
     private String shipper;
@@ -31,24 +23,8 @@ public class OrderDelivery {
     private Time timeDelivery;
     private List<OrderDetail> details;
 
-    public OrderDelivery() {
-    }
-
-    public OrderDelivery(Order order) {
-        this.id = order.getId();
-        this.cust = order.getCust();
-        this.addressDelivery = order.getAddressDelivery();
-        this.market = MarketController.mapMarket.get(order.getMarket());
-        this.note = order.getNote();
-        this.shipper = order.getShipper();
-        this.status = order.getStatus();
-        this.costShopping = order.getCostShopping();
-        this.costDelivery = order.getCostDelivery();
-        this.totalCost = order.getTotalCost();
-        this.dateDelivery = order.getDateDelivery();
-        this.timeDelivery = order.getTimeDelivery();
-        this.details = order.getDetails();
-    }
+//    public OrderDelivery() {
+//    }
 
     public String getId() {
         return id;
@@ -58,7 +34,7 @@ public class OrderDelivery {
         return cust;
     }
 
-    public String getAddressDelivery() {
+    public Map<String, String> getAddressDelivery() {
         return addressDelivery;
     }
 
@@ -110,7 +86,7 @@ public class OrderDelivery {
         this.cust = cust;
     }
 
-    public void setAddressDelivery(String addressDelivery) {
+    public void setAddressDelivery(Map<String, String> addressDelivery) {
         this.addressDelivery = addressDelivery;
     }
 

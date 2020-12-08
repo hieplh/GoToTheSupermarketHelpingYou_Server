@@ -10,7 +10,7 @@ import com.smhu.dao.AccountDAO;
 import com.smhu.helper.PropertiesWithJavaConfig;
 import com.smhu.iface.IMain;
 import com.smhu.iface.IStatus;
-import com.smhu.entity.Market;
+import com.smhu.market.Market;
 import com.smhu.order.Order;
 import com.smhu.order.OrderDetail;
 import com.smhu.status.Status;
@@ -67,6 +67,22 @@ public class GototheSupermarketHelpingYouApplication {
     public static void main(String[] args) {
         SpringApplication.run(GototheSupermarketHelpingYouApplication.class, args);
     }
+    
+//    public static void main(String[] args) throws IOException {
+//        List<String> addresses = new ArrayList<>();
+//        addresses.add("74 Đường D4A, Phước Long B, Quận 9, Thành phố Hồ Chí Minh");
+//        addresses.add("131-125 Đường 50, Phước Long B, Quận 9, Thành phố Hồ Chí Minh, Việt Nam");
+//        
+//        UrlConnection url = new UrlConnection();
+//        InputStreamReader isr = new InputStreamReader(url.openConnectionConvertPhysicalAddressToGeocoding(addresses), "utf-8");
+//        Geocoding geocoding = GsonHelper.gson.fromJson(isr, Geocoding.class);
+//        
+//        for (Result result : geocoding.getResults()) {
+//            System.out.println(result);
+//        }
+//        System.out.println(geocoding.getStatus());
+//        
+//    }
 
     private void initDefaultProperties() {
         try {

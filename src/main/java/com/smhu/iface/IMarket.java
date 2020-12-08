@@ -1,6 +1,6 @@
 package com.smhu.iface;
 
-import com.smhu.entity.Market;
+import com.smhu.market.Market;
 import java.sql.SQLException;
 import java.util.List;
 

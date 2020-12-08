@@ -4,7 +4,7 @@ import static com.smhu.core.CoreFunctions.AVG_TIME_TRAVEL_TO_MARKET;
 
 import com.smhu.controller.MarketController;
 import com.smhu.core.CoreFunctions;
-import com.smhu.entity.Market;
+import com.smhu.market.Market;
 import com.smhu.google.matrixobj.ElementObject;
 import com.smhu.google.matrixobj.MatrixObject;
 import com.smhu.helper.AverageTimeTravel;

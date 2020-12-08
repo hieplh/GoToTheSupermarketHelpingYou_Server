@@ -1,7 +1,7 @@
 package com.smhu.response.customer;
 
 import com.smhu.account.Shipper;
-import com.smhu.entity.Market;
+import com.smhu.market.Market;
 import java.sql.Time;
 
 public class OrderResponseCustomer {

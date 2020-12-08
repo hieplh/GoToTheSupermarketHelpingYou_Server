@@ -1,9 +1,10 @@
 package com.smhu.controller;
 
 import com.smhu.iface.IMarket;
-import com.smhu.entity.Market;
+import com.smhu.market.Market;
 import com.smhu.response.ResponseMsg;
 import com.smhu.utils.DBUtils;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
