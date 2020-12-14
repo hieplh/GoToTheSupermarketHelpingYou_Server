@@ -17,6 +17,26 @@ public class UrlConnection {
         System.setProperty("https.protocols", "TLSv1,TLSv1.1,TLSv1.2");
     }
 
+    public InputStream openConnectionFromSourceToDestination(String[] source, String destination) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        sb.append(URL_DISTANCE);
+        sb.append("&origins=");
+
+        sb.append(source[0]);
+        sb.append(",");
+        sb.append(source[1]);
+
+        sb.append("&destinations=");
+        sb.append(URLEncoder.encode(destination, "utf-8"));
+
+        sb.append("&language=vi");
+        sb.append("&mode=driving");
+        sb.append("&key=");
+        sb.append(PropertiesWithJavaConfig.PROPERTIES.get("google.api.key.distance.matrix"));
+
+        return new URL(sb.toString()).openStream();
+    }
+    
     public InputStream openConnectionFromSourceToDestination(String[] source, String[] destination) throws IOException {
         StringBuilder sb = new StringBuilder();
         sb.append(URL_DISTANCE);

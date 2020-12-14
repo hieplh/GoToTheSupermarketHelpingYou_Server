@@ -34,6 +34,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@CrossOrigin
 @RequestMapping("/api")
 public class AccountController {
 
@@ -51,7 +52,6 @@ public class AccountController {
         shipperListener = new ShipperDAO();
     }
 
-    @CrossOrigin
     @GetMapping("/account/{type}/count")
     public ResponseEntity<?> getCountAccounts(@PathVariable("type") String type) {
         try {
@@ -62,7 +62,6 @@ public class AccountController {
         }
     }
 
-    @CrossOrigin
     @GetMapping("/account/{type}/{search}/count")
     public ResponseEntity<?> getCountAccounts(@PathVariable("type") String type, @PathVariable("search") String search) {
         try {
@@ -73,7 +72,6 @@ public class AccountController {
         }
     }
 
-    @CrossOrigin
     @GetMapping("/accounts/{type}/{page}")
     public ResponseEntity<?> getAllAccounts(@PathVariable("type") String type, @PathVariable("page") String page) {
         try {
@@ -93,7 +91,6 @@ public class AccountController {
         }
     }
 
-    @CrossOrigin
     @GetMapping("/account/{type}/{search}/{page}")
     public ResponseEntity<?> getAccountsBySearch(@PathVariable("type") String type, @PathVariable("search") String search,
             @PathVariable("page") String page) {
@@ -105,7 +102,6 @@ public class AccountController {
         }
     }
 
-    @CrossOrigin
     @GetMapping("/account/{accountId}/{type}")
     public ResponseEntity<?> getAccountById(@PathVariable("accountId") String id, @PathVariable("type") String type) {
         try {
@@ -131,7 +127,6 @@ public class AccountController {
         }
     }
 
-    @CrossOrigin
     @PostMapping("/account/username")
     public ResponseEntity<?> getAccountByUsername(@RequestBody AccountLogin accountObj) {
         Object obj;
@@ -222,7 +217,6 @@ public class AccountController {
 //        }
 //        return new ResponseEntity<>(account, HttpStatus.OK);
 //    }
-    @CrossOrigin
     @DeleteMapping("/delete/{accountId}")
     public ResponseEntity<?> deleteAccount(@PathVariable("accountId") String id) {
         try {
@@ -237,7 +231,6 @@ public class AccountController {
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
-    @CrossOrigin
     @PutMapping("/account")
     public ResponseEntity<?> updateWalletAccount(@RequestBody AccountUpdateWallet account) {
         try {

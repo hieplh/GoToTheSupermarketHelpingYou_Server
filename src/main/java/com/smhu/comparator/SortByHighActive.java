@@ -25,19 +25,16 @@ import java.util.Comparator;
 //        }
 //    }
 //}
-public class SortByHighActive implements Comparator<String> {
+public class SortByHighActive implements Comparator<Shipper> {
 
     @Override
-    public int compare(String s1, String s2) {
-        Shipper shipper1 = ShipperController.mapAvailableShipper.get(s1);
-        Shipper shipper2 = ShipperController.mapAvailableShipper.get(s2);
-
-        double rating1 = shipper1.getRating();
-        double rating2 = shipper2.getRating();
-        int sumO1 = shipper1.getNumDelivery() + shipper1.getNumCancel() > 0 ? shipper1.getNumDelivery() + shipper1.getNumCancel() : 1;
-        int sumO2 = shipper2.getNumDelivery() + shipper2.getNumCancel() > 0 ? shipper2.getNumDelivery() + shipper2.getNumCancel() : 1;
-        double rateDelivery1 = Math.round((double) (shipper1.getNumDelivery() / sumO1 * 1000)) / 1000.0;
-        double rateDelivery2 = Math.round((double) (shipper2.getNumDelivery() / sumO2 * 1000)) / 1000.0;
+    public int compare(Shipper s1, Shipper s2) {
+        double rating1 = s1.getRating();
+        double rating2 = s2.getRating();
+        int sumO1 = s1.getNumDelivery() + s1.getNumCancel() > 0 ? s1.getNumDelivery() + s1.getNumCancel() : 1;
+        int sumO2 = s2.getNumDelivery() + s2.getNumCancel() > 0 ? s2.getNumDelivery() + s2.getNumCancel() : 1;
+        double rateDelivery1 = Math.round((double) (s1.getNumDelivery() / sumO1 * 1000)) / 1000.0;
+        double rateDelivery2 = Math.round((double) (s2.getNumDelivery() / sumO2 * 1000)) / 1000.0;
 
         if (rateDelivery1 >= rateDelivery2 && rating1 > rating2) {
             return -1;
@@ -46,7 +43,7 @@ public class SortByHighActive implements Comparator<String> {
             return -1;
         }
         if (rating1 < rating2) {
-            if (rating1 >= 4 && shipper1.getNumDelivery() >= shipper2.getNumDelivery() * 10) {
+            if (rating1 >= 4 && s1.getNumDelivery() >= s2.getNumDelivery() * 10) {
                 return -1;
             }
         }

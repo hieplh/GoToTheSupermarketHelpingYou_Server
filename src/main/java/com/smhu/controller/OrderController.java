@@ -68,6 +68,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -78,6 +79,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@CrossOrigin
 @RequestMapping("/api")
 public class OrderController {
 
@@ -267,8 +269,6 @@ public class OrderController {
         boolean isFirstAcceptOrder = false;
         boolean orderIsDone = false;
 
-        List<Order> listOrdersWaitingAfterShopping = service.checkOrdersWaitingAfterShoppingOfShipper(listOrders);
-
         for (OrderShipper orderInProcess : listOrders) {
             if (mapOrderIsCancel.containsKey(orderInProcess.getId())) {
                 numCancel++;
@@ -296,6 +296,7 @@ public class OrderController {
                         isFirstAcceptOrder = true;
                         mapOrderIsWaitingAccept.remove(orderWaitAccept);
                         mapCountOrderRelease.remove(orderWaitAccept.getId());
+                        service.remotePreOrderOfShipper(shipper, orderWaitAccept);
 
                         order = orderWaitAccept;
                         mapOrderInProgress.put(order.getId(), order);
@@ -312,28 +313,21 @@ public class OrderController {
                     } else {
                         status = order.getStatus() + 1;
                     }
-                    int statusIsDone = statusListener.getStatusIsDoneOrder();
 
-                    if (listOrdersWaitingAfterShopping != null) {
-                        if (listOrdersWaitingAfterShopping.contains(order)) {
-                            service.updateOrder(shipper, order, status);
-                        }
-                    } else {
-                        service.updateOrder(shipper, order, status);
-                    }
+                    int statusIsDone = statusListener.getStatusIsDoneOrder();
+                    service.updateOrder(shipper, order, status);
 
                     if (status == statusIsDone) {
-                        if (listOrdersWaitingAfterShopping == null) {
-                            try {
-                                orderIsDone = true;
-                                if (listVerificationResults == null) {
-                                    listVerificationResults = new ArrayList();
-                                }
-                                service.executeOrderIsDone(shipper, order, status, sync);
-                            } catch (ClassNotFoundException | SQLException e) {
-                                Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, "Update Order - Done: {0}", e.getMessage());
-                                return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+                        try {
+                            orderIsDone = true;
+                            if (listVerificationResults == null) {
+                                listVerificationResults = new ArrayList();
                             }
+                            OrderDoneDelivery result = service.executeOrderIsDone(shipper, order, status, sync);
+                            listVerificationResults.add(result);
+                        } catch (ClassNotFoundException | SQLException e) {
+                            Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, "Update Order - Done: {0}", e.getMessage());
+                            return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
                         }
                     } else {
                         if (listResults == null) {
@@ -352,8 +346,6 @@ public class OrderController {
 
         if (isFirstAcceptOrder) {
             mapOrderDeliveryForShipper.remove(shipper.getId());
-        } else if (listOrdersWaitingAfterShopping != null) {
-            mapOrderWaitingAfterShopping.remove(shipper.getId());
         } else if (orderIsDone) {
             if (mapShipperOrdersInProgress.get(shipper.getId()).isEmpty()) {
                 shipperListener.changeStatusOfShipper(shipper.getId());
@@ -599,6 +591,17 @@ public class OrderController {
                 return;
             }
             list.remove(order.getId());
+        }
+        
+        void remotePreOrderOfShipper(Shipper shipper, Order order) {
+            List<Order> list = mapOrderWaitingAfterShopping.get(shipper.getId());
+            if (list == null) {
+                return;
+            }
+            list.remove(order);
+            if (list.isEmpty()) {
+                mapOrderWaitingAfterShopping.remove(shipper.getId());
+            }
         }
 
         void checkShipperOutOfProgress() {

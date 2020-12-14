@@ -36,9 +36,9 @@ public class SystemTime {
         coreListener = new CoreFunctions();
     }
 
-    @Scheduled(fixedRate = 1000)
+    @Scheduled(fixedRate = 1 * 1000)
     public void runSystemTime() {
-        SYSTEM_TIME += 1000;
+        SYSTEM_TIME += 1 * 1000;
     }
 
 //    @Scheduled(fixedDelay = 13 * 1000)
