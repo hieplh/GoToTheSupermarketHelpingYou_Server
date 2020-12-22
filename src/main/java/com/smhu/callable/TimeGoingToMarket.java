@@ -58,7 +58,7 @@ public class TimeGoingToMarket<T> implements Callable<T> {
             if (map == null) {
                 return;
             }
-            
+
             for (Map.Entry<String, Integer> entry : map.entrySet()) {
                 if (!AVG_TIME_TRAVEL_TO_MARKET.containsKey(entry.getKey())) {
                     AVG_TIME_TRAVEL_TO_MARKET.put(entry.getKey(), entry.getValue());
@@ -88,11 +88,11 @@ public class TimeGoingToMarket<T> implements Callable<T> {
                             ExtractRangeInMechanism.getTheShortesRangeInMechanism(),
                             Integer.parseInt(listDistanceValue.get(i)),
                             timeTravelToMarket);
+                    getTimeTravelToMarket();
                 } catch (NumberFormatException e) {
                     Logger.getLogger(CoreFunctions.class.getName()).log(Level.SEVERE, "Scan Order, Insert AVG_TIME_TRAVEL: {0}", e.getMessage());
                 }
             }
-            getTimeTravelToMarket();
         } else {
             timeTravelToMarket = AVG_TIME_TRAVEL_TO_MARKET.get(marketId);
         }

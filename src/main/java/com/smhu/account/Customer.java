@@ -13,8 +13,8 @@ public class Customer extends Account {
     }
 
     public Customer(Account account, int numSuccess, int numCancel, double wallet, List<Address> addresses) {
-        super(account.getId(), account.getUsername(), account.getFirstName(), account.getMiddleName(), account.getLastName(),
-                account.getEmail(), account.getPhone(), account.getDob(), account.getRole());
+        super(account.getUsername(), account.getFirstName(), account.getMiddleName(), account.getLastName(),
+                account.getPhone(), account.getDob(), account.getRole());
         this.numSuccess = numSuccess;
         this.numCancel = numCancel;
         this.wallet = wallet;
@@ -55,7 +55,7 @@ public class Customer extends Account {
 
     @Override
     public String toString() {
-        return "Customer{" + "id=" + this.getId() + ", name=" + this.getLastName() + " " + this.getMiddleName() + " " + this.getFirstName() + '}';
+        return "Customer{name=" + this.getLastName() + " " + this.getMiddleName() + " " + this.getFirstName() + '}';
     }
 
 }

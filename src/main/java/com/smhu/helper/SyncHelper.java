@@ -32,7 +32,7 @@ public class SyncHelper {
         obj.setTimeCreate(order.getCreateTime());
         obj.setTimeDelivery(order.getTimeDelivery());
         obj.setStatus(order.getStatus());
-        obj.setShipper(shipperListener.getShipper(order.getShipper()));
+        obj.setShipper(order.getShipper());
         return obj;
     }
 
@@ -43,7 +43,7 @@ public class SyncHelper {
         obj.setAddressDelivery(convertAddressToMap(order.getAddressDelivery(), 0));
         obj.setMarket(MarketController.mapMarket.get(order.getMarket()));
         obj.setNote(order.getNote());
-        obj.setShipper(order.getShipper());
+        obj.setShipper(order.getShipper().getUsername());
         obj.setStatus(order.getStatus());
         obj.setCostShopping(order.getCostShopping());
         obj.setCostDelivery(order.getCostDelivery());
@@ -61,7 +61,7 @@ public class SyncHelper {
         obj.setAddressDelivery(convertAddressToMap(order.getAddressDelivery(), 0));
         obj.setMarket(MarketController.mapMarket.get(order.getMarket()));
         obj.setNote(order.getNote());
-        obj.setShipper(order.getShipper());
+        obj.setShipper(order.getShipper().getUsername());
         obj.setStatus(order.getStatus());
         obj.setCostShopping(order.getCostShopping());
         obj.setCostDelivery(order.getCostDelivery());

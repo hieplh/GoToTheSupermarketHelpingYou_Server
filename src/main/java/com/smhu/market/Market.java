@@ -1,6 +1,7 @@
 package com.smhu.market;
 
 import java.io.Serializable;
+import java.util.Objects;
 
 public class Market implements Serializable {
 
@@ -75,6 +76,24 @@ public class Market implements Serializable {
 
     public void setImage(String image) {
         this.image = image;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final Market other = (Market) obj;
+        if (!Objects.equals(this.id, other.id)) {
+            return false;
+        }
+        return true;
     }
 
     @Override

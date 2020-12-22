@@ -1,5 +1,7 @@
 package com.smhu.history;
 
+import com.smhu.account.Shipper;
+import com.smhu.market.Market;
 import java.sql.Date;
 import java.sql.Time;
 
@@ -7,9 +9,9 @@ public class History {
 
     private String id;
     private String addressDelivery;
-    private String marketName;
+    private Market market;
     private String note;
-    private String shipper;
+    private Shipper shipper;
     private int status;
     private Date createDate;
     private Time createTime;
@@ -22,10 +24,10 @@ public class History {
     public History() {
     }
 
-    public History(String id, String addressDelivery, String marketName, String note, String shipper, int status, Date createDate, Time createTime, Time receiveTime, Time deliveryTime, double costShopping, double costDelivery, double totalCost) {
+    public History(String id, String addressDelivery, Market market, String note, Shipper shipper, int status, Date createDate, Time createTime, Time receiveTime, Time deliveryTime, double costShopping, double costDelivery, double totalCost) {
         this.id = id;
         this.addressDelivery = addressDelivery;
-        this.marketName = marketName;
+        this.market = market;
         this.note = note;
         this.shipper = shipper;
         this.status = status;
@@ -54,12 +56,12 @@ public class History {
         this.addressDelivery = addressDelivery;
     }
 
-    public String getMarketName() {
-        return marketName;
+    public Market getMarket() {
+        return market;
     }
 
-    public void setMarketName(String marketName) {
-        this.marketName = marketName;
+    public void setMarket(Market market) {
+        this.market = market;
     }
 
     public String getNote() {
@@ -70,11 +72,11 @@ public class History {
         this.note = note;
     }
 
-    public String getShipper() {
+    public Shipper getShipper() {
         return shipper;
     }
 
-    public void setShipper(String shipper) {
+    public void setShipper(Shipper shipper) {
         this.shipper = shipper;
     }
 
@@ -140,6 +142,11 @@ public class History {
 
     public void setDeliveryTime(Time deliveryTime) {
         this.deliveryTime = deliveryTime;
+    }
+
+    @Override
+    public String toString() {
+        return "History{" + "id=" + id + ", addressDelivery=" + addressDelivery + ", market=" + market + ", note=" + note + ", shipper=" + shipper + ", status=" + status + ", createDate=" + createDate + ", createTime=" + createTime + ", receiveTime=" + receiveTime + ", deliveryTime=" + deliveryTime + ", costShopping=" + costShopping + ", costDelivery=" + costDelivery + ", totalCost=" + totalCost + '}';
     }
 
 }

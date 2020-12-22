@@ -1,17 +1,20 @@
 package com.smhu.dao;
 
 import com.smhu.account.Account;
+import com.smhu.account.AccountRegister;
 import com.smhu.account.Address;
 import com.smhu.account.Customer;
 import com.smhu.account.Shipper;
 import com.smhu.controller.AccountController;
 import com.smhu.iface.IAccount;
+import com.smhu.statement.QueryStatement;
 import com.smhu.utils.DBUtils;
 
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -19,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 public class AccountDAO implements IAccount {
 
@@ -34,6 +38,19 @@ public class AccountDAO implements IAccount {
     private int convertPageToIndex(String page) {
         int tmp = Integer.parseInt(page);
         return tmp > 0 ? (tmp - 1) * ROWS : 0;
+    }
+
+    private String randomSalt() {
+        StringBuilder sb = new StringBuilder();
+        Random random = new Random();
+        for (int i = 0; i < 20; i++) {
+            if (random.nextInt(2) % 2 == 0) {
+                sb.append((char) (97 + random.nextInt(26)));
+            } else {
+                sb.append((char) (48 + random.nextInt(10)));
+            }
+        }
+        return sb.toString();
     }
 
     @Override
@@ -118,12 +135,11 @@ public class AccountDAO implements IAccount {
                 rs = stmt.executeQuery();
                 if (rs.next()) {
                     if (type.toUpperCase().equals(SHIPPER)) {
-                        return new Shipper(new Account(rs.getString("ID"),
+                        return new Shipper(new Account(
                                 rs.getString("USERNAME"),
                                 rs.getString("FIRST_NAME"),
                                 rs.getString("MID_NAME"),
                                 rs.getString("LAST_NAME"),
-                                rs.getString("EMAIL"),
                                 rs.getString("PHONE"),
                                 rs.getDate("DOB"),
                                 rs.getString("ROLE")),
@@ -132,14 +148,14 @@ public class AccountDAO implements IAccount {
                                 rs.getInt("MAX_ORDER"),
                                 rs.getDouble("WALLET"),
                                 rs.getDouble("RATING"),
-                                null, null, null);
+                                null, null, null,
+                                rs.getString("VIN"));
                     }
-                    return new Customer(new Account(rs.getString("ID"),
+                    return new Customer(new Account(
                             rs.getString("USERNAME"),
                             rs.getString("FIRST_NAME"),
                             rs.getString("MID_NAME"),
                             rs.getString("LAST_NAME"),
-                            rs.getString("EMAIL"),
                             rs.getString("PHONE"),
                             rs.getDate("DOB"),
                             rs.getString("ROLE")),
@@ -325,12 +341,11 @@ public class AccountDAO implements IAccount {
                 if (rs.next()) {
                     switch (role.toUpperCase()) {
                         case SHIPPER:
-                            return new Shipper(new Account(rs.getString("ID"),
+                            return new Shipper(new Account(
                                     rs.getString("USERNAME"),
                                     rs.getString("FIRST_NAME"),
                                     rs.getString("MID_NAME"),
                                     rs.getString("LAST_NAME"),
-                                    rs.getString("EMAIL"),
                                     rs.getString("PHONE"),
                                     rs.getDate("DOB"),
                                     rs.getString("ROLE")),
@@ -339,14 +354,14 @@ public class AccountDAO implements IAccount {
                                     rs.getInt("MAX_ORDER"),
                                     rs.getDouble("WALLET"),
                                     rs.getDouble("RATING"),
-                                    null, null, null);
+                                    null, null, null,
+                                    rs.getString("VIN"));
                         case CUSTOMER:
-                            return new Customer(new Account(rs.getString("ID"),
+                            return new Customer(new Account(
                                     rs.getString("USERNAME"),
                                     rs.getString("FIRST_NAME"),
                                     rs.getString("MID_NAME"),
                                     rs.getString("LAST_NAME"),
-                                    rs.getString("EMAIL"),
                                     rs.getString("PHONE"),
                                     rs.getDate("DOB"),
                                     rs.getString("ROLE")),
@@ -355,12 +370,11 @@ public class AccountDAO implements IAccount {
                                     rs.getDouble("WALLET"),
                                     null);
                         default:
-                            return new Account(rs.getString("ID"),
+                            return new Account(
                                     rs.getString("USERNAME"),
                                     rs.getString("FIRST_NAME"),
                                     rs.getString("MID_NAME"),
                                     rs.getString("LAST_NAME"),
-                                    rs.getString("EMAIL"),
                                     rs.getString("PHONE"),
                                     rs.getDate("DOB"),
                                     rs.getString("ROLE"));
@@ -407,12 +421,11 @@ public class AccountDAO implements IAccount {
                     }
                     switch (role.toUpperCase()) {
                         case SHIPPER:
-                            list.add(new Shipper(new Account(rs.getString("ID"),
+                            list.add(new Shipper(new Account(
                                     rs.getString("USERNAME"),
                                     rs.getString("FIRST_NAME"),
                                     rs.getString("MID_NAME"),
                                     rs.getString("LAST_NAME"),
-                                    rs.getString("EMAIL"),
                                     rs.getString("PHONE"),
                                     rs.getDate("DOB"),
                                     rs.getString("ROLE")),
@@ -421,15 +434,15 @@ public class AccountDAO implements IAccount {
                                     rs.getInt("MAX_ORDER"),
                                     rs.getDouble("WALLET"),
                                     rs.getDouble("RATING"),
-                                    null, null, null));
+                                    null, null, null,
+                                    rs.getString("VIN")));
                             break;
                         case CUSTOMER:
-                            list.add(new Customer(new Account(rs.getString("ID"),
+                            list.add(new Customer(new Account(
                                     rs.getString("USERNAME"),
                                     rs.getString("FIRST_NAME"),
                                     rs.getString("MID_NAME"),
                                     rs.getString("LAST_NAME"),
-                                    rs.getString("EMAIL"),
                                     rs.getString("PHONE"),
                                     rs.getDate("DOB"),
                                     rs.getString("ROLE")),
@@ -481,12 +494,11 @@ public class AccountDAO implements IAccount {
                         list = new ArrayList<>();
                     }
                     if (type.toUpperCase().equals(SHIPPER)) {
-                        list.add(new Shipper(new Account(rs.getString("ID"),
+                        list.add(new Shipper(new Account(
                                 rs.getString("USERNAME"),
                                 rs.getString("FIRST_NAME"),
                                 rs.getString("MID_NAME"),
                                 rs.getString("LAST_NAME"),
-                                rs.getString("EMAIL"),
                                 rs.getString("PHONE"),
                                 rs.getDate("DOB"),
                                 rs.getString("ROLE")),
@@ -495,14 +507,14 @@ public class AccountDAO implements IAccount {
                                 rs.getInt("MAX_ORDER"),
                                 rs.getDouble("WALLET"),
                                 rs.getDouble("RATING"),
-                                null, null, null));
+                                null, null, null,
+                                rs.getString("VIN")));
                     } else if (type.toUpperCase().equals(CUSTOMER)) {
-                        list.add(new Customer(new Account(rs.getString("ID"),
+                        list.add(new Customer(new Account(
                                 rs.getString("USERNAME"),
                                 rs.getString("FIRST_NAME"),
                                 rs.getString("MID_NAME"),
                                 rs.getString("LAST_NAME"),
-                                rs.getString("EMAIL"),
                                 rs.getString("PHONE"),
                                 rs.getDate("DOB"),
                                 rs.getString("ROLE")),
@@ -511,12 +523,11 @@ public class AccountDAO implements IAccount {
                                 rs.getDouble("WALLET"),
                                 null));
                     } else {
-                        list.add(new Account(rs.getString("ID"),
+                        list.add(new Account(
                                 rs.getString("USERNAME"),
                                 rs.getString("FIRST_NAME"),
                                 rs.getString("MID_NAME"),
                                 rs.getString("LAST_NAME"),
-                                rs.getString("EMAIL"),
                                 rs.getString("PHONE"),
                                 rs.getDate("DOB"),
                                 rs.getString("ROLE")));
@@ -546,10 +557,34 @@ public class AccountDAO implements IAccount {
             con = DBUtils.getConnection();
             if (con != null) {
                 String sql = "UPDATE ACCOUNT SET IS_ACTIVE = ?\n"
-                        + "WHERE ID = ?";
+                        + "WHERE USERNAME = ?";
                 stmt = con.prepareStatement(sql);
                 stmt.setBoolean(1, flag);
                 stmt.setString(2, accountId);
+                return stmt.executeUpdate();
+            }
+        } finally {
+            if (stmt != null) {
+                stmt.close();
+            }
+            if (con != null) {
+                con.close();
+            }
+        }
+        return 0;
+    }
+
+    @Override
+    public int deleteAddrCustomer(String username) throws ClassNotFoundException, SQLException {
+        Connection con = null;
+        PreparedStatement stmt = null;
+
+        try {
+            con = DBUtils.getConnection();
+            if (con != null) {
+                String sql = QueryStatement.deleteAddrAccount;
+                stmt = con.prepareStatement(sql);
+                stmt.setString(1, username);
                 return stmt.executeUpdate();
             }
         } finally {
@@ -587,7 +622,7 @@ public class AccountDAO implements IAccount {
         }
         return 0;
     }
-    
+
     @Override
     public int updateNumSuccess(String accountId, int num) throws ClassNotFoundException, SQLException {
         Connection con = null;
@@ -638,5 +673,163 @@ public class AccountDAO implements IAccount {
             }
         }
         return 0;
+    }
+
+    @Override
+    public int updateProfile(Account account) throws ClassNotFoundException, SQLException {
+        Connection con = null;
+        PreparedStatement stmt = null;
+
+        try {
+            con = DBUtils.getConnection();
+            if (con != null) {
+                String sql = QueryStatement.updateInfoAccount;
+                stmt = con.prepareStatement(sql);
+                stmt.setString(1, account.getFirstName());
+                stmt.setString(2, account.getMiddleName());
+                stmt.setString(3, account.getLastName());
+                stmt.setString(4, account.getPhone());
+                stmt.setDate(5, account.getDob());
+                stmt.setString(6, account.getUsername());
+                return stmt.executeUpdate() > 0 ? 1 : 0;
+            }
+        } finally {
+            if (stmt != null) {
+                stmt.close();
+            }
+            if (con != null) {
+                con.close();
+            }
+        }
+        return 0;
+    }
+
+    @Override
+    public int updateMaxNumOrder(String username, int maxNumOrder) throws ClassNotFoundException, SQLException {
+        Connection con = null;
+        PreparedStatement stmt = null;
+
+        try {
+            con = DBUtils.getConnection();
+            if (con != null) {
+                String sql = QueryStatement.updateMaxNumOrder;
+                stmt = con.prepareStatement(sql);
+                stmt.setInt(1, maxNumOrder);
+                stmt.setString(2, username);
+                return stmt.executeUpdate() > 0 ? 1 : 0;
+            }
+        } finally {
+            if (stmt != null) {
+                stmt.close();
+            }
+            if (con != null) {
+                con.close();
+            }
+        }
+        return 0;
+    }
+
+    @Override
+    public int insertAccount(AccountRegister account, String vin) throws ClassNotFoundException, SQLException, NoSuchAlgorithmException, UnsupportedEncodingException {
+        Connection con = null;
+        PreparedStatement stmt = null;
+
+        try {
+            con = DBUtils.getConnection();
+            if (con != null) {
+
+                String sql = QueryStatement.insertAccount;
+                stmt = con.prepareStatement(sql);
+                String salt = randomSalt();
+                stmt.setString(1, account.getUsername());
+                stmt.setString(2, encryptSHA(account.getPassword() + salt));
+                stmt.setString(3, salt);
+                stmt.setString(4, account.getRole());
+                stmt.setString(5, account.getFirstName());
+                stmt.setString(6, account.getMiddleName());
+                stmt.setString(7, account.getLastName());
+                stmt.setString(7, account.getLastName());
+                stmt.setString(8, account.getPhone());
+                stmt.setDate(9, account.getDob());
+                stmt.setDate(10, new Date(new java.util.Date().getTime()));
+                stmt.setDouble(11, 0);
+                stmt.setInt(12, 0);
+                stmt.setInt(13, 0);
+                stmt.setBoolean(14, true);
+                if (account.getRole().toUpperCase().equals(SHIPPER)) {
+                    stmt.setString(15, vin);
+                } else {
+                    stmt.setString(15, "");
+                }
+                return stmt.executeUpdate() > 0 ? 1 : 0;
+            }
+        } finally {
+            if (stmt != null) {
+                stmt.close();
+            }
+            if (con != null) {
+                con.close();
+            }
+        }
+        return 0;
+    }
+
+    @Override
+    public int insertMaxNumOrder(String username, int num) throws ClassNotFoundException, SQLException {
+        Connection con = null;
+        PreparedStatement stmt = null;
+
+        try {
+            con = DBUtils.getConnection();
+            if (con != null) {
+
+                String sql = QueryStatement.insertMaxNumOrder;
+                stmt = con.prepareStatement(sql);
+                stmt.setString(1, username);
+                stmt.setInt(2, num);
+                return stmt.executeUpdate() > 0 ? 1 : 0;
+            }
+        } finally {
+            if (stmt != null) {
+                stmt.close();
+            }
+            if (con != null) {
+                con.close();
+            }
+        }
+        return 0;
+    }
+
+    @Override
+    public int[] insertAddress(String username, List<Address> addresses) throws ClassNotFoundException, SQLException {
+        Connection con = null;
+        PreparedStatement stmt = null;
+        int[] result = null;
+
+        try {
+            con = DBUtils.getConnection();
+            if (con != null) {
+                String sql = QueryStatement.insertAddrAccount;
+                stmt = con.prepareStatement(sql);
+                for (Address address : addresses) {
+                    stmt.setString(1, address.getAddr1().trim());
+                    stmt.setString(2, address.getAddr2().trim());
+                    stmt.setString(3, address.getAddr3().trim());
+                    stmt.setString(4, address.getAddr4().trim());
+                    stmt.setString(5, username);
+                    stmt.addBatch();
+                }
+                result = stmt.executeBatch();
+                con.commit();
+            }
+        } finally {
+            if (stmt != null) {
+                stmt.close();
+            }
+            if (con != null) {
+                con.close();
+            }
+        }
+        return result;
     }
 }

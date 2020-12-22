@@ -22,11 +22,10 @@ public class ShipperDAO extends AccountDAO implements IShipper {
 
     @Override
     public void addShipper(Shipper shipper) {
-        if (mapInProgressShipper.containsKey(shipper.getId())) {
+        if (mapInProgressShipper.containsKey(shipper.getUsername())) {
             return;
         }
-        mapAvailableShipper.put(shipper.getId(), shipper);
-
+        mapAvailableShipper.put(shipper.getUsername(), shipper);
     }
 
     @Override
@@ -45,7 +44,7 @@ public class ShipperDAO extends AccountDAO implements IShipper {
         if (shipper.getWallet() >= 0) {
             return;
         }
-        removeShipper(shipper.getId());
+        removeShipper(shipper.getUsername());
     }
 
     Shipper getAvailableShipperAccount(String id) {
@@ -56,7 +55,8 @@ public class ShipperDAO extends AccountDAO implements IShipper {
         return mapInProgressShipper.getOrDefault(id, null);
     }
 
-    boolean removeShipper(String id) {
+    @Override
+    public boolean removeShipper(String id) {
         if (mapAvailableShipper.containsKey(id)) {
             mapAvailableShipper.remove(id);
         } else {

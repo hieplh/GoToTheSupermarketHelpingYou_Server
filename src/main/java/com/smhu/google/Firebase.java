@@ -32,22 +32,12 @@ public class Firebase {
                 .putAllData(map)
                 .build());
     }
-
-    public String pushNotifyByToken(Map<String, String> token, Map<String, String> values) throws FirebaseMessagingException, IOException {
+    
+    public String pushNotifyOrderIsCancelByStaffForShipper(String token, Map<String, String> map) throws FirebaseMessagingException, IOException {
         initOptions();
         return FirebaseMessaging.getInstance().send(Message.builder()
-                .setToken(token.values().stream().findFirst().get())
-                .putAllData(token)
-                .putAllData(values)
-                .build());
-    }
-
-    public String pushNotifyLocationOfShipperToCustomer(String topic, String lat, String lng) throws FirebaseMessagingException, IOException {
-        initOptions();
-        return FirebaseMessaging.getInstance().send(Message.builder()
-                .setTopic(topic)
-                .putData("lat", lat)
-                .putData("lng", lng)
+                .setToken(token)
+                .putAllData(map)
                 .build());
     }
 

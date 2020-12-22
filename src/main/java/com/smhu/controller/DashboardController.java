@@ -3,6 +3,7 @@ package com.smhu.controller;
 import com.smhu.iface.IStatus;
 import com.smhu.response.ResponseMsg;
 import com.smhu.utils.DBUtils;
+
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
@@ -13,9 +14,9 @@ import java.util.Locale;
 import java.util.TimeZone;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;

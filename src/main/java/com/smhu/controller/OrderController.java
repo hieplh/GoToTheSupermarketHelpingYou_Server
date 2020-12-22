@@ -11,17 +11,18 @@ import com.smhu.GototheSupermarketHelpingYouApplication;
 import com.smhu.account.Account;
 import com.smhu.account.Customer;
 import com.smhu.account.Shipper;
-import com.smhu.comparator.SortByLowActive;
+
 import com.smhu.core.CoreFunctions;
+
 import com.smhu.dao.AccountDAO;
 import com.smhu.dao.OrderDAO;
 import com.smhu.dao.ShipperDAO;
+
 import com.smhu.google.Firebase;
 import com.smhu.google.matrixobj.MatrixObject;
-import com.smhu.google.matrixobj.ElementObject;
-import com.smhu.helper.ExtractElementDistanceMatrixApi;
 import com.smhu.helper.GsonHelper;
 import com.smhu.helper.SyncHelper;
+
 import com.smhu.iface.IAccount;
 import com.smhu.iface.ICore;
 import com.smhu.iface.IMain;
@@ -29,15 +30,18 @@ import com.smhu.iface.IOrder;
 import com.smhu.iface.IShipper;
 import com.smhu.iface.IStatus;
 import com.smhu.iface.ITransaction;
+
 import com.smhu.order.Order;
-import com.smhu.response.ResponseMsg;
-import com.smhu.request.customer.OrderRequestCustomer;
 import com.smhu.order.OrderDetail;
+
+import com.smhu.request.customer.OrderRequestCustomer;
+import com.smhu.response.ResponseMsg;
 import com.smhu.response.customer.OrderResponseCustomer;
 import com.smhu.response.moderator.OrderOverall;
 import com.smhu.response.shipper.OrderDelivery;
 import com.smhu.response.shipper.OrderDoneDelivery;
 import com.smhu.response.shipper.OrderShipper;
+
 import com.smhu.url.UrlConnection;
 
 import java.io.IOException;
@@ -55,7 +59,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -140,9 +143,9 @@ public class OrderController {
                     OrderOverall orderStaff = new OrderOverall(order);
                     orderStaff.setMarket(MarketController.mapMarket.get(order.getMarket()));
                     orderStaff.setCustomer((Customer) accountListener.getAccountById(order.getCust(), CUSTOMER));
-                    Shipper shipper = shipperListener.getShipper(order.getShipper());
+                    Shipper shipper = shipperListener.getShipper(order.getShipper().getUsername());
                     if (shipper == null) {
-                        shipper = (Shipper) accountListener.getAccountById(order.getShipper(), SHIPPER);
+                        shipper = (Shipper) accountListener.getAccountById(order.getShipper().getUsername(), SHIPPER);
                     }
                     orderStaff.setShipper(shipper);
                     if (order.getAuthor() != null) {
@@ -219,7 +222,7 @@ public class OrderController {
             order.setCust(orderReceive.getCust());
             order.setAddressDelivery(orderReceive.getAddressDelivery());
             order.setNote(orderReceive.getNote());
-            order.setMarket(orderReceive.getMarket());
+            order.setMarket(MarketController.mapMarket.get(orderReceive.getMarket()));
             order.setCreateDate(date);
             order.setCreateTime(time);
             order.setLastUpdate(time);
@@ -244,8 +247,8 @@ public class OrderController {
                     detail.setId(result + String.valueOf(++count));
                 }
             }
-            transactionListener.updateDeliveryTransaction(order.getCust(), order.getTotalCost() * -1,
-                    status, order.getId());
+            transactionListener.updateDeliveryTransaction(order.getCust(), order.getCust(),
+                    order.getTotalCost() * -1, status, order.getId());
             accountListener.updateWalletAccount(order.getCust(), order.getTotalCost() * -1);
 
             service.addOrderInqueue(order);
@@ -266,7 +269,6 @@ public class OrderController {
 
         int status;
         int numCancel = 0;
-        boolean isFirstAcceptOrder = false;
         boolean orderIsDone = false;
 
         for (OrderShipper orderInProcess : listOrders) {
@@ -293,10 +295,9 @@ public class OrderController {
                             return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
                         }
 
-                        isFirstAcceptOrder = true;
                         mapOrderIsWaitingAccept.remove(orderWaitAccept);
                         mapCountOrderRelease.remove(orderWaitAccept.getId());
-                        service.remotePreOrderOfShipper(shipper, orderWaitAccept);
+                        service.removePreOrderOfShipper(shipper, orderWaitAccept);
 
                         order = orderWaitAccept;
                         mapOrderInProgress.put(order.getId(), order);
@@ -344,12 +345,11 @@ public class OrderController {
             return new ResponseEntity("Đơn hàng của bạn đã bị hủy bởi khách hàng", HttpStatus.METHOD_NOT_ALLOWED);
         }
 
-        if (isFirstAcceptOrder) {
-            mapOrderDeliveryForShipper.remove(shipper.getId());
-        } else if (orderIsDone) {
-            if (mapShipperOrdersInProgress.get(shipper.getId()).isEmpty()) {
-                shipperListener.changeStatusOfShipper(shipper.getId());
-                mapShipperOrdersInProgress.remove(shipper.getId());
+        if (orderIsDone) {
+            if (mapShipperOrdersInProgress.get(shipper.getUsername()).isEmpty()) {
+                mapOrderDeliveryForShipper.remove(shipper.getUsername());
+                mapShipperOrdersInProgress.remove(shipper.getUsername());
+                shipperListener.changeStatusOfShipper(shipper.getUsername());
                 return new ResponseEntity<>(HttpStatus.OK);
             } else {
                 return new ResponseEntity<>(listVerificationResults, HttpStatus.OK);
@@ -358,54 +358,54 @@ public class OrderController {
         return new ResponseEntity<>(listResults, HttpStatus.OK);
     }
 
-    @GetMapping("switch/{orderId}/{authorId}")
-    public ResponseEntity<?> changeShipper(@PathVariable("orderId") String orderId, @PathVariable("authorId") String authorId) {
-        MatrixObject distanceObj;
-        List<Shipper> listShipper = service.getShippers(new SortByLowActive());
-        if (listShipper.isEmpty()) {
-            return new ResponseEntity<>(null, HttpStatus.OK);
-        }
-
-        synchronized (listShipper) {
-            Order order = mapOrderInProgress.get(orderId);
-            Shipper oldShipper = shipperListener.getShipper(order.getShipper());
-            for (Iterator<Shipper> it = listShipper.iterator(); it.hasNext();) {
-                Shipper newShipper = it.next();
-                if (newShipper.getLat() != null && newShipper.getLng() != null) {
-                    try {
-                        String[] sourceLocation = new String[]{oldShipper.getLat(), oldShipper.getLng()};
-                        String[] destinationLocation = new String[]{newShipper.getLat(), newShipper.getLng()};
-
-                        distanceObj = service.getDistanceMatrixObject(sourceLocation, destinationLocation);
-                        ExtractElementDistanceMatrixApi extract = new ExtractElementDistanceMatrixApi();
-                        List<ElementObject> listElments = extract.getListElements(distanceObj);
-                        List<String> listDistanceValue = extract.getListDistance(listElments, "value");
-
-                        int range = service.getTheLongestDistanceInMechanism();
-                        for (String distanceString : listDistanceValue) {
-                            int distance = Integer.parseInt(distanceString);
-                            if (distance <= range) {
-                                order.setShipper(newShipper.getId());
-                                order.setLastUpdate(new Time(new Date().getTime()));
-                                dao.updatetOrder(order);
-                                dao.insertAlterShipper(orderId, oldShipper.getId(), newShipper.getId(), authorId);
-                                it.remove();
-
-                                // wait process new shipper meet old shipper
-                                shipperListener.changeStatusOfShipper(oldShipper.getId());
-                                shipperListener.changeStatusOfShipper(newShipper.getId());
-                                System.out.println("Change shipper from: " + oldShipper.getId() + " to: " + newShipper.getId());
-                                return new ResponseEntity<>(order, HttpStatus.OK);
-                            }
-                        }
-                    } catch (IOException | ClassNotFoundException | NumberFormatException | SQLException e) {
-                        Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, "Scan Order: {0}", e.getMessage());
-                    }
-                }
-            }
-        }
-        return new ResponseEntity<>(null, HttpStatus.OK);
-    }
+//    @GetMapping("switch/{orderId}/{authorId}")
+//    public ResponseEntity<?> changeShipper(@PathVariable("orderId") String orderId, @PathVariable("authorId") String authorId) {
+//        MatrixObject distanceObj;
+//        List<Shipper> listShipper = service.getShippers(new SortByLowActive());
+//        if (listShipper.isEmpty()) {
+//            return new ResponseEntity<>(null, HttpStatus.OK);
+//        }
+//
+//        synchronized (listShipper) {
+//            Order order = mapOrderInProgress.get(orderId);
+//            Shipper oldShipper = shipperListener.getShipper(order.getShipper().getUsername());
+//            for (Iterator<Shipper> it = listShipper.iterator(); it.hasNext();) {
+//                Shipper newShipper = it.next();
+//                if (newShipper.getLat() != null && newShipper.getLng() != null) {
+//                    try {
+//                        String[] sourceLocation = new String[]{oldShipper.getLat(), oldShipper.getLng()};
+//                        String[] destinationLocation = new String[]{newShipper.getLat(), newShipper.getLng()};
+//
+//                        distanceObj = service.getDistanceMatrixObject(sourceLocation, destinationLocation);
+//                        ExtractElementDistanceMatrixApi extract = new ExtractElementDistanceMatrixApi();
+//                        List<ElementObject> listElments = extract.getListElements(distanceObj);
+//                        List<String> listDistanceValue = extract.getListDistance(listElments, "value");
+//
+//                        int range = service.getTheLongestDistanceInMechanism();
+//                        for (String distanceString : listDistanceValue) {
+//                            int distance = Integer.parseInt(distanceString);
+//                            if (distance <= range) {
+//                                order.setShipper(newShipper.getUsername());
+//                                order.setLastUpdate(new Time(new Date().getTime()));
+//                                dao.updatetOrder(order);
+//                                dao.insertAlterShipper(orderId, oldShipper.getUsername(), newShipper.getUsername(), authorId);
+//                                it.remove();
+//
+//                                // wait process new shipper meet old shipper
+//                                shipperListener.changeStatusOfShipper(oldShipper.getUsername());
+//                                shipperListener.changeStatusOfShipper(newShipper.getUsername());
+//                                System.out.println("Change shipper from: " + oldShipper.getUsername() + " to: " + newShipper.getUsername());
+//                                return new ResponseEntity<>(order, HttpStatus.OK);
+//                            }
+//                        }
+//                    } catch (IOException | ClassNotFoundException | NumberFormatException | SQLException e) {
+//                        Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, "Scan Order: {0}", e.getMessage());
+//                    }
+//                }
+//            }
+//        }
+//        return new ResponseEntity<>(null, HttpStatus.OK);
+//    }
 
     @GetMapping("/tracking/{orderId}")
     public ResponseEntity trackingOrder(@PathVariable("orderId") String orderId) {
@@ -413,7 +413,7 @@ public class OrderController {
         if (order == null) {
             return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
         }
-        Shipper shipper = shipperListener.getShipper(order.getShipper());
+        Shipper shipper = shipperListener.getShipper(order.getShipper().getUsername());
 
         Map<String, String> map = new HashMap();
         map.put("lat", shipper.getLat());
@@ -425,70 +425,89 @@ public class OrderController {
     public ResponseEntity<?> cancelOrder(@PathVariable("orderId") String orderId, @PathVariable("type") String type,
             @PathVariable("personId") String accountId) {
         Order order;
+        Shipper shipper;
+        int status;
+        double chargeCost;
 
         switch (type.toUpperCase()) {
             case STAFF:
-                order = mapOrderIsCancelInQueue.remove(orderId);
-                if (order == null) {
-                    order = mapOrderInProgress.remove(orderId);
-                }
-                mapOrderIsCancel.put(order.getId(), order);
-
-                String result = null;
-                try {
-                    order.setStatus(order.getStatus() * -1);
-                    order.setLastUpdate(new Time(new Date().getTime()));
-                    order.setAuthor(accountId);
-
-                    result = dao.CancelOrder(order);
-                } catch (ClassNotFoundException | SQLException e) {
-                    Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
-                }
-                if (result == null) {
-                    return new ResponseEntity<>(new ResponseMsg("Error while cancel order. Please try again!"), HttpStatus.INTERNAL_SERVER_ERROR);
-                }
-                shipperListener.changeStatusOfShipper(order.getShipper());
-
-                Map<String, String> token = new HashMap<>();
-                token.put("shipper_id", order.getShipper());
-                Map<String, String> values = new HashMap<>();
-                values.put("msg", "Your cancel request, order_id: " + order.getId() + ", is canceled");
-                try {
-                    new Firebase().pushNotifyByToken(token, values);
-                } catch (FirebaseMessagingException | IOException e) {
-                    Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
+                if (!mapOrderInProgress.containsKey(orderId)) {
+                    return new ResponseEntity<>("Your cancel request, order_id: " + orderId
+                            + ", temporary only customer can cancel", HttpStatus.METHOD_NOT_ALLOWED);
                 }
 
-                return new ResponseEntity<>(new ResponseMsg("Order_id: " + result + ", is canceled"), HttpStatus.OK);
-            case SHIPPER:
                 order = mapOrderInProgress.remove(orderId);
                 if (order == null) {
                     return new ResponseEntity<>(HttpStatus.NOT_FOUND.toString(), HttpStatus.NOT_FOUND);
                 }
+                mapOrderIsCancel.put(order.getId(), order);
 
-                int status = order.getStatus() * -1;
+                status = order.getStatus() * -1;
                 order.setStatus(status);
                 order.setLastUpdate(new Time(new Date().getTime()));
                 order.setAuthor(accountId);
                 order.setRefundCost(order.getTotalCost());
                 //mapOrderIsCancelInQueue.put(order.getId(), order);
 
-                double chargeCost = order.getCostShopping() * -1;
+                chargeCost = order.getCostShopping() * -1;
 
-                Shipper shipper = shipperListener.getShipper(accountId);
+                shipper = shipperListener.getShipper(order.getShipper().getUsername());
+                shipper.setNumCancel(shipper.getNumCancel() + 1);
+                shipper.setWallet(shipper.getWallet() + chargeCost);
+                try {
+                    service.cancelMapShipperOrder(orderId, shipper.getUsername());
+                    shipperListener.updateNumCancel(shipper.getUsername(), 1);
+
+                    transactionListener.updateDeliveryTransaction(shipper.getUsername(), accountId, chargeCost, status, order.getId());
+                    transactionListener.updateRefundTransaction(order.getCust(), accountId, order.getTotalCost(), status, orderId);
+
+                    accountListener.updateWalletAccount(order.getShipper().getUsername(), chargeCost);
+                    accountListener.updateWalletAccount(order.getCust(), order.getTotalCost());
+
+                    if (mapShipperOrdersInProgress.get(accountId) == null) {
+                        shipperListener.changeStatusOfShipper(shipper.getUsername());
+                    }
+                    shipperListener.checkWalletShipperAccount(shipper);
+                    dao.CancelOrder(order);
+
+                    service.sendNotificationOrderToShipper(shipper.getTokenFCM(), orderId);
+                } catch (SQLException | ClassNotFoundException e) {
+                    Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, e.getMessage());
+                }
+//                return new ResponseEntity<>(new ResponseMsg("Your cancel request, order_id: " + order.getId()
+//                        + ", is processing"), HttpStatus.OK);
+                return new ResponseEntity<>(new ResponseMsg("Your cancel request, order_id: " + order.getId()
+                        + ", is canceled"), HttpStatus.OK);
+            case SHIPPER:
+                order = mapOrderInProgress.remove(orderId);
+                if (order == null) {
+                    return new ResponseEntity<>(HttpStatus.NOT_FOUND.toString(), HttpStatus.NOT_FOUND);
+                }
+
+                status = order.getStatus() * -1;
+                order.setStatus(status);
+                order.setLastUpdate(new Time(new Date().getTime()));
+                order.setAuthor(accountId);
+                order.setRefundCost(order.getTotalCost());
+                //mapOrderIsCancelInQueue.put(order.getId(), order);
+
+                chargeCost = order.getCostDelivery()* -1;
+
+                shipper = shipperListener.getShipper(accountId);
                 shipper.setNumCancel(shipper.getNumCancel() + 1);
                 shipper.setWallet(shipper.getWallet() + chargeCost);
                 try {
                     service.cancelMapShipperOrder(orderId, accountId);
                     shipperListener.updateNumCancel(accountId, 1);
-                    accountListener.updateWalletAccount(shipper.getId(), chargeCost);
-                    transactionListener.updateDeliveryTransaction(shipper.getId(), chargeCost, status, order.getId());
 
-                    transactionListener.updateRefundTransaction(order.getCust(), order.getTotalCost(), status, orderId);
+                    transactionListener.updateDeliveryTransaction(shipper.getUsername(), shipper.getUsername(), chargeCost, status, order.getId());
+                    transactionListener.updateRefundTransaction(order.getCust(), shipper.getUsername(), order.getTotalCost(), status, orderId);
+
+                    accountListener.updateWalletAccount(shipper.getUsername(), chargeCost);
                     accountListener.updateWalletAccount(order.getCust(), order.getTotalCost());
 
                     if (mapShipperOrdersInProgress.get(accountId) == null) {
-                        shipperListener.changeStatusOfShipper(shipper.getId());
+                        shipperListener.changeStatusOfShipper(shipper.getUsername());
                     }
                     shipperListener.checkWalletShipperAccount(shipper);
                     dao.CancelOrder(order);
@@ -533,7 +552,7 @@ public class OrderController {
                 mapCountOrderRelease.remove(orderId);
                 service.cancelMapShipperOrder(orderId);
                 mapOrderIsCancel.put(order.getId(), order);
-                coreListener.preProcessMapFilterOrder(order.getMarket(), order);
+                coreListener.preProcessMapFilterOrder(order.getMarket().getId(), order);
                 if (order.getShipper() != null) {
                     mapOrderIsWaitingAccept.remove(order);
                     List<OrderDelivery> list = mapOrderDeliveryForShipper.get(order.getShipper());
@@ -555,7 +574,7 @@ public class OrderController {
 
                  {
                     try {
-                        transactionListener.updateRefundTransaction(accountId, order.getTotalCost(), order.getStatus(), order.getId());
+                        transactionListener.updateRefundTransaction(accountId, accountId, order.getTotalCost(), order.getStatus(), order.getId());
                         accountListener.updateWalletAccount(accountId, order.getTotalCost());
                         accountListener.updateNumCancel(accountId, 1);
                         dao.CancelOrder(order);
@@ -586,21 +605,21 @@ public class OrderController {
         }
 
         void remoteOrderBelongToShipper(Shipper shipper, Order order) {
-            List<String> list = mapShipperOrdersInProgress.get(shipper.getId());
+            List<String> list = mapShipperOrdersInProgress.get(shipper.getUsername());
             if (list == null) {
                 return;
             }
             list.remove(order.getId());
         }
-        
-        void remotePreOrderOfShipper(Shipper shipper, Order order) {
-            List<Order> list = mapOrderWaitingAfterShopping.get(shipper.getId());
+
+        void removePreOrderOfShipper(Shipper shipper, Order order) {
+            List<Order> list = mapOrderWaitingAfterShopping.get(shipper.getUsername());
             if (list == null) {
                 return;
             }
             list.remove(order);
             if (list.isEmpty()) {
-                mapOrderWaitingAfterShopping.remove(shipper.getId());
+                mapOrderWaitingAfterShopping.remove(shipper.getUsername());
             }
         }
 
@@ -679,7 +698,7 @@ public class OrderController {
 
         void cancelMapShipperOrder(String orderId, String accountId) {
             List<String> list = mapShipperOrdersInProgress.get(accountId);
-            for (int i = 0; i < list.size(); i++) {
+            for (int i = list.size() - 1; i >= 0; i--) {
                 if (list.get(i).equals(orderId)) {
                     list.remove(i);
                     if (list.isEmpty()) {
@@ -693,7 +712,7 @@ public class OrderController {
             List<String> listShippers = mapShipperOrdersInProgress.keySet().stream().collect(Collectors.toList());
             for (int i = 0; i < listShippers.size(); i++) {
                 List<String> listOrders = mapShipperOrdersInProgress.get(listShippers.get(i));
-                for (int j = 0; j < listOrders.size(); j++) {
+                for (int j = listOrders.size() - 1; j >= 0; j--) {
                     if (listOrders.get(j).equals(orderId)) {
                         listOrders.remove(j);
                         if (listOrders.isEmpty()) {
@@ -709,14 +728,14 @@ public class OrderController {
             mapOrderIsDone.put(orderDoneObj.getId(), orderDoneObj);
             service.remoteOrderBelongToShipper(shipper, orderDoneObj);
 
-            double totalReceivedCost = orderDoneObj.getCostShopping() + orderDoneObj.getCostDelivery();
-            transactionListener.updateDeliveryTransaction(shipper.getId(), totalReceivedCost,
-                    status, orderDoneObj.getId());
-            accountListener.updateWalletAccount(shipper.getId(), totalReceivedCost);
+            double totalReceiveTransMoney = orderDoneObj.getCostShopping() + orderDoneObj.getCostDelivery();
+            transactionListener.updateDeliveryTransaction(shipper.getUsername(), shipper.getUsername(),
+                    totalReceiveTransMoney, status, orderDoneObj.getId());
+            accountListener.updateWalletAccount(shipper.getUsername(), orderDoneObj.getTotalCost());
             accountListener.updateNumSuccess(orderDoneObj.getCust(), 1);
 
             shipper.setNumDelivery(shipper.getNumDelivery() + 1);
-            shipperListener.updateNumSuccess(shipper.getId(), 1);
+            shipperListener.updateNumSuccess(shipper.getUsername(), 1);
 
             return sync.syncOrderSystemToOrderDoneDelivery(orderDoneObj);
         }
@@ -732,6 +751,20 @@ public class OrderController {
                 Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, "OrderController - Update Order: {0}", e.getMessage());
             }
             return null;
+        }
+
+        void sendNotificationOrderToShipper(String token, String orderId) {
+            Map<String, String> map = new HashMap<>();
+            map.put("isCancel", "true");
+            map.put("orderId", orderId);
+
+            Firebase firebase = new Firebase();
+            try {
+                String result = firebase.pushNotifyOrdersToShipper(token, map);
+                System.out.println("Firebase: " + result);
+            } catch (FirebaseMessagingException | IOException | NullPointerException | IllegalArgumentException e) {
+                Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, "Send Notification: {0}", e.getMessage());
+            }
         }
         /*
         private String splitLocation(String location) {
@@ -784,7 +817,7 @@ public class OrderController {
 
         private Map<String[], List<Order>> groupOrders(Shipper shipper, Map<String, Order> mapOrders) {
             Map<String[], List<Order>> map = new HashMap<>();
-            List<String> listOrderReject = mapOrdersShipperReject.get(shipper.getId());
+            List<String> listOrderReject = mapOrdersShipperReject.get(shipper.getUsername());
             for (Order order : mapOrders.values()) {
                 boolean flag = true;
                 if (listOrderReject != null) {
@@ -882,7 +915,7 @@ public class OrderController {
             List<OrderDelivery> list = new ArrayList();
             for (Map.Entry<Order, Integer> entry : map.entrySet()) {
                 Order order = mapOrderInQueue.remove(entry.getKey().getId());
-                order.setShipper(shipper.getId());
+                order.setShipper(shipper.getUsername());
                 mapOrderIsWaitingAccept.put(order, SystemTime.SYSTEM_TIME + (20 * 1000));
                 list.add(new OrderDelivery(order.getAddressDelivery(),
                         entry.getValue(),
@@ -890,8 +923,8 @@ public class OrderController {
                 int numRelease = mapCountOrderRelease.getOrDefault(order.getId(), 0);
                 mapCountOrderRelease.put(order.getId(), numRelease + 1);
             }
-            mapOrderDeliveryForShipper.put(shipper.getId(), list);
-            shipperListener.changeStatusOfShipper(shipper.getId());
+            mapOrderDeliveryForShipper.put(shipper.getUsername(), list);
+            shipperListener.changeStatusOfShipper(shipper.getUsername());
         }
 
         private void sendNotificationOrderToShipper(String shipperId) {
@@ -951,13 +984,13 @@ public class OrderController {
                                     }
 
                                     if (mapOrdersResult != null) {
-                                        System.out.println("Shipper = " + shipper.getId() + "is has Orders");
+                                        System.out.println("Shipper = " + shipper.getUsername() + "is has Orders");
                                         for (Map.Entry<Order, Integer> entry : mapOrdersResult.entrySet()) {
                                             System.out.println(entry.getKey());
                                         }
                                         it.remove();
                                         preProcessOrderRelease(shipper, mapOrdersResult);
-                                        sendNotificationOrderToShipper(shipper.getId());
+                                        sendNotificationOrderToShipper(shipper.getUsername());
                                     }
                                 }
                             }

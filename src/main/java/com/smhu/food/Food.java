@@ -1,20 +1,13 @@
 package com.smhu.food;
 
-import com.google.gson.annotations.SerializedName;
-
 public class Food {
 
-    String id;
-
-    @SerializedName("name")
-    String name;
-
-    @SerializedName("image")
-    String image;
-
-    String description;
-    double price;
-    SaleOff saleOff;
+    private String id;
+    private String name;
+    private String image;
+    private String description;
+    private double price;
+    private SaleOff saleOff;
 
     public Food() {
     }
@@ -23,7 +16,7 @@ public class Food {
         this.name = name;
         this.image = image;
     }
-    
+
     public Food(String id, String name, String image, String description, double price) {
         this.id = id;
         this.name = name;
@@ -89,4 +82,8 @@ public class Food {
         this.saleOff = saleOff;
     }
 
+    @Override
+    public String toString() {
+        return "Food{" + "id=" + id + ", name=" + name + ", image=" + image + ", description=" + description + ", price=" + price + ", saleOff=" + saleOff + '}';
+    }
 }

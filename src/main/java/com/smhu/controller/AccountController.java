@@ -2,9 +2,13 @@ package com.smhu.controller;
 
 import com.smhu.account.Account;
 import com.smhu.account.AccountLogin;
+import com.smhu.account.AccountRegister;
 import com.smhu.account.AccountUpdateWallet;
 import com.smhu.account.Customer;
+import com.smhu.account.CustomerUpdateAddress;
 import com.smhu.account.Shipper;
+import com.smhu.account.ShipperUpdateMaxNumOrder;
+import com.smhu.core.CoreFunctions;
 import com.smhu.dao.AccountDAO;
 import com.smhu.dao.ShipperDAO;
 import com.smhu.iface.IAccount;
@@ -31,6 +35,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -79,12 +84,12 @@ public class AccountController {
             if (result != null) {
                 for (Object account : result) {
                     if (account instanceof Customer) {
-                        ((Customer) account).setAddresses(service.getAddressOfAccount(((Customer) account).getId()));
+                        ((Customer) account).setAddresses(service.getAddressOfAccount(((Customer) account).getUsername()));
                     }
                 }
             }
 
-            return new ResponseEntity<>(service.getAccounts(type, page), HttpStatus.OK);
+            return new ResponseEntity<>(result, HttpStatus.OK);
         } catch (ClassNotFoundException | SQLException e) {
             Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, "Get All Account: {0}", e.getMessage());
             return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -114,7 +119,7 @@ public class AccountController {
                 return new ResponseEntity<>((Shipper) account, HttpStatus.OK);
             } else if (account instanceof Customer) {
                 Customer customer = (Customer) account;
-                customer.setAddresses(service.getAddressOfAccount(customer.getId()));
+                customer.setAddresses(service.getAddressOfAccount(customer.getUsername()));
                 return new ResponseEntity<>(customer, HttpStatus.OK);
             } else if (account instanceof Account) {
                 return new ResponseEntity<>((Account) account, HttpStatus.OK);
@@ -127,6 +132,37 @@ public class AccountController {
         }
     }
 
+    @GetMapping("/account/{username}/logout")
+    public ResponseEntity<?> logoutAccount(@PathVariable("username") String username) {
+        Shipper shipper = shipperListener.getShipper(username);
+        if (shipper == null) {
+            return new ResponseEntity<>("Account is not existed.", HttpStatus.METHOD_NOT_ALLOWED);
+        }
+        try {
+            if (ShipperController.mapShipperOrdersInProgress.containsKey(shipper.getUsername())) {
+                return new ResponseEntity<>("You must be done all orders to logout.", HttpStatus.METHOD_NOT_ALLOWED);
+            }
+
+            synchronized (CoreFunctions.mapFilterShippers) {
+                for (Map.Entry<String, List<String>> entry : CoreFunctions.mapFilterShippers.entrySet()) {
+                    List<String> shippers = entry.getValue();
+                    if (shippers != null) {
+                        for (String object : shippers) {
+                            if (shipper.getUsername().equals(object)) {
+                                entry.getValue().remove(shipper.getUsername());
+                            }
+                        }
+                    }
+                }
+            }
+            shipperListener.removeShipper(shipper.getUsername());
+        } catch (Exception e) {
+            Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, e.getMessage());
+            return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return new ResponseEntity<>("Logout success", HttpStatus.OK);
+    }
+
     @PostMapping("/account/username")
     public ResponseEntity<?> getAccountByUsername(@RequestBody AccountLogin accountObj) {
         Object obj;
@@ -137,13 +173,13 @@ public class AccountController {
 
             String encrypt = service.getEncryptionPassword(accountObj.getUsername(), accountObj.getRole().toLowerCase());
             if (encrypt == null) {
-                return new ResponseEntity<>(new ResponseMsg("Username or Password is not correct"), HttpStatus.NOT_FOUND);
+                return new ResponseEntity<>(new ResponseMsg("Username or Password is not correct"), HttpStatus.CONFLICT);
             }
 
             String encodePassword = service.encryptSHA(accountObj.getPassword() + encrypt);
             obj = service.getAccountByUsername(accountObj.getUsername(), encodePassword, accountObj.getRole());
             if (obj == null) {
-                return new ResponseEntity<>(new ResponseMsg("Username or Password is not correct"), HttpStatus.NOT_FOUND);
+                return new ResponseEntity<>(new ResponseMsg("Username or Password is not correct"), HttpStatus.CONFLICT);
             }
 
             if (obj instanceof Shipper) {
@@ -156,7 +192,7 @@ public class AccountController {
                 return new ResponseEntity<>(shipper, HttpStatus.OK);
             } else if (obj instanceof Customer) {
                 Customer account = (Customer) obj;
-                account.setAddresses(service.getAddressOfAccount(account.getId()));
+                account.setAddresses(service.getAddressOfAccount(account.getUsername()));
                 System.out.println("Login: " + account);
                 System.out.println("");
 
@@ -174,49 +210,119 @@ public class AccountController {
         }
     }
 
-//    @GetMapping("/account/phone/{phone}/role/{role}")
-//    public ResponseEntity<?> getAccountByPhone(@PathVariable("phone") String phone, @PathVariable("role") String role) {
-//        Account account = null;
-//
-//        try {
-//            if (mapRoles.containsKey(role)) {
-//                account = service.getAccountByEmailOrPhone(phone.toLowerCase(), role, service.PHONE);
-//            } else {
-//                return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
-//            }
-//
-//            if (account == null) {
-//                return new ResponseEntity<>(new ResponseMsg("Phone number is not correct"), HttpStatus.NOT_FOUND);
-//            }
-//            account.setAddresses(service.getAddressOfAccount(account.getId()));
-//        } catch (SQLException | ClassNotFoundException e) {
-//            Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, e.getMessage());
-//            return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
-//        }
-//        return new ResponseEntity<>(account, HttpStatus.OK);
-//    }
-//
-//    @GetMapping("/account/email/{email}/role/{role}")
-//    public ResponseEntity<?> getAccountByEmail(@PathVariable("email") String email, @PathVariable("role") String role) {
-//        Account account = null;
-//
-//        try {
-//            if (mapRoles.containsKey(role)) {
-//                account = service.getAccountByEmailOrPhone(email.toLowerCase(), role, service.EMAIL);
-//            } else {
-//                return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
-//            }
-//
-//            if (account == null) {
-//                return new ResponseEntity<>(new ResponseMsg("Email is not correct"), HttpStatus.NOT_FOUND);
-//            }
-//            account.setAddresses(service.getAddressOfAccount(account.getId()));
-//        } catch (SQLException | ClassNotFoundException e) {
-//            Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, e.getMessage());
-//            return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
-//        }
-//        return new ResponseEntity<>(account, HttpStatus.OK);
-//    }
+    @PostMapping("/register")
+    public ResponseEntity<?> registerAccount(@RequestBody AccountRegister account, @RequestParam("vin") String vin) {
+        try {
+            if (!mapRoles.containsKey(account.getRole().toLowerCase())) {
+                return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
+            }
+
+            String encrypted = service.getEncryptionPassword(account.getUsername(), account.getRole());
+            if (encrypted != null) {
+                return new ResponseEntity<>("Username is existed. Please try again!", HttpStatus.CONFLICT);
+            }
+            int result = service.insertAccount(account, vin);
+            if (result > 0) {
+                if (account.getRole().toUpperCase().equals(SHIPPER)) {
+                    service.insertMaxNumOrder(account.getUsername(), 1);
+                }
+            }
+        } catch (ClassNotFoundException | SQLException
+                | NoSuchAlgorithmException | UnsupportedEncodingException e) {
+            Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return new ResponseEntity<>("Registered Success", HttpStatus.OK);
+    }
+
+    @PutMapping("/account/wallet")
+    public ResponseEntity<?> updateWalletAccount(@RequestBody AccountUpdateWallet account) {
+        try {
+            int result = service.updateWalletAccount(account.getUsername(), account.getAmount());
+            if (result < 0) {
+                return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
+            }
+            ITransaction transactionListener = new TransactionController().getTransactionListener();
+            int checkTransaction = transactionListener.updateRechargeTransaction(account.getUsername(), account.getAmount());
+            if (checkTransaction <= 0) {
+                return new ResponseEntity<>(new ResponseMsg("Update Traction Error. Please try again!"), HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        } catch (ClassNotFoundException | SQLException | NumberFormatException e) {
+            Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, "Update Wallet: {0}", e.getMessage());
+            return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @PutMapping("/account/info")
+    public ResponseEntity<?> updateInfo(@RequestBody Account account) {
+        try {
+            if (!mapRoles.containsKey(account.getRole().toLowerCase())) {
+                return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
+            }
+
+            int result = service.updateProfile(account);
+            if (result < 0) {
+                return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
+            }
+        } catch (ClassNotFoundException | SQLException | NumberFormatException e) {
+            Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, "Update Wallet: {0}", e.getMessage());
+            return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return new ResponseEntity<>("Update Success", HttpStatus.OK);
+    }
+
+    @PutMapping("/account/address")
+    public ResponseEntity<?> updateAddress(@RequestBody CustomerUpdateAddress account) {
+        try {
+            String role = account.getRole().toUpperCase();
+            switch (role) {
+                case CUSTOMER:
+                    int result = service.deleteAddrCustomer(account.getUsername());
+                    if (result <= 0) {
+                        return new ResponseEntity<>("Update Address failed", HttpStatus.INTERNAL_SERVER_ERROR);
+                    } else {
+                        int[] arrResult = service.insertAddress(account.getUsername(), account.getAddresses());
+                        if (arrResult == null) {
+                            return new ResponseEntity<>("Update Address failed", HttpStatus.INTERNAL_SERVER_ERROR);
+                        }
+                    }
+                    break;
+                default:
+                    return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
+            }
+        } catch (ClassNotFoundException | SQLException | NumberFormatException e) {
+            Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, "Update Wallet: {0}", e.getMessage());
+            return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return new ResponseEntity<>("Update Success", HttpStatus.OK);
+    }
+
+    @PutMapping("/account/maxnumorder")
+    public ResponseEntity<?> updateMaxNumOrder(@RequestBody ShipperUpdateMaxNumOrder account) {
+        try {
+            if (!mapRoles.containsKey(account.getRole().toLowerCase())) {
+                return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
+            }
+
+            String role = account.getRole().toUpperCase();
+            switch (role) {
+                case SHIPPER:
+                    int result = service.updateMaxNumOrder(account.getUsername(), account.getMaxNumOrder());
+                    if (result <= 0) {
+                        return new ResponseEntity<>("Update max num Order failed", HttpStatus.INTERNAL_SERVER_ERROR);
+                    }
+                    break;
+                default:
+                    return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
+            }
+        } catch (ClassNotFoundException | SQLException | NumberFormatException e) {
+            Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, "Update Wallet: {0}", e.getMessage());
+            return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return new ResponseEntity<>("Update Success", HttpStatus.OK);
+    }
+
     @DeleteMapping("/delete/{accountId}")
     public ResponseEntity<?> deleteAccount(@PathVariable("accountId") String id) {
         try {
@@ -229,94 +335,5 @@ public class AccountController {
             return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return new ResponseEntity<>(HttpStatus.OK);
-    }
-
-    @PutMapping("/account")
-    public ResponseEntity<?> updateWalletAccount(@RequestBody AccountUpdateWallet account) {
-        try {
-            int result = service.updateWalletAccount(account.getId(), account.getAmount());
-            if (result <= 0) {
-                return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
-            }
-            ITransaction transactionListener = new TransactionController().getTransactionListener();
-            int checkTransaction = transactionListener.updateRechargeTransaction(account.getId(), account.getAmount());
-            if (checkTransaction <= 0) {
-                return new ResponseEntity<>(new ResponseMsg("Update Traction Error. Please try again!"), HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-        } catch (ClassNotFoundException | SQLException | NumberFormatException e) {
-            Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, "Update Wallet: {0}", e.getMessage());
-            return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-        return new ResponseEntity<>(HttpStatus.OK);
-    }
-
-    class AccountService {
-
-        
-
-//        Account getAccountByEmailOrPhone(String param, String role, String type) throws SQLException, ClassNotFoundException {
-//            if (!AccountController.mapRoles.containsKey(role)) {
-//                return null;
-//            }
-//
-//            Connection con = null;
-//            PreparedStatement stmt = null;
-//            ResultSet rs = null;
-//            StringBuilder sql = new StringBuilder();
-//
-//            try {
-//                con = DBUtils.getConnection();
-//                if (con != null) {
-//                    sql.append("SELECT *")
-//                            .append("\n");
-//                    sql.append("FROM GET_ACCOUNT")
-//                            .append("\n");
-//                    sql.append("WHERE ROLE = ?")
-//                            .append("\n");
-//                    switch (type) {
-//                        case EMAIL:
-//                            sql.append("AND EMAIL = ?");
-//                            break;
-//                        case PHONE:
-//                            sql.append("AND PHONE = ?");
-//                            break;
-//                        default:
-//                            return null;
-//                    }
-//
-//                    stmt = con.prepareStatement(sql.toString());
-//                    stmt.setString(1, role);
-//                    stmt.setString(2, param);
-//                    rs = stmt.executeQuery();
-//                    if (rs.next()) {
-//                        return new Account(rs.getString("ID"),
-//                                rs.getString("USERNAME"),
-//                                rs.getString("FIRST_NAME"),
-//                                rs.getString("MID_NAME"),
-//                                rs.getString("LAST_NAME"),
-//                                rs.getString("EMAIL"),
-//                                rs.getString("PHONE"),
-//                                rs.getDate("DOB"),
-//                                rs.getString("ROLE"),
-//                                rs.getInt("NUM_SUCCESS"),
-//                                rs.getInt("NUM_CANCEL"),
-//                                rs.getDouble("WALLET"),
-//                                null);
-//                    }
-//                }
-//            } finally {
-//                if (rs != null) {
-//                    rs.close();
-//                }
-//                if (stmt != null) {
-//                    stmt.close();
-//                }
-//                if (con != null) {
-//                    con.close();
-//                }
-//            }
-//            return null;
-//        }
-        
     }
 }

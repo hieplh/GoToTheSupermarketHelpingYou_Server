@@ -165,7 +165,7 @@ public class TransactionController {
         }
 
         @Override
-        public int updateDeliveryTransaction(String authorId, double amount, int status, String orderId) throws ClassNotFoundException, SQLException {
+        public int updateDeliveryTransaction(String affectedId, String authorId, double amount, int status, String orderId) throws ClassNotFoundException, SQLException {
             Connection con = null;
             PreparedStatement stmt = null;
 
@@ -176,7 +176,7 @@ public class TransactionController {
                             + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
                     stmt = con.prepareStatement(sql);
                     stmt.setString(1, generateId(orderId, status, DELIVERY));
-                    stmt.setString(2, authorId);
+                    stmt.setString(2, affectedId);
                     stmt.setDouble(3, amount);
                     stmt.setString(4, authorId);
 
@@ -200,7 +200,7 @@ public class TransactionController {
         }
 
         @Override
-        public int updateRefundTransaction(String authorId, double amount, int status, String orderId) throws ClassNotFoundException, SQLException {
+        public int updateRefundTransaction(String affectedId, String authorId, double amount, int status, String orderId) throws ClassNotFoundException, SQLException {
             Connection con = null;
             PreparedStatement stmt = null;
 
@@ -211,7 +211,7 @@ public class TransactionController {
                             + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
                     stmt = con.prepareStatement(sql);
                     stmt.setString(1, generateId(orderId, status, REFUND));
-                    stmt.setString(2, authorId);
+                    stmt.setString(2, affectedId);
                     stmt.setDouble(3, amount);
                     stmt.setString(4, authorId);
 

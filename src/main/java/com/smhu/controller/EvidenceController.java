@@ -1,10 +1,13 @@
 package com.smhu.controller;
 
+import com.smhu.dao.ImageDAO;
+import com.smhu.response.ResponseMsg;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.springframework.core.io.ClassPathResource;
@@ -23,7 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @CrossOrigin
 @RequestMapping("/api")
-public class ImageController {
+public class EvidenceController {
 
     final String IMAGES = "/images";
     final String STATIC = "/static";
@@ -33,20 +36,68 @@ public class ImageController {
     final String PNG = "PNG";
     final String GIF = "GIF";
 
-    private ImageService service;
+    private final ImageService service;
 
-    public ImageController() {
+    public EvidenceController() {
         service = new ImageService();
         service.initImagesFolder();
     }
 
+    @GetMapping("/evidence/{orderId}")
+    public ResponseEntity<?> getEvidenceByOrderId(@PathVariable("orderId") String orderId) {
+        try {
+            ImageDAO dao = new ImageDAO();
+            return new ResponseEntity<>(dao.getEvidencesByOrderId(orderId), HttpStatus.OK);
+        } catch (ClassNotFoundException | SQLException e) {
+            Logger.getLogger(HistoryController.class.getName()).log(Level.SEVERE, e.getMessage());
+            return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.OK);
+        }
+    }
+
+//    @GetMapping("/image/{filename}")
+//    public ResponseEntity<byte[]> getImage(@PathVariable("filename") String filename, @PathVariable("shipper") String shipperId) {
+//        String rootDirPath;
+//        try {
+//            rootDirPath = new ClassPathResource("/").getFile().getAbsolutePath();
+//        } catch (IOException e) {
+//            Logger.getLogger(EvidenceController.class.getName()).log(Level.SEVERE, "Error - Missing - Folder Path: {0}", e.getMessage());
+//            return new ResponseEntity("Error Path Folder", HttpStatus.INTERNAL_SERVER_ERROR);
+//        }
+//        String absolutelyPath = rootDirPath + IMAGES + "/" + shipperId;
+//        if (!service.checkFileIsExisted(absolutelyPath + "/" + filename)) {
+//            return new ResponseEntity("Image is not existed", HttpStatus.NOT_FOUND);
+//        }
+//
+//        try {
+//            File img = new File(absolutelyPath + "/" + filename);
+//            String[] extension = filename.split("\\.");
+//            switch (extension[extension.length - 1].toUpperCase()) {
+//                case GIF:
+//                    return ResponseEntity.ok().contentType(MediaType.IMAGE_GIF)
+//                            .body(java.nio.file.Files.readAllBytes(img.toPath()));
+//                case PNG:
+//                    return ResponseEntity.ok().contentType(MediaType.IMAGE_PNG)
+//                            .body(java.nio.file.Files.readAllBytes(img.toPath()));
+//                case JPEG:
+//                    return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG)
+//                            .body(java.nio.file.Files.readAllBytes(img.toPath()));
+//                default:
+//                    return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG)
+//                            .body(java.nio.file.Files.readAllBytes(img.toPath()));
+//            }
+//        } catch (IOException e) {
+//            Logger.getLogger(EvidenceController.class.getName()).log(Level.SEVERE, "Error - Path or Filename: {0}", e.getMessage());
+//            return new ResponseEntity("Error Path or Filename", HttpStatus.NOT_FOUND);
+//        }
+//    }
+    
     @GetMapping("/image/{filename}/shipper/{shipper}")
     public ResponseEntity<byte[]> getImage(@PathVariable("filename") String filename, @PathVariable("shipper") String shipperId) {
         String rootDirPath;
         try {
             rootDirPath = new ClassPathResource("/").getFile().getAbsolutePath();
         } catch (IOException e) {
-            Logger.getLogger(ImageController.class.getName()).log(Level.SEVERE, "Error - Missing - Folder Path: {0}", e.getMessage());
+            Logger.getLogger(EvidenceController.class.getName()).log(Level.SEVERE, "Error - Missing - Folder Path: {0}", e.getMessage());
             return new ResponseEntity("Error Path Folder", HttpStatus.INTERNAL_SERVER_ERROR);
         }
         String absolutelyPath = rootDirPath + IMAGES + "/" + shipperId;
@@ -72,7 +123,7 @@ public class ImageController {
                             .body(java.nio.file.Files.readAllBytes(img.toPath()));
             }
         } catch (IOException e) {
-            Logger.getLogger(ImageController.class.getName()).log(Level.SEVERE, "Error - Path or Filename: {0}", e.getMessage());
+            Logger.getLogger(EvidenceController.class.getName()).log(Level.SEVERE, "Error - Path or Filename: {0}", e.getMessage());
             return new ResponseEntity("Error Path or Filename", HttpStatus.NOT_FOUND);
         }
     }
@@ -81,14 +132,14 @@ public class ImageController {
     public ResponseEntity<?> uploadFileToServer(@RequestParam(name = "shipperId") String shipperId, @RequestParam(name = "orderId") String orderId,
             @RequestParam(name = "file") MultipartFile[] file) {
         if (file == null) {
-            Logger.getLogger(ImageController.class.getName()).log(Level.SEVERE, "Error - Upload File: null");
+            Logger.getLogger(EvidenceController.class.getName()).log(Level.SEVERE, "Error - Upload File: null");
             return new ResponseEntity("File Error", HttpStatus.NO_CONTENT);
         }
         String imageType;
         String rootDirPath;
 
         if (file.length == 0) {
-            Logger.getLogger(ImageController.class.getName()).log(Level.SEVERE, "Error - Upload File: empty");
+            Logger.getLogger(EvidenceController.class.getName()).log(Level.SEVERE, "Error - Upload File: empty");
             return new ResponseEntity("File Error", HttpStatus.NO_CONTENT);
         }
 
@@ -100,7 +151,7 @@ public class ImageController {
         try {
             rootDirPath = new ClassPathResource("/").getFile().getAbsolutePath();
         } catch (IOException e) {
-            Logger.getLogger(ImageController.class.getName()).log(Level.SEVERE, "Error - Missing - Folder Path: {0}", e.getMessage());
+            Logger.getLogger(EvidenceController.class.getName()).log(Level.SEVERE, "Error - Missing - Folder Path: {0}", e.getMessage());
             return new ResponseEntity("Error Path Folder", HttpStatus.INTERNAL_SERVER_ERROR);
         }
         String absolutelyPath = rootDirPath + IMAGES + "/" + shipperId;
@@ -110,6 +161,7 @@ public class ImageController {
         while (service.checkFileIsExisted(nameFile)) {
             nameFile = orderId + "_" + (++count) + "." + imageType;
         }
+        ImageDAO dao = new ImageDAO();
         File rootDir = new File(absolutelyPath);
         for (MultipartFile data : file) {
             if (!rootDir.isDirectory()) {
@@ -121,11 +173,12 @@ public class ImageController {
                 try (BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(serverFile))) {
                     bos.write(data.getBytes());
                 }
+                dao.insertEvidence(nameFile, orderId);
             } catch (FileNotFoundException e) {
-                Logger.getLogger(ImageController.class.getName()).log(Level.SEVERE, "FileNotFoundException: {0}", e.getMessage());
+                Logger.getLogger(EvidenceController.class.getName()).log(Level.SEVERE, "FileNotFoundException: {0}", e.getMessage());
                 return new ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
-            } catch (IOException e) {
-                Logger.getLogger(ImageController.class.getName()).log(Level.SEVERE, "IOException: {0}", e.getMessage());
+            } catch (IOException | ClassNotFoundException | SQLException e) {
+                Logger.getLogger(EvidenceController.class.getName()).log(Level.SEVERE, "IOException: {0}", e.getMessage());
                 return new ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
             }
         }
@@ -140,7 +193,7 @@ public class ImageController {
             try {
                 rootDirPath = new ClassPathResource("/").getFile().getAbsolutePath();
             } catch (IOException ex) {
-                Logger.getLogger(ImageController.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(EvidenceController.class.getName()).log(Level.SEVERE, null, ex);
                 return;
             }
             String absolutelyPath = rootDirPath + IMAGES;
@@ -172,4 +225,5 @@ public class ImageController {
             return imageType;
         }
     }
+
 }

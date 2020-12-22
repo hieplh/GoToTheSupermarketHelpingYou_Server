@@ -1,30 +1,30 @@
 package com.smhu.account;
 
 import java.sql.Date;
-import java.util.Objects;
 
-public class Account {
+public class AccountRegister {
 
     private String username;
+    private String password;
+    private String role;
     private String firstName;
     private String middleName;
     private String lastName;
     private String phone;
     private Date dob;
-    private String role;
 
-    public Account() {
+    public AccountRegister() {
     }
 
-    public Account(String username, String firstName, String middleName, String lastName,
-            String phone, Date dob, String role) {
+    public AccountRegister(String username, String password, String role, String firstName, String middleName, String lastName, String phone, Date dob) {
         this.username = username;
+        this.password = password;
+        this.role = role;
         this.firstName = firstName;
         this.middleName = middleName;
         this.lastName = lastName;
         this.phone = phone;
         this.dob = dob;
-        this.role = role;
     }
 
     public String getUsername() {
@@ -33,6 +33,22 @@ public class Account {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
     }
 
     public String getFirstName() {
@@ -73,36 +89,5 @@ public class Account {
 
     public void setDob(Date dob) {
         this.dob = dob;
-    }
-
-    public String getRole() {
-        return role;
-    }
-
-    public void setRole(String role) {
-        this.role = role;
-    }
-
-    @Override
-    public String toString() {
-        return "Account{" + "username=" + username + ", firstName=" + firstName + ", middleName=" + middleName + ", lastName=" + lastName + ", phone=" + phone + ", dob=" + dob + ", role=" + role + '}';
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final Account other = (Account) obj;
-        if (!Objects.equals(this.username, other.username)) {
-            return false;
-        }
-        return true;
     }
 }

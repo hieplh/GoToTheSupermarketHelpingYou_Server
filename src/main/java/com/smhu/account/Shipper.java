@@ -12,6 +12,7 @@ public class Shipper extends Account {
     private String lat;
     private String lng;
     private double rating;
+    private String vin;
 
     @JsonIgnore
     private String tokenFCM;
@@ -20,13 +21,14 @@ public class Shipper extends Account {
     }
 
     public Shipper(Account account) {
-        super(account.getId(), account.getUsername(), account.getFirstName(), account.getMiddleName(), account.getLastName(),
-                account.getEmail(), account.getPhone(), account.getDob(), account.getRole());
+        super(account.getUsername(), account.getFirstName(), account.getMiddleName(), account.getLastName(),
+                account.getPhone(), account.getDob(), account.getRole());
     }
 
-    public Shipper(Account account, int numDelivery, int numCancel, int maxOrder, double wallet, double rating, String lat, String lng, String tokenFCM) {
-        super(account.getId(), account.getUsername(), account.getFirstName(), account.getMiddleName(), account.getLastName(),
-                account.getEmail(), account.getPhone(), account.getDob(), account.getRole());
+    public Shipper(Account account, int numDelivery, int numCancel, int maxOrder, double wallet, double rating,
+            String lat, String lng, String tokenFCM, String vin) {
+        super(account.getUsername(), account.getFirstName(), account.getMiddleName(), account.getLastName(),
+                account.getPhone(), account.getDob(), account.getRole());
         this.maxOrder = maxOrder;
         this.numDelivery = numDelivery;
         this.numCancel = numCancel;
@@ -35,6 +37,7 @@ public class Shipper extends Account {
         this.lng = lng;
         this.rating = rating;
         this.tokenFCM = tokenFCM;
+        this.vin = vin;
     }
 
     public int getNumDelivery() {
@@ -101,9 +104,17 @@ public class Shipper extends Account {
         this.tokenFCM = tokenFCM;
     }
 
+    public String getVin() {
+        return vin;
+    }
+
+    public void setVin(String vin) {
+        this.vin = vin;
+    }
+
     @Override
     public String toString() {
-        return "Shipper{" + "id=" + this.getId() + ", lat=" + lat + ", lng=" + lng + ", rating=" + rating + ", tokenFCM=" + tokenFCM + '}';
+        return "Shipper{" + "numDelivery=" + numDelivery + ", numCancel=" + numCancel + ", wallet=" + wallet + ", maxOrder=" + maxOrder + ", lat=" + lat + ", lng=" + lng + ", rating=" + rating + ", vin=" + vin + ", tokenFCM=" + tokenFCM + '}';
     }
 
     @Override
@@ -118,7 +129,7 @@ public class Shipper extends Account {
             return false;
         }
         final Shipper other = (Shipper) obj;
-        if (!Objects.equals(this.getId(), other.getId())) {
+        if (!Objects.equals(this.getUsername(), other.getUsername())) {
             return false;
         }
         return true;

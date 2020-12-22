@@ -1,10 +1,15 @@
 package com.smhu.controller;
 
+import com.smhu.account.Shipper;
+import com.smhu.dao.AccountDAO;
+import com.smhu.dao.FoodDAO;
 import com.smhu.history.History;
 import com.smhu.iface.IStatus;
+import com.smhu.order.Order;
 import com.smhu.order.OrderDetail;
 import com.smhu.response.ResponseMsg;
 import com.smhu.utils.DBUtils;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -13,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -71,6 +77,7 @@ public class HistoryController {
             PreparedStatement stmt = null;
             ResultSet rs = null;
             List<History> list = null;
+            AccountDAO dao = new AccountDAO();
 
             try {
                 con = DBUtils.getConnection();
@@ -97,15 +104,15 @@ public class HistoryController {
                             list = new ArrayList<>();
                         }
                         History history = new History();
-                        history.setId(rs.getString("ID"));
+                        history.setId(rs.getString("ORDER_ID"));
                         history.setCreateDate(rs.getDate("CREATED_DATE"));
                         history.setCreateTime(rs.getTime("CREATED_TIME"));
                         history.setReceiveTime(rs.getTime("TIME_DELIVERY"));
                         history.setDeliveryTime(rs.getTime("LAST_UPDATE"));
                         history.setAddressDelivery(rs.getString("ADDRESS_DELIVERY"));
-                        history.setShipper(rs.getString("SHIPPER"));
+                        history.setShipper((Shipper) dao.getAccountById(rs.getString("SHIPPER"), "shipper"));
+                        history.setMarket(MarketController.mapMarket.get(rs.getString("MARKET_ID")));
                         history.setStatus(rs.getInt("STATUS"));
-                        history.setMarketName(rs.getString("NAME"));
                         history.setNote(rs.getString("NOTE"));
                         history.setCostDelivery(rs.getDouble("COST_DELIVERY"));
                         history.setCostShopping(rs.getDouble("COST_SHOPPING"));
@@ -127,15 +134,56 @@ public class HistoryController {
             return list;
         }
 
+        private Order loadOrder(String orderId) throws SQLException, ClassNotFoundException {
+            Connection con = null;
+            PreparedStatement stmt = null;
+            ResultSet rs = null;
+
+            try {
+                con = DBUtils.getConnection();
+                if (con != null) {
+                    String sql = "SELECT MARKET\n"
+                            + "FROM ORDERS\n"
+                            + "WHERE ID = ?";
+                    stmt = con.prepareStatement(sql);
+                    stmt.setString(1, orderId);
+
+                    rs = stmt.executeQuery();
+                    if (rs.next()) {
+                        Order order = new Order();
+                        order.setMarket(MarketController.mapMarket.get(rs.getString("MARKET")));
+                        return order;
+                    }
+                }
+            } finally {
+                if (rs != null) {
+                    rs.close();
+                }
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (con != null) {
+                    con.close();
+                }
+            }
+            return null;
+        }
+
         List<OrderDetail> getOrderDetailsHistoryById(String orderId) throws SQLException, ClassNotFoundException {
             Connection con = null;
             PreparedStatement stmt = null;
             ResultSet rs = null;
             List<OrderDetail> listDetails = null;
+            FoodDAO dao = new FoodDAO();
 
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
+                    Order order = loadOrder(orderId);
+                    if (order == null) {
+                        return null;
+                    }
+
                     String sql = "EXEC GET_ORDER_DETAIL_BY_ID ?";
                     stmt = con.prepareStatement(sql);
                     stmt.setString(1, orderId);
@@ -145,9 +193,7 @@ public class HistoryController {
                             listDetails = new ArrayList<>();
                         }
                         listDetails.add(new OrderDetail(rs.getString("ID"),
-                                rs.getString("FOOD"),
-                                rs.getString("NAME"),
-                                rs.getString("IMAGE"),
+                                dao.getFoodById(order.getMarket().getId(), rs.getString("FOOD")),
                                 rs.getDouble("ORIGINAL_PRICE"),
                                 rs.getDouble("PAID_PRICE"),
                                 rs.getDouble("WEIGHT"),

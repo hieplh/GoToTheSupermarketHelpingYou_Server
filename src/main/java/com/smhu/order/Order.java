@@ -1,6 +1,8 @@
 package com.smhu.order;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.smhu.account.Shipper;
+import com.smhu.market.Market;
 import java.sql.Date;
 import java.sql.Time;
 import java.util.List;
@@ -12,8 +14,8 @@ public class Order implements Cloneable, Comparable<Order> {
     private String cust;
     private String addressDelivery;
     private String note;
-    private String market;
-    private String shipper;
+    private Market market;
+    private Shipper shipper;
     private String lat;
     private String lng;
     private Date createDate;
@@ -29,15 +31,15 @@ public class Order implements Cloneable, Comparable<Order> {
     private Date dateDelivery;
     private Time timeDelivery;
     private List<OrderDetail> details;
-    
+
     @JsonIgnore
     private List<Evidence> evidences;
 
     public Order() {
     }
 
-    public Order(String id, String cust, String addressDelivery, String note, String market,
-            String shipper, String lat, String lng,
+    public Order(String id, String cust, String addressDelivery, String note, Market market,
+            Shipper shipper, String lat, String lng,
             Date createDate, Time createTime, Time lastUpdate,
             int status, String author, String reasonCancel, double costShopping, double costDelivery, double totalCost, double refundCost,
             Date dateDelivery, Time timeDelivery, List<OrderDetail> details, List<Evidence> evidences) {
@@ -97,19 +99,19 @@ public class Order implements Cloneable, Comparable<Order> {
         this.note = note;
     }
 
-    public String getMarket() {
+    public Market getMarket() {
         return market;
     }
 
-    public void setMarket(String market) {
+    public void setMarket(Market market) {
         this.market = market;
     }
 
-    public String getShipper() {
+    public Shipper getShipper() {
         return shipper;
     }
 
-    public void setShipper(String shipper) {
+    public void setShipper(Shipper shipper) {
         this.shipper = shipper;
     }
 
@@ -243,7 +245,7 @@ public class Order implements Cloneable, Comparable<Order> {
 
     @Override
     public String toString() {
-        return "Order{" + "id=" + id + ", cust=" + cust + ", addressDelivery=" + addressDelivery + ", note=" + note + ", market=" + market + ", shipper=" + shipper + ", lat=" + lat + ", lng=" + lng + ", createDate=" + createDate + ", createTime=" + createTime + ", lastUpdate=" + lastUpdate + ", status=" + status + ", author=" + author + ", reasonCancel=" + reasonCancel + ", costShopping=" + costShopping + ", costDelivery=" + costDelivery + ", totalCost=" + totalCost + ", dateDelivery=" + dateDelivery + ", timeDelivery=" + timeDelivery + ", details=" + details + ", evidences=" + evidences + '}';
+        return "Order{" + "id=" + id + ", cust=" + cust + ", addressDelivery=" + addressDelivery + ", note=" + note + ", market=" + market + ", shipper=" + shipper + ", lat=" + lat + ", lng=" + lng + ", createDate=" + createDate + ", createTime=" + createTime + ", lastUpdate=" + lastUpdate + ", status=" + status + ", author=" + author + ", reasonCancel=" + reasonCancel + ", costShopping=" + costShopping + ", costDelivery=" + costDelivery + ", totalCost=" + totalCost + ", refundCost=" + refundCost + ", dateDelivery=" + dateDelivery + ", timeDelivery=" + timeDelivery + ", details=" + details + ", evidences=" + evidences + '}';
     }
 
     @Override

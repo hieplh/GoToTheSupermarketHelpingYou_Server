@@ -8,6 +8,8 @@ public interface IShipper {
     public void addShipper(Shipper shipper);
 
     public Shipper getShipper(String id);
+    
+    public boolean removeShipper(String id);
 
     public void changeStatusOfShipper(String shipperId);
 

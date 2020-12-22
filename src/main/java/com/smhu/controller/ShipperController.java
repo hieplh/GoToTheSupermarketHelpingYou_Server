@@ -8,6 +8,7 @@ import com.smhu.order.Order;
 import java.util.ArrayList;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -60,7 +61,7 @@ public class ShipperController {
             if (shipper == null) {
                 return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
             }
-            List<OrderDelivery> list = OrderController.mapOrderDeliveryForShipper.getOrDefault(shipperId, null);
+            List<OrderDelivery> list = reSyncOrder(OrderController.mapOrderDeliveryForShipper.getOrDefault(shipperId, null));
             if (list != null) {
                 System.out.println("Shipper: " + shipperId + " received Orders");
                 for (OrderDelivery orderDelivery : list) {
@@ -68,7 +69,8 @@ public class ShipperController {
                 }
                 System.out.println("");
             }
-            return new ResponseEntity<>(OrderController.mapOrderDeliveryForShipper.getOrDefault(shipperId, null), HttpStatus.OK);
+
+            return new ResponseEntity<>(list, HttpStatus.OK);
         } catch (Exception e) {
             Logger.getLogger(ShipperController.class.getName()).log(Level.SEVERE, "Get release orders: {0}", e.getMessage());
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -83,7 +85,7 @@ public class ShipperController {
                 return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
             }
 
-            List<Order> listPreOrders = OrderController.mapOrderWaitingAfterShopping.getOrDefault(shipper.getId(), null);
+            List<Order> listPreOrders = OrderController.mapOrderWaitingAfterShopping.getOrDefault(shipper.getUsername(), null);
 
             if (listPreOrders == null) {
                 return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
@@ -102,10 +104,10 @@ public class ShipperController {
                 result.add(sync.syncOrderSystemToOrderDelivery(preOrder));
                 listIdOrdersBelongToShipper.add(preOrder.getId());
             }
-            mapShipperOrdersInProgress.put(shipper.getId(), listIdOrdersBelongToShipper);
+            mapShipperOrdersInProgress.put(shipper.getUsername(), listIdOrdersBelongToShipper);
 
-            if (mapAvailableShipper.containsKey(shipper.getId())) {
-                service.changeStatusOfShipper(shipper.getId());
+            if (mapAvailableShipper.containsKey(shipper.getUsername())) {
+                service.changeStatusOfShipper(shipper.getUsername());
             }
 
             if (result != null) {
@@ -120,5 +122,22 @@ public class ShipperController {
             Logger.getLogger(ShipperController.class.getName()).log(Level.SEVERE, "Get release orders: {0}", e.getMessage());
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    private List<OrderDelivery> reSyncOrder(List<OrderDelivery> list) {
+        if (list == null) {
+            return null;
+        }
+
+        SyncHelper sync = new SyncHelper();
+        Iterator<OrderDelivery> iterator = list.iterator();
+        while (iterator.hasNext()) {
+            OrderDelivery orderDelivery = iterator.next();
+            Order order = OrderController.mapOrderInProgress.get(orderDelivery.getId());
+            if (order != null) {
+                orderDelivery = sync.syncOrderSystemToOrderDelivery(order);
+            }
+        }
+        return list;
     }
 }

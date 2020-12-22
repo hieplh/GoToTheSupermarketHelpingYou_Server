@@ -1,5 +1,7 @@
 package com.smhu;
 
+import com.smhu.account.Account;
+import com.smhu.account.Shipper;
 import com.smhu.controller.AccountController;
 import com.smhu.controller.MarketController;
 import com.smhu.controller.OrderController;
@@ -7,12 +9,15 @@ import com.smhu.controller.ShipperController;
 import com.smhu.controller.StatusController;
 import com.smhu.core.CoreFunctions;
 import com.smhu.dao.AccountDAO;
+import com.smhu.dao.FoodDAO;
+import com.smhu.dao.MarketDAO;
 import com.smhu.helper.PropertiesWithJavaConfig;
 import com.smhu.iface.IMain;
 import com.smhu.iface.IStatus;
 import com.smhu.market.Market;
 import com.smhu.order.Order;
 import com.smhu.order.OrderDetail;
+import com.smhu.statement.QueryStatement;
 import com.smhu.status.Status;
 import com.smhu.utils.DBUtils;
 
@@ -67,7 +72,7 @@ public class GototheSupermarketHelpingYouApplication {
     public static void main(String[] args) {
         SpringApplication.run(GototheSupermarketHelpingYouApplication.class, args);
     }
-    
+
 //    public static void main(String[] args) throws IOException {
 //        List<String> addresses = new ArrayList<>();
 //        addresses.add("74 Đường D4A, Phước Long B, Quận 9, Thành phố Hồ Chí Minh");
@@ -83,7 +88,6 @@ public class GototheSupermarketHelpingYouApplication {
 //        System.out.println(geocoding.getStatus());
 //        
 //    }
-
     private void initDefaultProperties() {
         try {
             PropertiesWithJavaConfig.PROPERTIES.load(new ClassPathResource(APPLICATION_CONFIG_FILE_PATH).getInputStream());
@@ -91,7 +95,7 @@ public class GototheSupermarketHelpingYouApplication {
             Logger.getLogger(GototheSupermarketHelpingYouApplication.class.getName()).log(Level.SEVERE, "Init Default Properties:{0}", e.getMessage());
         }
     }
-    
+
     public void init() {
         initDefaultProperties();
         CoreFunctions core = new CoreFunctions();
@@ -137,7 +141,7 @@ public class GototheSupermarketHelpingYouApplication {
                 service.loadOrderDetail(listOrderIsDone);
                 listOrderIsDone.forEach(order -> OrderController.mapOrderIsDone.put(order.getId(), order));
             }
-            
+
             List<Order> listOrdersIsCancel = service.loadOrder(date, "-%");
             if (listOrdersIsCancel != null) {
                 for (Order order : listOrdersIsCancel) {
@@ -169,8 +173,51 @@ public class GototheSupermarketHelpingYouApplication {
 
     class MainService implements IMain {
 
-        public Properties loadFileConfig(String path) throws IOException {
+        private Properties loadFileConfig(String path) throws IOException {
             return PropertiesWithJavaConfig.getProperties(path);
+        }
+
+        private Shipper loadShipperAccount(String username) throws SQLException, ClassNotFoundException {
+            Connection con = null;
+            PreparedStatement stmt = null;
+            ResultSet rs = null;
+
+            try {
+                con = DBUtils.getConnection();
+                if (con != null) {
+                    String sql = QueryStatement.selectAccount;
+                    stmt = con.prepareStatement(sql);
+                    rs = stmt.executeQuery();
+                    if (rs.next()) {
+                        return new Shipper(new Account(
+                                rs.getString("USERNAME"),
+                                rs.getString("FIRST_NAME"),
+                                rs.getString("MID_NAME"),
+                                rs.getString("LAST_NAME"),
+                                rs.getString("PHONE"),
+                                rs.getDate("DOB"),
+                                rs.getString("ROLE")),
+                                rs.getInt("NUM_SUCCESS"),
+                                rs.getInt("NUM_CANCEL"),
+                                rs.getInt("MAX_ORDER"),
+                                rs.getDouble("WALLET"),
+                                rs.getDouble("RATING"),
+                                null, null, null,
+                                rs.getString("VIN"));
+                    }
+                }
+            } finally {
+                if (rs != null) {
+                    rs.close();
+                }
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (con != null) {
+                    con.close();
+                }
+            }
+            return null;
         }
 
         @Override
@@ -214,17 +261,9 @@ public class GototheSupermarketHelpingYouApplication {
             return list;
         }
 
-//        public void loadOrderInProcess() {
-//            IOrder orderListener = new OrderController().getOrderListener();
-//            try {
-//                orderListener.checkOrderInqueue();
-//            } catch (Exception e) {
-//                Logger.getLogger(GototheSupermarketHelpingYouApplication.class.getName()).log(Level.SEVERE, e.getMessage());
-//            }
-//        }
         @Override
         public List<Market> loadMarket() throws SQLException, ClassNotFoundException {
-            return new MarketController().getMarketListener().getBranchMarkets();
+            return new MarketDAO().getBranchMarkets();
         }
 
         @Override
@@ -234,6 +273,7 @@ public class GototheSupermarketHelpingYouApplication {
             ResultSet rs = null;
             Order order = null;
             List<Order> listOrders = null;
+            AccountDAO dao = new AccountDAO();
 
             try {
                 con = DBUtils.getConnection();
@@ -253,12 +293,12 @@ public class GototheSupermarketHelpingYouApplication {
                         order.setCust(rs.getString("CUST"));
                         order.setAddressDelivery(rs.getString("ADDRESS_DELIVERY"));
                         order.setNote(rs.getString("NOTE"));
-                        order.setMarket(rs.getString("MARKET"));
-                        order.setShipper(rs.getString("SHIPPER"));
+                        order.setMarket(MarketController.mapMarket.get(rs.getString("MARKET")));
+                        order.setShipper((Shipper) dao.getAccountById(rs.getString("SHIPPER"), "shipper"));
                         order.setCreateDate(rs.getDate("CREATED_DATE"));
                         order.setCreateTime(rs.getTime("CREATED_TIME"));
                         order.setLastUpdate(rs.getTime("LAST_UPDATE"));
-                        order.setStatus(Integer.parseInt(status));
+                        order.setStatus(rs.getInt("STATUS"));
                         order.setCostShopping(rs.getDouble("COST_SHOPPING"));
                         order.setCostDelivery(rs.getDouble("COST_DELIVERY"));
                         order.setTotalCost(rs.getDouble("TOTAL_COST"));
@@ -287,6 +327,7 @@ public class GototheSupermarketHelpingYouApplication {
             PreparedStatement stmt = null;
             ResultSet rs = null;
             List<OrderDetail> listDetails = order.getDetails();
+            FoodDAO dao = new FoodDAO();
 
             try {
                 con = DBUtils.getConnection();
@@ -300,9 +341,7 @@ public class GototheSupermarketHelpingYouApplication {
                             listDetails = new ArrayList<>();
                         }
                         listDetails.add(new OrderDetail(rs.getString("ID"),
-                                rs.getString("FOOD"),
-                                rs.getString("NAME"),
-                                rs.getString("IMAGE"),
+                                dao.getFoodById(order.getMarket().getId(), rs.getString("FOOD")),
                                 rs.getDouble("ORIGINAL_PRICE"),
                                 rs.getDouble("PAID_PRICE"),
                                 rs.getDouble("WEIGHT"),
@@ -328,6 +367,7 @@ public class GototheSupermarketHelpingYouApplication {
             Connection con = null;
             PreparedStatement stmt = null;
             ResultSet rs = null;
+            FoodDAO dao = new FoodDAO();
 
             try {
                 con = DBUtils.getConnection();
@@ -343,9 +383,7 @@ public class GototheSupermarketHelpingYouApplication {
                                 listDetails = new ArrayList<>();
                             }
                             listDetails.add(new OrderDetail(rs.getString("ID"),
-                                    rs.getString("FOOD"),
-                                    rs.getString("NAME"),
-                                    rs.getString("IMAGE"),
+                                    dao.getFoodById(order.getMarket().getId(), rs.getString("FOOD")),
                                     rs.getDouble("ORIGINAL_PRICE"),
                                     rs.getDouble("PAID_PRICE"),
                                     rs.getDouble("WEIGHT"),

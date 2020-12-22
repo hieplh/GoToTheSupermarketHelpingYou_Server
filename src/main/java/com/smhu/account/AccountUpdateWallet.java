@@ -2,23 +2,23 @@ package com.smhu.account;
 
 public class AccountUpdateWallet {
 
-    private String id;
+    private String username;
     private double amount;
 
     public AccountUpdateWallet() {
     }
 
-    public AccountUpdateWallet(String id, double amount) {
-        this.id = id;
+    public AccountUpdateWallet(String username, double amount) {
+        this.username = username;
         this.amount = amount;
     }
 
-    public String getId() {
-        return id;
+    public String getUsername() {
+        return username;
     }
 
-    public void setId(String id) {
-        this.id = id;
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     public double getAmount() {

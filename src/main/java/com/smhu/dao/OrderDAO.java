@@ -3,10 +3,12 @@ package com.smhu.dao;
 import com.smhu.account.Account;
 import com.smhu.account.Shipper;
 import com.smhu.account.ShipperAlter;
+import com.smhu.controller.MarketController;
 import com.smhu.iface.IAccount;
 import com.smhu.iface.IOrder;
 import com.smhu.order.Order;
 import com.smhu.order.OrderDetail;
+import com.smhu.statement.QueryStatement;
 import com.smhu.utils.DBUtils;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -17,12 +19,12 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-public class OrderDAO implements IOrder{
+public class OrderDAO implements IOrder {
 
     public final String STAFF = "STAFF";
     public final String CUSTOMER = "CUSTOMER";
     public final String SHIPPER = "SHIPPER";
-    
+
     @Override
     public Order getOrderById(String orderId, String type) throws SQLException, ClassNotFoundException {
         Connection con = null;
@@ -49,17 +51,9 @@ public class OrderDAO implements IOrder{
                     }
                     order.setAddressDelivery(rs.getString("ADDRESS_DELIVERY"));
                     order.setNote(rs.getString("NOTE"));
-                    if (type.toUpperCase().equals(STAFF)) {
-                        order.setMarket(rs.getString("MARKET"));
-                    } else {
-                        order.setMarket(rs.getString("MARKET_NAME"));
-                    }
-
-                    if (type.toUpperCase().equals(STAFF)) {
-                        order.setShipper(rs.getString("SHIPPER"));
-                    } else {
-                        order.setShipper(rs.getString("SHIPPER_NAME"));
-                    }
+                    order.setMarket(MarketController.mapMarket.get(rs.getString("MARKET")));
+                    AccountDAO dao = new AccountDAO();
+                    order.setShipper((Shipper) dao.getAccountById(rs.getString("SHIPPER"), "shipper"));
                     order.setCreateDate(rs.getDate("CREATED_DATE"));
                     order.setCreateTime(rs.getTime("CREATED_TIME"));
                     order.setStatus(rs.getInt("STATUS"));
@@ -169,16 +163,12 @@ public class OrderDAO implements IOrder{
         try {
             con = DBUtils.getConnection();
             if (con != null) {
-                String sql = "INSERT INTO ORDERS (ID, CUST, ADDRESS_DELIVERY, MARKET, NOTE, \n"
-                        + "COST_SHOPPING, COST_DELIVERY, TOTAL_COST, REFUND_COST,\n"
-                        + "CREATED_DATE, CREATED_TIME, LAST_UPDATE, STATUS,  \n"
-                        + "DATE_DELIVERY, TIME_DELIVERY)\n"
-                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                String sql = QueryStatement.insertOrder;
                 stmt = con.prepareStatement(sql);
                 stmt.setString(1, order.getId());
                 stmt.setString(2, order.getCust());
                 stmt.setString(3, order.getAddressDelivery());
-                stmt.setString(4, order.getMarket());
+                stmt.setString(4, order.getMarket().getId());
                 stmt.setString(5, order.getNote());
 
                 stmt.setDouble(6, order.getCostShopping());
@@ -221,7 +211,7 @@ public class OrderDAO implements IOrder{
                 int count = 0;
                 for (OrderDetail detail : details) {
                     stmt.setString(1, idOrder + String.valueOf(++count));
-                    stmt.setString(2, detail.getFoodId());
+                    stmt.setString(2, detail.getFood().getId());
                     stmt.setDouble(3, detail.getPriceOriginal());
                     stmt.setInt(4, detail.getSaleOff());
                     stmt.setDouble(5, detail.getPricePaid());
@@ -256,7 +246,7 @@ public class OrderDAO implements IOrder{
                 String sql = "UPDATE ORDERS SET SHIPPER = ?, STATUS = ?, LAT = ?, LNG = ?, LAST_UPDATE = ?\n"
                         + "WHERE ID = ?";
                 stmt = con.prepareStatement(sql);
-                stmt.setString(1, order.getShipper());
+                stmt.setString(1, order.getShipper().getUsername());
                 stmt.setInt(2, order.getStatus());
                 stmt.setString(3, order.getLat());
                 stmt.setString(4, order.getLng());

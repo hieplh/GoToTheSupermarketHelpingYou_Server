@@ -1,11 +1,11 @@
 package com.smhu.order;
 
+import com.smhu.food.Food;
+
 public class OrderDetail {
 
     private String id;
-    private String foodId;
-    private String foodName;
-    private String image;
+    private Food food;
     private double priceOriginal;
     private double pricePaid;
     private double weight;
@@ -14,11 +14,10 @@ public class OrderDetail {
     public OrderDetail() {
     }
 
-    public OrderDetail(String id, String food, String foodName, String image,
+    public OrderDetail(String id, Food food,
             double priceOrginal, double pricePaid, double weight, int saleOff) {
         this.id = id;
-        this.foodId = food;
-        this.image = image;
+        this.food = food;
         this.priceOriginal = priceOrginal;
         this.pricePaid = pricePaid;
         this.weight = weight;
@@ -33,28 +32,12 @@ public class OrderDetail {
         this.id = id;
     }
 
-    public String getFoodId() {
-        return foodId;
+    public Food getFood() {
+        return food;
     }
 
-    public void setFoodId(String foodId) {
-        this.foodId = foodId;
-    }
-
-    public String getFoodName() {
-        return foodName;
-    }
-
-    public void setFoodName(String foodName) {
-        this.foodName = foodName;
-    }
-
-    public String getImage() {
-        return image;
-    }
-
-    public void setImage(String image) {
-        this.image = image;
+    public void setFood(Food food) {
+        this.food = food;
     }
 
     public double getPriceOriginal() {
@@ -87,6 +70,11 @@ public class OrderDetail {
 
     public void setSaleOff(int saleOff) {
         this.saleOff = saleOff;
+    }
+
+    @Override
+    public String toString() {
+        return "OrderDetail{" + "id=" + id + ", food=" + food + ", priceOriginal=" + priceOriginal + ", pricePaid=" + pricePaid + ", weight=" + weight + ", saleOff=" + saleOff + '}';
     }
 
 }

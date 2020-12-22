@@ -51,24 +51,24 @@ public class SystemTime {
             try {
                 Order order = iterator.next();
                 if (SYSTEM_TIME >= OrderController.mapOrderIsWaitingAccept.get(order)) {
-                    Shipper shipper = shipperListener.getShipper(order.getShipper());
+                    Shipper shipper = shipperListener.getShipper(order.getShipper().getUsername());
 
                     List<String> list = OrderController.mapOrdersShipperReject.get(order.getShipper());
                     if (list == null) {
                         list = new ArrayList<>();
-                        OrderController.mapOrdersShipperReject.put(shipper.getId(), list);
+                        OrderController.mapOrdersShipperReject.put(shipper.getUsername(), list);
                     }
                     System.out.println(order);
 
                     if (rejectedShippers == null) {
                         rejectedShippers = new ArrayList();
                     }
-                    if (!rejectedShippers.contains(shipper.getId())) {
-                        rejectedShippers.add(shipper.getId());
+                    if (!rejectedShippers.contains(shipper.getUsername())) {
+                        rejectedShippers.add(shipper.getUsername());
                     }
 
                     list.add(order.getId());
-                    OrderController.mapOrderDeliveryForShipper.remove(shipper.getId());
+                    OrderController.mapOrderDeliveryForShipper.remove(shipper.getUsername());
 
                     List<String> listOrderBelongToShipper = ShipperController.mapShipperOrdersInProgress.get(order.getShipper());
                     listOrderBelongToShipper.remove(order.getId());
@@ -78,7 +78,7 @@ public class SystemTime {
 
                     order.setShipper(null);
                     shipper.setNumCancel(shipper.getNumCancel() + 1);
-                    shipperListener.updateNumCancel(shipper.getId(), 1);
+                    shipperListener.updateNumCancel(shipper.getUsername(), 1);
 
                     coreListener.filterOrder(order);
                     iterator.remove();
