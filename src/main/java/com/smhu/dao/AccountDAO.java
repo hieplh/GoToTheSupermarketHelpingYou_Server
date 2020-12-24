@@ -5,7 +5,6 @@ import com.smhu.account.AccountRegister;
 import com.smhu.account.Address;
 import com.smhu.account.Customer;
 import com.smhu.account.Shipper;
-import com.smhu.controller.AccountController;
 import com.smhu.iface.IAccount;
 import com.smhu.statement.QueryStatement;
 import com.smhu.utils.DBUtils;
@@ -54,11 +53,7 @@ public class AccountDAO implements IAccount {
     }
 
     @Override
-    public String getEncryptionPassword(String username, String type) throws SQLException, ClassNotFoundException {
-        if (!AccountController.mapRoles.containsKey(type)) {
-            return null;
-        }
-
+    public String getEncryptionPassword(String username) throws SQLException, ClassNotFoundException {
         Connection con = null;
         PreparedStatement stmt = null;
         ResultSet rs = null;
@@ -66,20 +61,9 @@ public class AccountDAO implements IAccount {
         try {
             con = DBUtils.getConnection();
             if (con != null) {
-                StringBuilder sql = new StringBuilder();
-                sql.append("SELECT SALT")
-                        .append("\n");
-                sql.append("FROM ACCOUNT")
-                        .append("\n");
-                sql.append("WHERE IS_ACTIVE = 1")
-                        .append("\n");
-                sql.append("AND USERNAME = ?")
-                        .append("\n");
-                sql.append("AND ROLE = ?");
-
-                stmt = con.prepareStatement(sql.toString());
+                String sql = QueryStatement.selectSalt;
+                stmt = con.prepareStatement(sql);
                 stmt.setString(1, username);
-                stmt.setString(2, type);
                 rs = stmt.executeQuery();
                 if (rs.next()) {
                     return rs.getString("SALT");
@@ -113,6 +97,38 @@ public class AccountDAO implements IAccount {
             hexString.append(hex);
         }
         return hexString.toString();
+    }
+
+    @Override
+    public boolean checkExistedPhoneOrVin(String phone, String vin) throws SQLException, ClassNotFoundException {
+        Connection con = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+
+        try {
+            con = DBUtils.getConnection();
+            if (con != null) {
+                String sql = QueryStatement.selectPhoneOrVinAccount;
+                stmt = con.prepareStatement(sql);
+                stmt.setString(1, phone);
+                stmt.setString(2, vin != null ? vin : "");
+                rs = stmt.executeQuery();
+                if (rs.next()) {
+                    return true;
+                }
+            }
+        } finally {
+            if (rs != null) {
+                rs.close();
+            }
+            if (stmt != null) {
+                stmt.close();
+            }
+            if (con != null) {
+                con.close();
+            }
+        }
+        return false;
     }
 
     @Override
@@ -730,7 +746,35 @@ public class AccountDAO implements IAccount {
     }
 
     @Override
-    public int insertAccount(AccountRegister account, String vin) throws ClassNotFoundException, SQLException, NoSuchAlgorithmException, UnsupportedEncodingException {
+    public int updatePassword(String username, String password) throws ClassNotFoundException, SQLException,
+            NoSuchAlgorithmException, UnsupportedEncodingException {
+        Connection con = null;
+        PreparedStatement stmt = null;
+
+        try {
+            con = DBUtils.getConnection();
+            if (con != null) {
+                String sql = QueryStatement.updatePassword;
+                stmt = con.prepareStatement(sql);
+                String salt = randomSalt();
+                stmt.setString(1, encryptSHA(password + salt));
+                stmt.setString(2, salt);
+                stmt.setString(3, username);
+                return stmt.executeUpdate() > 0 ? 1 : 0;
+            }
+        } finally {
+            if (stmt != null) {
+                stmt.close();
+            }
+            if (con != null) {
+                con.close();
+            }
+        }
+        return 0;
+    }
+
+    @Override
+    public int insertAccount(AccountRegister account) throws ClassNotFoundException, SQLException, NoSuchAlgorithmException, UnsupportedEncodingException {
         Connection con = null;
         PreparedStatement stmt = null;
 
@@ -757,7 +801,7 @@ public class AccountDAO implements IAccount {
                 stmt.setInt(13, 0);
                 stmt.setBoolean(14, true);
                 if (account.getRole().toUpperCase().equals(SHIPPER)) {
-                    stmt.setString(15, vin);
+                    stmt.setString(15, account.getVin());
                 } else {
                     stmt.setString(15, "");
                 }

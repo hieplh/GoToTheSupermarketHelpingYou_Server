@@ -1,12 +1,13 @@
 package com.smhu.response.shipper;
 
+import com.smhu.market.Market;
 import java.sql.Date;
 import java.sql.Time;
 
 public class OrderDoneDelivery {
 
     private String id;
-    private String marketName;
+    private Market market;
     private int quantity;
     private double costDelivery;
     private double costShopping;
@@ -20,9 +21,9 @@ public class OrderDoneDelivery {
     public OrderDoneDelivery() {
     }
 
-    public OrderDoneDelivery(String id, String marketName, int quantity, double costDelivery, double costShopping, double totalCostItems, double totalCost, Date createDate, Time endTime, int status, String note) {
+    public OrderDoneDelivery(String id, Market market, int quantity, double costDelivery, double costShopping, double totalCostItems, double totalCost, Date createDate, Time endTime, int status, String note) {
         this.id = id;
-        this.marketName = marketName;
+        this.market = market;
         this.quantity = quantity;
         this.costDelivery = costDelivery;
         this.costShopping = costShopping;
@@ -42,12 +43,12 @@ public class OrderDoneDelivery {
         this.id = id;
     }
 
-    public String getMarketName() {
-        return marketName;
+    public Market getMarket() {
+        return market;
     }
 
-    public void setMarketName(String marketName) {
-        this.marketName = marketName;
+    public void setMarket(Market market) {
+        this.market = market;
     }
 
     public int getQuantity() {
@@ -124,7 +125,7 @@ public class OrderDoneDelivery {
 
     @Override
     public String toString() {
-        return "OrderDoneDelivery{" + "id=" + id + ", marketName=" + marketName + ", quantity=" + quantity + ", costDelivery=" + costDelivery + ", costShopping=" + costShopping + ", totalCostItems=" + totalCostItems + ", totalCost=" + totalCost + ", createDate=" + createDate + ", endTime=" + endTime + ", status=" + status + ", note=" + note + '}';
+        return "OrderDoneDelivery{" + "id=" + id + ", market=" + market + ", quantity=" + quantity + ", costDelivery=" + costDelivery + ", costShopping=" + costShopping + ", totalCostItems=" + totalCostItems + ", totalCost=" + totalCost + ", createDate=" + createDate + ", endTime=" + endTime + ", status=" + status + ", note=" + note + '}';
     }
 
 }

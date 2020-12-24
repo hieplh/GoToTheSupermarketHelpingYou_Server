@@ -1,33 +1,14 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package com.smhu.food;
 
-import com.google.gson.annotations.SerializedName;
 import java.sql.Date;
 import java.sql.Time;
 
-/**
- *
- * @author Admin
- */
 public class SaleOff {
 
-    @SerializedName("startDate")
     Date startDate;
-
-    @SerializedName("endDate")
     Date endDate;
-
-    @SerializedName("startTime")
     Time startTime;
-
-    @SerializedName("EndTime")
     Time endTime;
-
-    @SerializedName("discount")
     int saleOff;
 
     public SaleOff() {
@@ -79,6 +60,11 @@ public class SaleOff {
 
     public void setSaleOff(int saleOff) {
         this.saleOff = saleOff;
+    }
+
+    @Override
+    public String toString() {
+        return "SaleOff{" + "startDate=" + startDate + ", endDate=" + endDate + ", startTime=" + startTime + ", endTime=" + endTime + ", saleOff=" + saleOff + '}';
     }
 
 }

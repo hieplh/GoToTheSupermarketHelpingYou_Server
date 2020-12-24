@@ -3,6 +3,7 @@ package com.smhu.controller;
 import com.smhu.iface.IStatus;
 import com.smhu.iface.ITransaction;
 import com.smhu.response.ResponseMsg;
+import com.smhu.statement.QueryStatement;
 import com.smhu.transaction.Transaction;
 import com.smhu.utils.DBUtils;
 
@@ -107,7 +108,7 @@ public class TransactionController {
                                 rs.getString("ID"),
                                 rs.getString("FULL_NAME"),
                                 rs.getDouble("AMOUNT"),
-                                rs.getString("DESCRIPTION"),
+                                rs.getString("NOTE"),
                                 rs.getInt("STATUS"),
                                 rs.getString("DH"),
                                 rs.getDate("CREATE_DATE"),
@@ -136,8 +137,7 @@ public class TransactionController {
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
-                    String sql = "INSERT INTO TRANSACTIONS (ID, ACCOUNT, AMOUNT, AUTHOR, CREATE_DATE, CREATE_TIME, STATUS)\n"
-                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                    String sql = QueryStatement.insertTransactionWithoutOrder;
                     stmt = con.prepareStatement(sql);
                     stmt.setString(1, generateId(authorId, -1, RECHARGE));
                     stmt.setString(2, authorId);
@@ -172,8 +172,7 @@ public class TransactionController {
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
-                    String sql = "INSERT INTO TRANSACTIONS (ID, ACCOUNT, AMOUNT, AUTHOR, CREATE_DATE, CREATE_TIME, STATUS, DH)\n"
-                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                    String sql = QueryStatement.insertTransaction;
                     stmt = con.prepareStatement(sql);
                     stmt.setString(1, generateId(orderId, status, DELIVERY));
                     stmt.setString(2, affectedId);
@@ -207,8 +206,7 @@ public class TransactionController {
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
-                    String sql = "INSERT INTO TRANSACTIONS (ID, ACCOUNT, AMOUNT, AUTHOR, CREATE_DATE, CREATE_TIME, STATUS, DH)\n"
-                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                    String sql = QueryStatement.insertTransaction;
                     stmt = con.prepareStatement(sql);
                     stmt.setString(1, generateId(orderId, status, REFUND));
                     stmt.setString(2, affectedId);

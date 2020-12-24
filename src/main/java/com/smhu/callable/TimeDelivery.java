@@ -1,6 +1,5 @@
 package com.smhu.callable;
 
-import com.smhu.controller.MarketController;
 import com.smhu.market.Market;
 import com.smhu.google.matrixobj.ElementObject;
 import com.smhu.google.matrixobj.MatrixObject;
@@ -37,9 +36,9 @@ public class TimeDelivery<T> implements Callable<T> {
 
     private List<String> getListPhysicalAddresses(List<Order> listOrders) {
         List<String> list = new ArrayList();
-        for (Order order : listOrders) {
+        listOrders.forEach((order) -> {
             list.add(order.getAddressDelivery());
-        }
+        });
         return list;
     }
 
@@ -60,7 +59,7 @@ public class TimeDelivery<T> implements Callable<T> {
             Order order = listOrders.get(count - 1);
             matrixObj = MatrixObjBuilder.getMatrixObject(order.getAddressDelivery(), getListPhysicalAddresses(listOrders.subList(count, listOrders.size())));
         } else {
-            Market market = MarketController.mapMarket.get(listOrders.get(count).getMarket());
+            Market market = listOrders.get(count).getMarket();
             matrixObj = MatrixObjBuilder.getMatrixObject(new String[]{market.getLat(), market.getLng()}, getListPhysicalAddresses(listOrders));
         }
 

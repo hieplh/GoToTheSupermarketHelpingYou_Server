@@ -59,6 +59,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -141,12 +142,17 @@ public class OrderController {
                     return new ResponseEntity<>(order, HttpStatus.OK);
                 case STAFF:
                     OrderOverall orderStaff = new OrderOverall(order);
-                    orderStaff.setMarket(MarketController.mapMarket.get(order.getMarket()));
+                    orderStaff.setMarket(order.getMarket());
                     orderStaff.setCustomer((Customer) accountListener.getAccountById(order.getCust(), CUSTOMER));
-                    Shipper shipper = shipperListener.getShipper(order.getShipper().getUsername());
-                    if (shipper == null) {
-                        shipper = (Shipper) accountListener.getAccountById(order.getShipper().getUsername(), SHIPPER);
+
+                    Shipper shipper = null;
+                    if (order.getShipper() != null) {
+                        shipper = shipperListener.getShipper(order.getShipper().getUsername());
+                        if (shipper == null) {
+                            shipper = (Shipper) accountListener.getAccountById(order.getShipper().getUsername(), SHIPPER);
+                        }
                     }
+
                     orderStaff.setShipper(shipper);
                     if (order.getAuthor() != null) {
                         orderStaff.setAuthor((Account) accountListener.getAccountById(order.getAuthor(), STAFF));
@@ -291,12 +297,13 @@ public class OrderController {
                         numCancel++;
                         isHasOrderCancel = true;
                     } else {
-                        if (!orderWaitAccept.getShipper().equals(orderInProcess.getShipper())) {
+                        if (!orderWaitAccept.getShipper().getUsername().equals(orderInProcess.getShipper())) {
                             return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
                         }
 
                         mapOrderIsWaitingAccept.remove(orderWaitAccept);
                         mapCountOrderRelease.remove(orderWaitAccept.getId());
+                        service.removeOrderDeliveryForShipper(shipper, orderWaitAccept);
                         service.removePreOrderOfShipper(shipper, orderWaitAccept);
 
                         order = orderWaitAccept;
@@ -406,7 +413,6 @@ public class OrderController {
 //        }
 //        return new ResponseEntity<>(null, HttpStatus.OK);
 //    }
-
     @GetMapping("/tracking/{orderId}")
     public ResponseEntity trackingOrder(@PathVariable("orderId") String orderId) {
         Order order = mapOrderInProgress.get(orderId);
@@ -491,7 +497,7 @@ public class OrderController {
                 order.setRefundCost(order.getTotalCost());
                 //mapOrderIsCancelInQueue.put(order.getId(), order);
 
-                chargeCost = order.getCostDelivery()* -1;
+                chargeCost = order.getCostDelivery() * -1;
 
                 shipper = shipperListener.getShipper(accountId);
                 shipper.setNumCancel(shipper.getNumCancel() + 1);
@@ -555,7 +561,7 @@ public class OrderController {
                 coreListener.preProcessMapFilterOrder(order.getMarket().getId(), order);
                 if (order.getShipper() != null) {
                     mapOrderIsWaitingAccept.remove(order);
-                    List<OrderDelivery> list = mapOrderDeliveryForShipper.get(order.getShipper());
+                    List<OrderDelivery> list = mapOrderDeliveryForShipper.get(order.getShipper().getUsername());
                     if (list != null) {
                         for (int i = list.size() - 1; i >= 0; i--) {
                             if (order.getId().equals(list.get(i).getId())) {
@@ -604,12 +610,29 @@ public class OrderController {
             return mapOrderWaitingAfterShopping.get(listOrders.get(0).getShipper());
         }
 
-        void remoteOrderBelongToShipper(Shipper shipper, Order order) {
+        void removeOrderBelongToShipper(Shipper shipper, Order order) {
             List<String> list = mapShipperOrdersInProgress.get(shipper.getUsername());
             if (list == null) {
                 return;
             }
             list.remove(order.getId());
+        }
+
+        void removeOrderDeliveryForShipper(Shipper shipper, Order order) {
+            List<OrderDelivery> list = mapOrderDeliveryForShipper.get(shipper.getUsername());
+            if (list != null) {
+                Iterator<OrderDelivery> iterator = list.iterator();
+                while (iterator.hasNext()) {
+                    OrderDelivery tmp = iterator.next();
+                    if (tmp.getId().equals(order.getId())) {
+                        iterator.remove();
+                    }
+                }
+
+//                if (list.isEmpty()) {
+//                    mapOrderDeliveryForShipper.remove(shipper.getUsername());
+//                }
+            }
         }
 
         void removePreOrderOfShipper(Shipper shipper, Order order) {
@@ -650,14 +673,10 @@ public class OrderController {
 
         List<Shipper> getShippers(Comparator comparator) {
             List<Shipper> list = new ArrayList<>();
-            for (Map.Entry<String, Shipper> entry : mapAvailableShipper.entrySet()) {
+            mapAvailableShipper.entrySet().forEach((entry) -> {
                 list.add(entry.getValue());
-            }
+            });
             list.sort(comparator);
-
-            for (Shipper shipper : list) {
-                System.out.println(shipper);
-            }
             return list;
         }
 
@@ -698,25 +717,31 @@ public class OrderController {
 
         void cancelMapShipperOrder(String orderId, String accountId) {
             List<String> list = mapShipperOrdersInProgress.get(accountId);
-            for (int i = list.size() - 1; i >= 0; i--) {
-                if (list.get(i).equals(orderId)) {
-                    list.remove(i);
-                    if (list.isEmpty()) {
-                        mapShipperOrdersInProgress.remove(accountId);
-                    }
+            Iterator<String> iterator = list.iterator();
+            while (iterator.hasNext()) {
+                String id = iterator.next();
+                if (id.equals(orderId)) {
+                    iterator.remove();
                 }
+            }
+            if (list.isEmpty()) {
+                mapShipperOrdersInProgress.remove(accountId);
             }
         }
 
         void cancelMapShipperOrder(String orderId) {
             List<String> listShippers = mapShipperOrdersInProgress.keySet().stream().collect(Collectors.toList());
-            for (int i = 0; i < listShippers.size(); i++) {
-                List<String> listOrders = mapShipperOrdersInProgress.get(listShippers.get(i));
-                for (int j = listOrders.size() - 1; j >= 0; j--) {
-                    if (listOrders.get(j).equals(orderId)) {
-                        listOrders.remove(j);
-                        if (listOrders.isEmpty()) {
-                            mapShipperOrdersInProgress.remove(listShippers.get(i));
+            if (listShippers != null) {
+                for (int i = 0; i < listShippers.size(); i++) {
+                    List<String> listOrders = mapShipperOrdersInProgress.get(listShippers.get(i));
+                    if (listOrders != null) {
+                        for (int j = listOrders.size() - 1; j >= 0; j--) {
+                            if (listOrders.get(j).equals(orderId)) {
+                                listOrders.remove(j);
+                                if (listOrders.isEmpty()) {
+                                    mapShipperOrdersInProgress.remove(listShippers.get(i));
+                                }
+                            }
                         }
                     }
                 }
@@ -726,9 +751,9 @@ public class OrderController {
         OrderDoneDelivery executeOrderIsDone(Shipper shipper, Order order, int status, SyncHelper sync) throws ClassNotFoundException, SQLException {
             Order orderDoneObj = mapOrderInProgress.remove(order.getId());
             mapOrderIsDone.put(orderDoneObj.getId(), orderDoneObj);
-            service.remoteOrderBelongToShipper(shipper, orderDoneObj);
+            service.removeOrderBelongToShipper(shipper, orderDoneObj);
 
-            double totalReceiveTransMoney = orderDoneObj.getCostShopping() + orderDoneObj.getCostDelivery();
+            double totalReceiveTransMoney = (orderDoneObj.getCostShopping() + orderDoneObj.getCostDelivery()) / 2;
             transactionListener.updateDeliveryTransaction(shipper.getUsername(), shipper.getUsername(),
                     totalReceiveTransMoney, status, orderDoneObj.getId());
             accountListener.updateWalletAccount(shipper.getUsername(), orderDoneObj.getTotalCost());

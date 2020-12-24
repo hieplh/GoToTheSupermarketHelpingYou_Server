@@ -12,11 +12,9 @@ public class AccountRegister {
     private String lastName;
     private String phone;
     private Date dob;
+    private String vin;
 
-    public AccountRegister() {
-    }
-
-    public AccountRegister(String username, String password, String role, String firstName, String middleName, String lastName, String phone, Date dob) {
+    public AccountRegister(String username, String password, String role, String firstName, String middleName, String lastName, String phone, Date dob, String vin) {
         this.username = username;
         this.password = password;
         this.role = role;
@@ -25,6 +23,7 @@ public class AccountRegister {
         this.lastName = lastName;
         this.phone = phone;
         this.dob = dob;
+        this.vin = vin;
     }
 
     public String getUsername() {
@@ -90,4 +89,18 @@ public class AccountRegister {
     public void setDob(Date dob) {
         this.dob = dob;
     }
+
+    public String getVin() {
+        return vin;
+    }
+
+    public void setVin(String vin) {
+        this.vin = vin;
+    }
+
+    @Override
+    public String toString() {
+        return "AccountRegister{" + "username=" + username + ", password=" + password + ", role=" + role + ", firstName=" + firstName + ", middleName=" + middleName + ", lastName=" + lastName + ", phone=" + phone + ", dob=" + dob + ", vin=" + vin + '}';
+    }
+
 }

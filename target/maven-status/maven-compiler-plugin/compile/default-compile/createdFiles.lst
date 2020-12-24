@@ -17,6 +17,7 @@ com\smhu\iface\IFood.class
 com\smhu\helper\PropertiesWithJavaConfig.class
 com\smhu\controller\MarketController.class
 com\smhu\ServletInitializer.class
+com\smhu\feedback\Feedback.class
 com\smhu\google\geocoding\Result.class
 com\smhu\order\OrderDetail.class
 com\smhu\account\Customer.class
@@ -45,7 +46,6 @@ com\smhu\status\Status.class
 com\smhu\comparator\SortByLowActive.class
 com\smhu\account\ShipperAlter.class
 com\smhu\google\matrixobj\ElementObject.class
-com\smhu\account\AccountUpdateWallet.class
 com\smhu\callable\TimeDelivery.class
 com\smhu\account\ShipperUpdateMaxNumOrder.class
 com\smhu\response\ResponseMsg.class
@@ -57,7 +57,6 @@ com\smhu\helper\ExtractLocationGeocoding.class
 com\smhu\dao\OrderDAO.class
 com\smhu\controller\EvidenceController$ImageService.class
 com\smhu\comparator\SortByHighActive.class
-com\smhu\feedback\FeedBack.class
 com\smhu\google\geocoding\Geocoding.class
 com\smhu\order\Evidence.class
 com\smhu\dao\ShipperDAO.class

@@ -1,10 +1,8 @@
 package com.smhu.helper;
 
 import com.smhu.controller.MarketController;
-import com.smhu.dao.ShipperDAO;
 import com.smhu.google.geocoding.Geocoding;
 import com.smhu.google.geocoding.Result;
-import com.smhu.iface.IShipper;
 import com.smhu.order.Order;
 import com.smhu.order.OrderDetail;
 import com.smhu.response.customer.OrderResponseCustomer;
@@ -22,11 +20,9 @@ import java.util.Map;
 public class SyncHelper {
 
     public OrderResponseCustomer syncOrderSystemToOrderResponseCustomer(Order order) {
-        IShipper shipperListener = new ShipperDAO();
-
         OrderResponseCustomer obj = new OrderResponseCustomer();
         obj.setId(order.getId());
-        obj.setMarket(MarketController.mapMarket.get(order.getMarket()));
+        obj.setMarket(order.getMarket());
         obj.setQuantity(order.getDetails().size());
         obj.setTotalCost(order.getTotalCost());
         obj.setTimeCreate(order.getCreateTime());
@@ -41,7 +37,7 @@ public class SyncHelper {
         obj.setId(order.getId());
         obj.setCust(order.getCust());
         obj.setAddressDelivery(convertAddressToMap(order.getAddressDelivery(), 0));
-        obj.setMarket(MarketController.mapMarket.get(order.getMarket()));
+        obj.setMarket(order.getMarket());
         obj.setNote(order.getNote());
         obj.setShipper(order.getShipper().getUsername());
         obj.setStatus(order.getStatus());
@@ -59,7 +55,7 @@ public class SyncHelper {
         obj.setId(order.getId());
         obj.setCust(order.getCust());
         obj.setAddressDelivery(convertAddressToMap(order.getAddressDelivery(), 0));
-        obj.setMarket(MarketController.mapMarket.get(order.getMarket()));
+        obj.setMarket(order.getMarket());
         obj.setNote(order.getNote());
         obj.setShipper(order.getShipper().getUsername());
         obj.setStatus(order.getStatus());
@@ -75,7 +71,7 @@ public class SyncHelper {
     public OrderDoneDelivery syncOrderSystemToOrderDoneDelivery(Order order) {
         OrderDoneDelivery obj = new OrderDoneDelivery();
         obj.setId(order.getId());
-        obj.setMarketName(MarketController.mapMarket.get(order.getMarket()).getName());
+        obj.setMarket(order.getMarket());
         obj.setQuantity(order.getDetails().size());
         obj.setCostDelivery(order.getCostDelivery());
         obj.setCostShopping(order.getCostShopping());

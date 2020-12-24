@@ -18,9 +18,7 @@ public class TimeShopping<T> implements Callable<T> {
     public T call() throws Exception {
         int timeShopping = 0;
         synchronized (listOrdersForShipper) {
-            for (Order order : listOrdersForShipper) {
-                timeShopping += getTotalTimeShopping(order);
-            }
+            timeShopping = listOrdersForShipper.stream().map((order) -> getTotalTimeShopping(order)).reduce(timeShopping, Integer::sum);
         }
         return (T) ((Integer) timeShopping);
     }

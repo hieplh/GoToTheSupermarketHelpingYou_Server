@@ -1,18 +1,20 @@
 package com.smhu.feedback;
 
-public class FeedBack {
+public class Feedback {
 
     private String id;
+    private String customer;
     private String shipper;
     private String order;
     private String feedback;
     private int rating;
 
-    public FeedBack() {
+    public Feedback() {
     }
 
-    public FeedBack(String id, String shipper, String order, String feedback, int rating) {
+    public Feedback(String id, String customer, String shipper, String order, String feedback, int rating) {
         this.id = id;
+        this.customer = customer;
         this.shipper = shipper;
         this.order = order;
         this.feedback = feedback;
@@ -25,6 +27,14 @@ public class FeedBack {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public String getCustomer() {
+        return customer;
+    }
+
+    public void setCustomer(String customer) {
+        this.customer = customer;
     }
 
     public String getShipper() {
@@ -61,7 +71,6 @@ public class FeedBack {
 
     @Override
     public String toString() {
-        return "FeedBack{" + "id=" + id + ", shipper=" + shipper + ", order=" + order + ", feedback=" + feedback + ", rating=" + rating + '}';
+        return "FeedBack{" + "id=" + id + ", customer=" + customer + ", shipper=" + shipper + ", order=" + order + ", feedback=" + feedback + ", rating=" + rating + '}';
     }
-
 }

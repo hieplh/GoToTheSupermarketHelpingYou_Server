@@ -3,7 +3,7 @@ package com.smhu.controller;
 import com.smhu.account.Account;
 import com.smhu.account.AccountLogin;
 import com.smhu.account.AccountRegister;
-import com.smhu.account.AccountUpdateWallet;
+import com.smhu.account.AccountUpdate;
 import com.smhu.account.Customer;
 import com.smhu.account.CustomerUpdateAddress;
 import com.smhu.account.Shipper;
@@ -11,6 +11,7 @@ import com.smhu.account.ShipperUpdateMaxNumOrder;
 import com.smhu.core.CoreFunctions;
 import com.smhu.dao.AccountDAO;
 import com.smhu.dao.ShipperDAO;
+
 import com.smhu.iface.IAccount;
 import com.smhu.iface.IShipper;
 import com.smhu.iface.ITransaction;
@@ -35,7 +36,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -171,7 +171,7 @@ public class AccountController {
                 return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
             }
 
-            String encrypt = service.getEncryptionPassword(accountObj.getUsername(), accountObj.getRole().toLowerCase());
+            String encrypt = service.getEncryptionPassword(accountObj.getUsername());
             if (encrypt == null) {
                 return new ResponseEntity<>(new ResponseMsg("Username or Password is not correct"), HttpStatus.CONFLICT);
             }
@@ -210,18 +210,27 @@ public class AccountController {
         }
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<?> registerAccount(@RequestBody AccountRegister account, @RequestParam("vin") String vin) {
+    @PostMapping("/account/register")
+    public ResponseEntity<?> registerAccount(@RequestBody AccountRegister account) {
         try {
+            System.out.println("Account: " + account);
+            if (account == null) {
+                return new ResponseEntity<>("Account is null", HttpStatus.METHOD_NOT_ALLOWED);
+            }
             if (!mapRoles.containsKey(account.getRole().toLowerCase())) {
                 return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
             }
 
-            String encrypted = service.getEncryptionPassword(account.getUsername(), account.getRole());
+            String encrypted = service.getEncryptionPassword(account.getUsername());
             if (encrypted != null) {
                 return new ResponseEntity<>("Username is existed. Please try again!", HttpStatus.CONFLICT);
             }
-            int result = service.insertAccount(account, vin);
+            boolean isDuplicatePhoneOrVin = service.checkExistedPhoneOrVin(account.getPhone(), account.getVin());
+            if (isDuplicatePhoneOrVin) {
+                return new ResponseEntity<>("Phone or Vin is existed. Please try again!", HttpStatus.CONFLICT);
+            }
+
+            int result = service.insertAccount(account);
             if (result > 0) {
                 if (account.getRole().toUpperCase().equals(SHIPPER)) {
                     service.insertMaxNumOrder(account.getUsername(), 1);
@@ -236,7 +245,7 @@ public class AccountController {
     }
 
     @PutMapping("/account/wallet")
-    public ResponseEntity<?> updateWalletAccount(@RequestBody AccountUpdateWallet account) {
+    public ResponseEntity<?> updateWalletAccount(@RequestBody AccountUpdate account) {
         try {
             int result = service.updateWalletAccount(account.getUsername(), account.getAmount());
             if (result < 0) {
@@ -260,13 +269,9 @@ public class AccountController {
             if (!mapRoles.containsKey(account.getRole().toLowerCase())) {
                 return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
             }
-
-            int result = service.updateProfile(account);
-            if (result < 0) {
-                return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
-            }
+            service.updateProfile(account);
         } catch (ClassNotFoundException | SQLException | NumberFormatException e) {
-            Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, "Update Wallet: {0}", e.getMessage());
+            Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, "Update Info: {0}", e.getMessage());
             return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return new ResponseEntity<>("Update Success", HttpStatus.OK);
@@ -278,14 +283,10 @@ public class AccountController {
             String role = account.getRole().toUpperCase();
             switch (role) {
                 case CUSTOMER:
-                    int result = service.deleteAddrCustomer(account.getUsername());
-                    if (result <= 0) {
+                    service.deleteAddrCustomer(account.getUsername());
+                    int[] arrResult = service.insertAddress(account.getUsername(), account.getAddresses());
+                    if (arrResult == null) {
                         return new ResponseEntity<>("Update Address failed", HttpStatus.INTERNAL_SERVER_ERROR);
-                    } else {
-                        int[] arrResult = service.insertAddress(account.getUsername(), account.getAddresses());
-                        if (arrResult == null) {
-                            return new ResponseEntity<>("Update Address failed", HttpStatus.INTERNAL_SERVER_ERROR);
-                        }
                     }
                     break;
                 default:
@@ -321,6 +322,32 @@ public class AccountController {
             return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return new ResponseEntity<>("Update Success", HttpStatus.OK);
+    }
+
+    @PutMapping("/account/password")
+    public ResponseEntity<?> updatePassword(@RequestBody AccountUpdate account) {
+        try {
+            String salt = service.getEncryptionPassword(account.getUsername());
+            if (salt == null) {
+                return new ResponseEntity<>(HttpStatus.UNAUTHORIZED.toString(), HttpStatus.UNAUTHORIZED);
+            }
+
+            String encryptedPwd = service.encryptSHA(account.getOldPwd() + salt);
+            Account obj = (Account) service.getAccountByUsername(account.getUsername(), encryptedPwd, account.getRole());
+            if (obj == null) {
+                return new ResponseEntity<>("Password is not correct", HttpStatus.CONFLICT);
+            }
+
+            int result = service.updatePassword(account.getUsername(), account.getNewPwd());
+            if (result <= 0) {
+                return new ResponseEntity<>("Update password failed. Please try again", HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        } catch (ClassNotFoundException | SQLException
+                | NumberFormatException | NoSuchAlgorithmException | UnsupportedEncodingException e) {
+            Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, "Update Password: {0}", e.getMessage());
+            return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return new ResponseEntity<>("Update pwd Success", HttpStatus.OK);
     }
 
     @DeleteMapping("/delete/{accountId}")

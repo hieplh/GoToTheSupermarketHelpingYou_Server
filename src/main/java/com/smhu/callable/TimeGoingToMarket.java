@@ -59,11 +59,9 @@ public class TimeGoingToMarket<T> implements Callable<T> {
                 return;
             }
 
-            for (Map.Entry<String, Integer> entry : map.entrySet()) {
-                if (!AVG_TIME_TRAVEL_TO_MARKET.containsKey(entry.getKey())) {
-                    AVG_TIME_TRAVEL_TO_MARKET.put(entry.getKey(), entry.getValue());
-                }
-            }
+            map.entrySet().stream().filter((entry) -> (!AVG_TIME_TRAVEL_TO_MARKET.containsKey(entry.getKey()))).forEachOrdered((entry) -> {
+                AVG_TIME_TRAVEL_TO_MARKET.put(entry.getKey(), entry.getValue());
+            });
         } catch (ClassNotFoundException | SQLException e) {
             Logger.getLogger(CoreFunctions.class.getName()).log(Level.SEVERE, "Scan Order, Get AVG_TIME_TRAVEL: {0}", e.getMessage());
         }
@@ -73,7 +71,7 @@ public class TimeGoingToMarket<T> implements Callable<T> {
         MatrixObject matrixObj;
         AverageTimeTravel averageTimeTravel = new AverageTimeTravel();
         int timeTravelToMarket = -1;
-        if (AVG_TIME_TRAVEL_TO_MARKET == null || !AVG_TIME_TRAVEL_TO_MARKET.containsKey(marketId)) {
+        if (!AVG_TIME_TRAVEL_TO_MARKET.containsKey(marketId)) {
             Market market = MarketController.mapMarket.get(marketId);
             matrixObj = getMatrixObject(new String[]{lat, lng}, new String[]{market.getLat(), market.getLng()});
             ExtractElementDistanceMatrixApi extract = new ExtractElementDistanceMatrixApi();

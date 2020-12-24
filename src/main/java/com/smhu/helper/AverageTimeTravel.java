@@ -35,7 +35,7 @@ public class AverageTimeTravel {
                     if (map == null) {
                         map = new HashMap<>();
                     }
-                    map.put(rs.getString(rs.getString("MARKET")), (int) rs.getDouble("AVG_TIME"));
+                    map.put(rs.getString("MARKET"), (int) rs.getDouble("AVG_TIME"));
                 }
             }
         } finally {

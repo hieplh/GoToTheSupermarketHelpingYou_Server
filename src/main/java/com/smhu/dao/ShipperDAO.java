@@ -4,7 +4,9 @@ import static com.smhu.controller.ShipperController.mapAvailableShipper;
 import static com.smhu.controller.ShipperController.mapInProgressShipper;
 
 import com.smhu.account.Shipper;
+import com.smhu.iface.IAccount;
 import com.smhu.iface.IShipper;
+import java.sql.SQLException;
 
 public class ShipperDAO extends AccountDAO implements IShipper {
 
@@ -63,5 +65,17 @@ public class ShipperDAO extends AccountDAO implements IShipper {
             mapInProgressShipper.remove(id);
         }
         return true;
+    }
+
+    @Override
+    public void updateShipper(String id) throws SQLException, ClassNotFoundException {
+        IAccount accountListener = new AccountDAO();
+        Shipper tmp = (Shipper) accountListener.getAccountById(id, SHIPPER);
+        if (tmp != null) {
+            Shipper shipper = getShipper(tmp.getUsername());
+            if (shipper != null) {
+                shipper.setRating(shipper.getRating());
+            }
+        }
     }
 }

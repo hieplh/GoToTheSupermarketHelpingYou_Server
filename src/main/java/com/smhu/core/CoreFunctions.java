@@ -9,6 +9,7 @@ import static com.smhu.controller.OrderController.mapOrderIsWaitingAccept;
 import static com.smhu.controller.OrderController.mapOrdersShipperReject;
 import static com.smhu.controller.OrderController.mapOrderInProgress;
 import static com.smhu.controller.OrderController.mapOrderWaitingAfterShopping;
+import static com.smhu.controller.OrderController.mapOrderIsCancel;
 
 import static com.smhu.controller.ShipperController.mapAvailableShipper;
 import static com.smhu.controller.ShipperController.mapInProgressShipper;
@@ -27,6 +28,8 @@ import com.smhu.comparator.SortByTimeDelivery;
 
 import com.smhu.controller.MarketController;
 import com.smhu.controller.OrderController;
+import com.smhu.controller.TransactionController;
+import com.smhu.dao.AccountDAO;
 
 import com.smhu.dao.OrderDAO;
 import com.smhu.dao.ShipperDAO;
@@ -40,10 +43,12 @@ import com.smhu.helper.ExtractElementDistanceMatrixApi;
 import com.smhu.helper.ExtractRangeInMechanism;
 import com.smhu.helper.MatrixObjBuilder;
 import com.smhu.helper.SyncHelper;
+import com.smhu.iface.IAccount;
 
 import com.smhu.iface.ICore;
 import com.smhu.iface.IOrder;
 import com.smhu.iface.IShipper;
+import com.smhu.iface.ITransaction;
 
 import com.smhu.response.shipper.OrderDelivery;
 import com.smhu.system.SystemTime;
@@ -74,7 +79,7 @@ public class CoreFunctions implements ICore {
     public static final Map<String, List<String>> mapFilterOrders = new HashMap<>(); // id Market - id Order
     public static final Map<String, List<String>> mapFilterShippers = new HashMap<>(); // id Market - id Shipper
 
-    public static Map<String, Integer> AVG_TIME_TRAVEL_TO_MARKET = null;
+    public static Map<String, Integer> AVG_TIME_TRAVEL_TO_MARKET = new HashMap<>();
 
     private final String DELIVERY_ORDER = "DELIVERY_ORDER";
     private final String PRE_DELIVERY_ORDER = "PRE_DELIVERY_ORDER";
@@ -121,8 +126,6 @@ public class CoreFunctions implements ICore {
     @Override
     public void scanShippers() {
         synchronized (mapFilterShippers) {
-//            System.out.println("SCAN SHIPPER");
-
             mapFilterShippers.entrySet().forEach((entry) -> {
                 Market market = MarketController.mapMarket.get(entry.getKey());
                 List<String> list = entry.getValue();
@@ -174,17 +177,6 @@ public class CoreFunctions implements ICore {
                     }
                 }
             });
-
-//            for (String market : mapFilterShippers.keySet()) {
-//                System.out.println("Market: " + market);
-//                List<String> list = mapFilterShippers.get(market);
-//                if (list != null) {
-//                    for (String shipper : list) {
-//                        System.out.println("Shipper: " + shipper);
-//                    }
-//                }
-//                System.out.println("");
-//            }
         }
     }
 
@@ -193,7 +185,7 @@ public class CoreFunctions implements ICore {
         for (int i = 0; i < listOrders.size(); i++) {
             Order tmp = mapOrderInProgress.get(listOrders.get(i));
             if (tmp != null) {
-                if (tmp.getShipper().equals(shipper.getUsername())) {
+                if (tmp.getShipper().equals(shipper)) {
                     if (tmp.getStatus() < 23) {
                         if (result == null) {
                             result = new ArrayList();
@@ -271,14 +263,11 @@ public class CoreFunctions implements ICore {
             return false;
         }
 
-        if (rejectedOrders.contains(order.getId())) {
-            return true;
-        }
-        return false;
+        return rejectedOrders.contains(order.getId());
     }
 
     private boolean filterOrderToShipperInProgress(Order order) {
-        List<String> listIdShipper = mapFilterShippers.get(order.getMarket());
+        List<String> listIdShipper = mapFilterShippers.get(order.getMarket().getId());
         if (listIdShipper != null) {
             List<String> listIdShippers = null;
             for (int i = listIdShipper.size() - 1; i >= 0; i--) {
@@ -295,15 +284,11 @@ public class CoreFunctions implements ICore {
                 return false;
             } else {
                 List<Shipper> listShippers = getListShipperFromId(listIdShippers);
-
                 for (Shipper shipper : listShippers) {
                     boolean flag;
                     boolean isOutMaxOrder = false;
                     boolean isRejected = false;
                     List<String> listIdOrders = mapShipperOrdersInProgress.get(shipper.getUsername());
-//                    if (listOrders != null) {
-//                        listOrders = checkOrderShipperReject(shipper, listOrders);
-//                    }
 
                     if (listIdOrders.size() >= shipper.getMaxOrder()) {
                         isOutMaxOrder = true;
@@ -340,7 +325,7 @@ public class CoreFunctions implements ICore {
             return;
         }
 
-        Market market = MarketController.mapMarket.get(order.getMarket().getId());
+        Market market = order.getMarket();
         List<String> list = mapFilterOrders.get(market.getId());
         if (list == null) {
             list = new ArrayList<>();
@@ -348,6 +333,52 @@ public class CoreFunctions implements ICore {
         }
         list.add(order.getId());
         mapOrderInQueue.put(order.getId(), order);
+    }
+
+    public void scanOrderExpire() {
+        synchronized (mapOrderInQueue) {
+            DateTimeHelper dateTime = new DateTimeHelper();
+            ITransaction transactionListener = new TransactionController().getTransactionListener();
+            IAccount accountListener = new AccountDAO();
+            OrderDAO dao = new OrderDAO();
+            Time curTime;
+            List<Order> result = null;
+            for (Map.Entry<String, Order> entry : mapOrderInQueue.entrySet()) {
+                Order order = entry.getValue();
+                int timeDelivery = dateTime.parseTimeToMinute(order.getTimeDelivery().toLocalTime());
+                curTime = new Time(SystemTime.SYSTEM_TIME);
+                int currentSystemTime = dateTime.parseTimeToMinute(curTime.toLocalTime());
+
+                if (currentSystemTime - timeDelivery >= (-90)) {
+                    order.setStatus(-13);
+                    order.setRefundCost(order.getTotalCost());
+                    order.setShipper(null);
+                    order.setLastUpdate(new Time(new Date().getTime()));
+
+                    try {
+                        transactionListener.updateRefundTransaction(order.getCust(), order.getCust(), order.getTotalCost(), order.getStatus(), order.getId());
+                        accountListener.updateWalletAccount(order.getCust(), order.getTotalCost());
+                        accountListener.updateNumCancel(order.getCust(), 1);
+                        dao.CancelOrder(order);
+                    } catch (ClassNotFoundException | SQLException e) {
+                        Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, "OrderController - Cancel Cust: {0}", e.getMessage());
+                    }
+
+                    if (result == null) {
+                        result = new ArrayList();
+                    }
+                    result.add(order);
+                    mapOrderIsCancel.put(order.getId(), order);
+                    preProcessMapFilterOrder(order.getMarket().getId(), order);
+                }
+            }
+
+            if (result != null) {
+                for (Order order : result) {
+                    mapOrderInQueue.remove(order.getId());
+                }
+            }
+        }
     }
 
     private int checkTimeReleaseOrderForShipper(int time) {
@@ -379,7 +410,6 @@ public class CoreFunctions implements ICore {
                 list = null;
             }
         }
-
         return list;
     }
 
@@ -408,13 +438,13 @@ public class CoreFunctions implements ICore {
         LocalTime releaseTime;
         List<Order> listOrderResult = null;
         DateTimeHelper helper = new DateTimeHelper();
-        LocalTime curTime = LocalTime.now(ZoneId.of("GMT+7"));
+        Time curTime = new Time(SystemTime.SYSTEM_TIME);
         for (Order order : listOrders) {
             if (count >= shipper.getMaxOrder()) {
                 break;
             }
             releaseTime = order.getTimeDelivery().toLocalTime();
-            if (helper.parseTimeToMinute(releaseTime) - helper.parseTimeToMinute(curTime) <= (4 * 60) + (count * 30)) {
+            if (helper.parseTimeToMinute(releaseTime) - helper.parseTimeToMinute(curTime.toLocalTime()) <= (4 * 60) + (count * 30)) {
                 if (listOrderResult == null) {
                     listOrderResult = new ArrayList();
                 }
@@ -430,7 +460,6 @@ public class CoreFunctions implements ICore {
         for (Order order : orders) {
             list.add(order.getId());
         }
-
         mapShipperOrdersInProgress.put(shipper.getUsername(), list);
     }
 
@@ -468,8 +497,10 @@ public class CoreFunctions implements ICore {
 
     private void preProcessMapFilterOrder(String market, List<Order> orders) {
         List<String> listStrings = mapFilterOrders.get(market);
-        for (int i = 0; i < orders.size(); i++) {
-            listStrings.remove(orders.get(i).getId());
+        Iterator<Order> iterator = orders.iterator();
+        while (iterator.hasNext()) {
+            Order order = iterator.next();
+            listStrings.remove(order.getId());
         }
 
         if (listStrings.isEmpty()) {
@@ -517,6 +548,7 @@ public class CoreFunctions implements ICore {
             try {
                 for (Future<?> future : futures) {
                     try {
+                        System.out.println("Future: " + future.toString());
                         int result = (Integer) future.get();
                         System.out.println("Time: " + result);
                         totalTime += result;
@@ -549,7 +581,7 @@ public class CoreFunctions implements ICore {
     }
 
     private void scanOrderForShipperInProgress(Shipper shipper, String marketId,
-            List<String> ListOrdersBelongToShipper, List<String> listIdOrders) {
+            List<String> listOrderBelongToShipper, List<String> listIdOrders) {
         if (checkShipperIsInDeliveryProgress(shipper)) {
             List<Order> result = null;
             int count = 0;
@@ -562,7 +594,8 @@ public class CoreFunctions implements ICore {
                 for (Iterator<Order> o = listOrders.iterator(); o.hasNext();) {
                     Order order = o.next();
                     try {
-                        MatrixObject matrixObject = MatrixObjBuilder.getMatrixObject(new String[]{shipper.getLat(), shipper.getLng()}, order.getAddressDelivery());
+                        MatrixObject matrixObject = MatrixObjBuilder.getMatrixObject(new String[]{shipper.getLat(), shipper.getLng()},
+                                getListPhysicalAddresses(listOrderBelongToShipper));
                         ExtractElementDistanceMatrixApi extract = new ExtractElementDistanceMatrixApi();
                         List<String> distances = extract.getListDistance(extract.getListElements(matrixObject), "value");
                         int distance = 9999;
@@ -571,16 +604,16 @@ public class CoreFunctions implements ICore {
                         }
 
                         if (distance <= 2000) {
-                            if (count + ListOrdersBelongToShipper.size() <= shipper.getMaxOrder()) {
+                            if (count <= shipper.getMaxOrder()) {
 //                                try {
-//                                    if (checkDistanceBetweenNewAndOldOrders(order.getAddressDelivery(), ListOrdersBelongToShipper)) {
+//                                if (checkDistanceBetweenNewAndOldOrders(order.getAddressDelivery(), ListOrdersBelongToShipper)) {
 //
-//                                    }
-                                    if (result == null) {
-                                        result = new ArrayList();
-                                    }
-                                    result.add(order);
-                                    count++;
+//                                }
+                                if (result == null) {
+                                    result = new ArrayList();
+                                }
+                                result.add(order);
+                                count++;
 //                                } catch (IOException e) {
 //                                    Logger.getLogger(CoreFunctions.class.getName()).log(Level.SEVERE, "Scan Order - 23: {0}", e.getMessage());
 //                                }
@@ -601,6 +634,13 @@ public class CoreFunctions implements ICore {
                         preProcessOrderRelease(shipper, result, PRE_DELIVERY_ORDER);
                         preProcessMapFilterOrder(marketId, result);
                         sendNotificationOrderToShipper(shipper.getTokenFCM(), TRUE);
+
+                        System.out.println("Map Shipper Order Belong To Shipper");
+                        if (listOrderBelongToShipper != null) {
+                            for (Order listOrder : listOrders) {
+                                System.out.println(listOrder);
+                            }
+                        }
                     } catch (Exception e) {
                         Logger.getLogger(CoreFunctions.class.getName()).log(Level.SEVERE, "Swap Order Ascending Moving - 23: {0}", e.getMessage());
                     }
@@ -611,17 +651,18 @@ public class CoreFunctions implements ICore {
 
     @Override
     public void scanOrder() {
+        scanOrderExpire();
+        
         synchronized (mapFilterShippers) {
             System.out.println("SCAN ORDER");
-
+            
             for (Map.Entry<String, List<String>> entry : mapFilterShippers.entrySet()) {
                 List<String> listIdShippers = entry.getValue();
                 if (listIdShippers != null && !listIdShippers.isEmpty()) {
-//                    checkShipperIsAvailable(listIdShippers);
                     List<Shipper> listShippers = getListShipperFromId(listIdShippers);
                     for (Iterator<Shipper> it = listShippers.iterator(); it.hasNext();) {
                         Shipper shipper = it.next();
-                        if (mapAvailableShipper.containsValue(shipper)) {
+                        if (mapAvailableShipper.containsKey(shipper.getUsername())) {
                             scanOrderForShipperAvailable(shipper, mapFilterOrders.get(entry.getKey()), entry.getKey());
                         } else {
                             List<Order> listPreOrdersOfShipper = mapOrderWaitingAfterShopping.get(shipper.getUsername());
@@ -660,16 +701,16 @@ public class CoreFunctions implements ICore {
 
     private List<String> getListPhysicalAddresses(List<String> listOrders) {
         List<String> list = new ArrayList();
-        for (String s : listOrders) {
+        listOrders.forEach((s) -> {
             list.add(mapOrderInProgress.get(s).getAddressDelivery());
-        }
+        });
         return list;
     }
 
     private List<Order> getListOrderInDeliveryProgress(List<Order> newOrders, List<String> oldOrders) {
-        for (String oldOrder : oldOrders) {
+        oldOrders.forEach((oldOrder) -> {
             newOrders.add(mapOrderInProgress.get(oldOrder));
-        }
+        });
         return newOrders;
     }
 
@@ -680,12 +721,7 @@ public class CoreFunctions implements ICore {
         ExtractElementDistanceMatrixApi extract = new ExtractElementDistanceMatrixApi();
         List<ElementObject> elements = extract.getListElements(matrixObject);
         List<String> distances = extract.getListDistance(elements, "value");
-        for (String distance : distances) {
-            if (Integer.parseInt(distance) <= 3000) {
-                return true;
-            }
-        }
-        return false;
+        return distances.stream().anyMatch((distance) -> (Integer.parseInt(distance) <= 3000));
     }
 
     private void updateOrderAfterInDelivery(Shipper shipper, List<Order> newOrders) {

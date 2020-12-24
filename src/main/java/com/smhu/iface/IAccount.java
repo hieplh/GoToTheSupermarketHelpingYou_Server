@@ -11,9 +11,11 @@ import java.util.Map;
 
 public interface IAccount {
 
-    public String getEncryptionPassword(String username, String type) throws SQLException, ClassNotFoundException;
+    public String getEncryptionPassword(String username) throws SQLException, ClassNotFoundException;
 
     public String encryptSHA(String source) throws NoSuchAlgorithmException, UnsupportedEncodingException;
+
+    public boolean checkExistedPhoneOrVin(String phone, String vin) throws SQLException, ClassNotFoundException;
 
     public int getCountAccounts(String role) throws SQLException, ClassNotFoundException;
 
@@ -39,15 +41,18 @@ public interface IAccount {
 
     public int updateNumCancel(String accountId, int num) throws ClassNotFoundException, SQLException;
 
-    public int insertAccount(AccountRegister account, String vin) throws ClassNotFoundException, SQLException, NoSuchAlgorithmException, UnsupportedEncodingException;
-    
+    public int insertAccount(AccountRegister account) throws ClassNotFoundException, SQLException, NoSuchAlgorithmException, UnsupportedEncodingException;
+
     public int insertMaxNumOrder(String username, int num) throws ClassNotFoundException, SQLException;
-    
+
     public int updateProfile(Account account) throws ClassNotFoundException, SQLException;
-    
+
     public int updateMaxNumOrder(String username, int maxNumOrder) throws ClassNotFoundException, SQLException;
-    
+
+    public int updatePassword(String username, String password) throws ClassNotFoundException, SQLException,
+            NoSuchAlgorithmException, UnsupportedEncodingException;
+
     public int[] insertAddress(String username, List<Address> addresses) throws ClassNotFoundException, SQLException;
-    
+
     public int deleteAddrCustomer(String username) throws ClassNotFoundException, SQLException;
 }
