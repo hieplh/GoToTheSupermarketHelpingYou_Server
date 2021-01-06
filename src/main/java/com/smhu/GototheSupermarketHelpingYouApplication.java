@@ -1,14 +1,15 @@
 package com.smhu;
 
-import com.smhu.account.Account;
 import com.smhu.account.Shipper;
 import com.smhu.controller.AccountController;
+import com.smhu.controller.CommissionController;
 import com.smhu.controller.MarketController;
 import com.smhu.controller.OrderController;
 import com.smhu.controller.ShipperController;
 import com.smhu.controller.StatusController;
 import com.smhu.core.CoreFunctions;
 import com.smhu.dao.AccountDAO;
+import com.smhu.dao.CommissionDAO;
 import com.smhu.dao.FoodDAO;
 import com.smhu.dao.MarketDAO;
 import com.smhu.helper.PropertiesWithJavaConfig;
@@ -27,8 +28,10 @@ import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -74,19 +77,8 @@ public class GototheSupermarketHelpingYouApplication {
     }
 
 //    public static void main(String[] args) throws IOException {
-//        List<String> addresses = new ArrayList<>();
-//        addresses.add("74 Đường D4A, Phước Long B, Quận 9, Thành phố Hồ Chí Minh");
-//        addresses.add("131-125 Đường 50, Phước Long B, Quận 9, Thành phố Hồ Chí Minh, Việt Nam");
-//        
-//        UrlConnection url = new UrlConnection();
-//        InputStreamReader isr = new InputStreamReader(url.openConnectionConvertPhysicalAddressToGeocoding(addresses), "utf-8");
-//        Geocoding geocoding = GsonHelper.gson.fromJson(isr, Geocoding.class);
-//        
-//        for (Result result : geocoding.getResults()) {
-//            System.out.println(result);
-//        }
-//        System.out.println(geocoding.getStatus());
-//        
+//        new GototheSupermarketHelpingYouApplication().init();
+//        SpringApplication.run(GototheSupermarketHelpingYouApplication.class, args);
 //    }
     private void initDefaultProperties() {
         try {
@@ -96,8 +88,26 @@ public class GototheSupermarketHelpingYouApplication {
         }
     }
 
+    private void initCommission() {
+        try {
+            Date date = new Date(Calendar.getInstance(
+                    TimeZone.getTimeZone("Asia/Ho_Chi_Minh"), Locale.forLanguageTag("vi-vn"))
+                    .getTimeInMillis());
+            Time time = new Time(date.getTime());
+            CommissionDAO dao = new CommissionDAO();
+            CommissionController.commission = dao.getCommission(date, time);
+            CommissionController.listEvents = dao.getCommissionEvent(date);
+            if (CommissionController.listEvents != null && !CommissionController.listEvents.isEmpty()) {
+                Collections.sort(CommissionController.listEvents);
+            }
+        } catch (ClassNotFoundException | SQLException e) {
+            Logger.getLogger(GototheSupermarketHelpingYouApplication.class.getName()).log(Level.SEVERE, "Init Commission:{0}", e.getMessage());
+        }
+    }
+
     public void init() {
         initDefaultProperties();
+        initCommission();
         CoreFunctions core = new CoreFunctions();
         service = new MainService();
         statusListener = new StatusController().getStatusListener();
@@ -177,49 +187,49 @@ public class GototheSupermarketHelpingYouApplication {
             return PropertiesWithJavaConfig.getProperties(path);
         }
 
-        private Shipper loadShipperAccount(String username) throws SQLException, ClassNotFoundException {
-            Connection con = null;
-            PreparedStatement stmt = null;
-            ResultSet rs = null;
-
-            try {
-                con = DBUtils.getConnection();
-                if (con != null) {
-                    String sql = QueryStatement.selectAccount;
-                    stmt = con.prepareStatement(sql);
-                    rs = stmt.executeQuery();
-                    if (rs.next()) {
-                        return new Shipper(new Account(
-                                rs.getString("USERNAME"),
-                                rs.getString("FIRST_NAME"),
-                                rs.getString("MID_NAME"),
-                                rs.getString("LAST_NAME"),
-                                rs.getString("PHONE"),
-                                rs.getDate("DOB"),
-                                rs.getString("ROLE")),
-                                rs.getInt("NUM_SUCCESS"),
-                                rs.getInt("NUM_CANCEL"),
-                                rs.getInt("MAX_ORDER"),
-                                rs.getDouble("WALLET"),
-                                rs.getDouble("RATING"),
-                                null, null, null,
-                                rs.getString("VIN"));
-                    }
-                }
-            } finally {
-                if (rs != null) {
-                    rs.close();
-                }
-                if (stmt != null) {
-                    stmt.close();
-                }
-                if (con != null) {
-                    con.close();
-                }
-            }
-            return null;
-        }
-
+//        private Shipper loadShipperAccount(String username) throws SQLException, ClassNotFoundException {
+//            Connection con = null;
+//            PreparedStatement stmt = null;
+//            ResultSet rs = null;
+//
+//            try {
+//                con = DBUtils.getConnection();
+//                if (con != null) {
+//                    String sql = QueryStatement.selectAccount
+//                            + "WHERE USERNAME = ?";
+//                    stmt = con.prepareStatement(sql);
+//                    rs = stmt.executeQuery();
+//                    if (rs.next()) {
+//                        return new Shipper(new Account(
+//                                rs.getString("USERNAME"),
+//                                rs.getString("FIRST_NAME"),
+//                                rs.getString("MID_NAME"),
+//                                rs.getString("LAST_NAME"),
+//                                rs.getString("PHONE"),
+//                                rs.getDate("DOB"),
+//                                rs.getString("ROLE")),
+//                                rs.getInt("NUM_SUCCESS"),
+//                                rs.getInt("NUM_CANCEL"),
+//                                rs.getInt("MAX_ORDER"),
+//                                rs.getDouble("WALLET"),
+//                                rs.getDouble("RATING"),
+//                                null, null, null,
+//                                rs.getString("VIN"));
+//                    }
+//                }
+//            } finally {
+//                if (rs != null) {
+//                    rs.close();
+//                }
+//                if (stmt != null) {
+//                    stmt.close();
+//                }
+//                if (con != null) {
+//                    con.close();
+//                }
+//            }
+//            return null;
+//        }
         @Override
         public Map<String, String> loadRoles() throws SQLException, ClassNotFoundException {
             return new AccountDAO().getRoles();
@@ -235,9 +245,7 @@ public class GototheSupermarketHelpingYouApplication {
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
-                    String sql = "SELECT CODE, DESCRIPTION\n"
-                            + "FROM STATUS\n"
-                            + "ORDER BY CODE ASC";
+                    String sql = QueryStatement.selectStatus;
                     stmt = con.prepareStatement(sql);
                     rs = stmt.executeQuery();
                     while (rs.next()) {
@@ -278,7 +286,7 @@ public class GototheSupermarketHelpingYouApplication {
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
-                    String sql = "EXEC GET_ORDERS_INQUEUE_BY_DATE ?, ?";
+                    String sql = QueryStatement.loadOrder;
                     stmt = con.prepareStatement(sql);
                     stmt.setDate(1, date);
                     stmt.setString(2, status);
@@ -332,9 +340,10 @@ public class GototheSupermarketHelpingYouApplication {
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
-                    String sql = "EXEC GET_ORDER_DETAIL_BY_ID ?";
+                    String sql = QueryStatement.selectOrderDetail;
                     stmt = con.prepareStatement(sql);
                     stmt.setString(1, order.getId());
+                    stmt.setString(2, order.getId());
                     rs = stmt.executeQuery();
                     while (rs.next()) {
                         if (listDetails == null) {
@@ -372,10 +381,11 @@ public class GototheSupermarketHelpingYouApplication {
             try {
                 con = DBUtils.getConnection();
                 if (con != null) {
-                    String sql = "EXEC GET_ORDER_DETAIL_BY_ID ?";
+                    String sql = QueryStatement.selectOrderDetail;
                     stmt = con.prepareStatement(sql);
                     for (Order order : listOrders) {
                         stmt.setString(1, order.getId());
+                        stmt.setString(2, order.getId());
                         rs = stmt.executeQuery();
                         List<OrderDetail> listDetails = order.getDetails();
                         while (rs.next()) {

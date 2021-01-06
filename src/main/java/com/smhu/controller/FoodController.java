@@ -1,20 +1,9 @@
 package com.smhu.controller;
 
 import com.smhu.dao.FoodDAO;
-import com.smhu.dao.MarketDAO;
-import com.smhu.food.Category;
-import java.util.ArrayList;
-import java.util.List;
-import com.smhu.food.Food;
-import com.smhu.food.SaleOff;
 import com.smhu.iface.IFood;
-import com.smhu.iface.IMarket;
 import com.smhu.response.ResponseMsg;
 
-import com.smhu.utils.DBUtils;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -27,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/smhu")
 public class FoodController {
     
     IFood service = new FoodDAO();

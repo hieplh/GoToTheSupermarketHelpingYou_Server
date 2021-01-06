@@ -1,6 +1,7 @@
 package com.smhu.dao;
 
 import com.smhu.order.Evidence;
+import com.smhu.statement.QueryStatement;
 import com.smhu.utils.DBUtils;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -33,7 +34,7 @@ public class ImageDAO {
         try {
             con = DBUtils.getConnection();
             if (con != null) {
-                String sql = "EXEC GET_EVIDENCE_BY_ORDER_ID ?";
+                String sql = QueryStatement.selectImageByOrder;
                 stmt = con.prepareStatement(sql);
                 stmt.setString(1, orderId);
                 rs = stmt.executeQuery();
@@ -69,8 +70,7 @@ public class ImageDAO {
         try {
             con = DBUtils.getConnection();
             if (con != null) {
-                String sql = "INSERT INTO EVIDENCE (ID, IMAGE, CREATE_DATE, CREATE_TIME, DH)\n"
-                        + "VALUES (?, ?, ?, ?, ?)";
+                String sql = QueryStatement.insertImage;
                 stmt = con.prepareStatement(sql);
                 stmt.setString(1, generateId(orderId));
                 stmt.setString(2, imagePath);

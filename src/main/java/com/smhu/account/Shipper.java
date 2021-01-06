@@ -21,14 +21,12 @@ public class Shipper extends Account {
     }
 
     public Shipper(Account account) {
-        super(account.getUsername(), account.getFirstName(), account.getMiddleName(), account.getLastName(),
-                account.getPhone(), account.getDob(), account.getRole());
+        super(account.getUsername(), account.getFullname(), account.getDob(), account.getRole());
     }
 
     public Shipper(Account account, int numDelivery, int numCancel, int maxOrder, double wallet, double rating,
             String lat, String lng, String tokenFCM, String vin) {
-        super(account.getUsername(), account.getFirstName(), account.getMiddleName(), account.getLastName(),
-                account.getPhone(), account.getDob(), account.getRole());
+        super(account.getUsername(), account.getFullname(), account.getDob(), account.getRole());
         this.maxOrder = maxOrder;
         this.numDelivery = numDelivery;
         this.numCancel = numCancel;
@@ -114,7 +112,7 @@ public class Shipper extends Account {
 
     @Override
     public String toString() {
-        return "Shipper{" + "numDelivery=" + numDelivery + ", numCancel=" + numCancel + ", wallet=" + wallet + ", maxOrder=" + maxOrder + ", lat=" + lat + ", lng=" + lng + ", rating=" + rating + ", vin=" + vin + ", tokenFCM=" + tokenFCM + '}';
+        return "Shipper{" + "username=" + this.getUsername() + ", numDelivery=" + numDelivery + ", numCancel=" + numCancel + ", wallet=" + wallet + ", maxOrder=" + maxOrder + ", lat=" + lat + ", lng=" + lng + ", rating=" + rating + ", vin=" + vin + ", tokenFCM=" + tokenFCM + '}';
     }
 
     @Override

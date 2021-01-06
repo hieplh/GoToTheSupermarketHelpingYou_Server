@@ -7,6 +7,9 @@ import java.util.List;
 
 public class ExtractElementDistanceMatrixApi {
 
+    public final String TYPE = "type";
+    public final String VALUE = "value";
+    
     public List<ElementObject> getListElements(MatrixObject obj) {
         return obj.getRows()[0].getElements();
     }

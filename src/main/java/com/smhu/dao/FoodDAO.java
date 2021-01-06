@@ -11,7 +11,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Time;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 public class FoodDAO implements IFood {
@@ -62,10 +64,16 @@ public class FoodDAO implements IFood {
         try {
             con = DBUtils.getConnection();
             if (con != null) {
-                String sql = "EXEC GET_FOOD_OF_MARKET_BY_CATEGORY_ID ?, ?";
+                String sql = "EXEC GET_FOOD_OF_MARKET_BY_CATEGORY_ID ?, ?, ?, ?";
                 stmt = con.prepareStatement(sql);
                 stmt.setString(1, market);
                 stmt.setString(2, category);
+
+                java.sql.Date date = new java.sql.Date(new Date().getTime());
+                Time time = new Time(new Date().getTime());
+                stmt.setDate(3, date);
+                stmt.setTime(4, time);
+                
                 rs = stmt.executeQuery();
                 while (rs.next()) {
                     if (listFoods == null) {
@@ -106,10 +114,16 @@ public class FoodDAO implements IFood {
         try {
             con = DBUtils.getConnection();
             if (con != null) {
-                String sql = "EXEC GET_FOOD_BY_ID ?, ?";
+                String sql = "EXEC GET_FOOD_BY_ID ?, ?, ?, ?";
                 stmt = con.prepareStatement(sql);
                 stmt.setString(1, marketId);
                 stmt.setString(2, foodId);
+                
+                java.sql.Date date = new java.sql.Date(new Date().getTime());
+                Time time = new Time(new Date().getTime());
+                stmt.setDate(3, date);
+                stmt.setTime(4, time);
+                
                 rs = stmt.executeQuery();
                 if (rs.next()) {
                     return new Food(rs.getString("ID"),

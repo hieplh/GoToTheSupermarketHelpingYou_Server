@@ -43,8 +43,6 @@ public interface IAccount {
 
     public int insertAccount(AccountRegister account) throws ClassNotFoundException, SQLException, NoSuchAlgorithmException, UnsupportedEncodingException;
 
-    public int insertMaxNumOrder(String username, int num) throws ClassNotFoundException, SQLException;
-
     public int updateProfile(Account account) throws ClassNotFoundException, SQLException;
 
     public int updateMaxNumOrder(String username, int maxNumOrder) throws ClassNotFoundException, SQLException;

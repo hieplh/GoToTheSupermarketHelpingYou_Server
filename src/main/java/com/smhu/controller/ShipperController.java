@@ -29,6 +29,7 @@ public class ShipperController {
 
     public final static Map<String, Shipper> mapAvailableShipper = new HashMap<>();
     public final static Map<String, Shipper> mapInProgressShipper = new HashMap();
+    
     public final static Map<String, List<String>> mapShipperOrdersInProgress = new HashMap<>();
     public static Map<Integer, Integer> mapMechanismReleaseOrder = new HashMap<>();
 

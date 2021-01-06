@@ -64,8 +64,8 @@ public class TimeDelivery<T> implements Callable<T> {
         }
 
         List<ElementObject> listElements = extract.getListElements(matrixObj);
-        List<String> listDistanceValue = extract.getListDistance(listElements, "value");
-        List<String> listDurationValue = extract.getListDuration(listElements, "value");
+        List<String> listDistanceValue = extract.getListDistance(listElements, extract.VALUE);
+        List<String> listDurationValue = extract.getListDuration(listElements, extract.VALUE);
 
         int pos = 0;
         for (int i = 1; i < listDistanceValue.size(); i++) {

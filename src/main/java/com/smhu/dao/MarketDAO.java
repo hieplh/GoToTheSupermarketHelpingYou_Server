@@ -3,6 +3,7 @@ package com.smhu.dao;
 import com.smhu.food.Category;
 import com.smhu.iface.IMarket;
 import com.smhu.market.Market;
+import com.smhu.statement.QueryStatement;
 import com.smhu.utils.DBUtils;
 
 import java.sql.Connection;
@@ -27,8 +28,7 @@ public class MarketDAO implements IMarket {
         try {
             con = DBUtils.getConnection();
             if (con != null) {
-                String sql = "SELECT ID, NAME, ADDR_1, ADDR_2, ADDR_3, ADDR_4, LAT, LNG, IMAGE\n"
-                        + "FROM MARKET";
+                String sql = QueryStatement.selectMarket;
                 stmt = con.prepareStatement(sql);
                 rs = stmt.executeQuery();
                 while (rs.next()) {
@@ -37,10 +37,10 @@ public class MarketDAO implements IMarket {
                     }
                     listMarkets.add(new Market(rs.getString("ID"),
                             rs.getString("NAME"),
-                            rs.getString("ADDR_1"),
-                            rs.getString("ADDR_2"),
-                            rs.getString("ADDR_3"),
-                            rs.getString("ADDR_4"),
+                            rs.getString("STREET"),
+                            rs.getString("WARD"),
+                            rs.getString("DISTRICT"),
+                            rs.getString("PROVINCE"),
                             rs.getString("LAT"),
                             rs.getString("LNG"),
                             rs.getString("IMAGE")));
@@ -69,8 +69,7 @@ public class MarketDAO implements IMarket {
         try {
             con = DBUtils.getConnection();
             if (con != null) {
-                String sql = "SELECT ID, NAME, ADDR_1, ADDR_2, ADDR_3, ADDR_4, LAT, LNG, IMAGE\n"
-                        + "FROM MARKET\n"
+                String sql = QueryStatement.selectMarket
                         + "WHERE BRANCH = ?";
                 stmt = con.prepareStatement(sql);
                 stmt.setString(1, corporationId);
@@ -81,10 +80,10 @@ public class MarketDAO implements IMarket {
                     }
                     listMarkets.add(new Market(rs.getString("ID"),
                             rs.getString("NAME"),
-                            rs.getString("ADDR_1"),
-                            rs.getString("ADDR_2"),
-                            rs.getString("ADDR_3"),
-                            rs.getString("ADDR_4"),
+                            rs.getString("STREET"),
+                            rs.getString("WARD"),
+                            rs.getString("DISTRICT"),
+                            rs.getString("PROVINCE"),
                             rs.getString("LAT"),
                             rs.getString("LNG"),
                             rs.getString("IMAGE")));
@@ -113,8 +112,7 @@ public class MarketDAO implements IMarket {
         try {
             con = DBUtils.getConnection();
             if (con != null) {
-                String sql = "SELECT ID, NAME, IMAGE\n"
-                        + "FROM BRANCH";
+                String sql = QueryStatement.selectCorporation;
                 stmt = con.prepareStatement(sql);
                 rs = stmt.executeQuery();
                 while (rs.next()) {
@@ -151,8 +149,7 @@ public class MarketDAO implements IMarket {
         try {
             con = DBUtils.getConnection();
             if (con != null) {
-                String sql = "SELECT ID, NAME, ADDR_1, ADDR_2, ADDR_3, ADDR_4, LAT, LNG, IMAGE\n"
-                        + "FROM MARKET\n"
+                String sql = QueryStatement.selectMarket
                         + "WHERE ID = ?";
                 stmt = con.prepareStatement(sql);
                 stmt.setString(1, id);
@@ -160,10 +157,10 @@ public class MarketDAO implements IMarket {
                 if (rs.next()) {
                     return new Market(rs.getString("ID"),
                             rs.getString("NAME"),
-                            rs.getString("ADDR_1"),
-                            rs.getString("ADDR_2"),
-                            rs.getString("ADDR_3"),
-                            rs.getString("ADDR_4"),
+                            rs.getString("STREET"),
+                            rs.getString("WARD"),
+                            rs.getString("DISTRICT"),
+                            rs.getString("PROVINCE"),
                             rs.getString("LAT"),
                             rs.getString("LNG"),
                             rs.getString("IMAGE"));
@@ -193,8 +190,7 @@ public class MarketDAO implements IMarket {
         try {
             con = DBUtils.getConnection();
             if (con != null) {
-                String sql = "SELECT *\n"
-                        + "FROM GET_CATEGORY_OF_MARKET_BY_ID\n"
+                String sql = QueryStatement.selectCategory
                         + "WHERE MARKET_ID = ?";
                 stmt = con.prepareStatement(sql);
                 stmt.setString(1, id);
@@ -205,7 +201,8 @@ public class MarketDAO implements IMarket {
                     }
                     list.add(new Category(
                             rs.getString("CATEGORY_ID"),
-                            rs.getString("CATEGORY_DESC"), null));
+                            rs.getString("CATEGORY_DESC"),
+                            null));
                 }
             }
         } finally {

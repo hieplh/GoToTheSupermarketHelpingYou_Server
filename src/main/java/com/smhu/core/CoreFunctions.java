@@ -548,7 +548,6 @@ public class CoreFunctions implements ICore {
             try {
                 for (Future<?> future : futures) {
                     try {
-                        System.out.println("Future: " + future.toString());
                         int result = (Integer) future.get();
                         System.out.println("Time: " + result);
                         totalTime += result;

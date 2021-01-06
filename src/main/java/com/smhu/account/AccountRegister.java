@@ -1,37 +1,26 @@
 package com.smhu.account;
 
 import java.sql.Date;
+import java.util.Objects;
 
 public class AccountRegister {
 
     private String username;
     private String password;
     private String role;
-    private String firstName;
-    private String middleName;
-    private String lastName;
-    private String phone;
+    private String fullname;
     private Date dob;
     private String vin;
+    private String codeOTP;
 
-    public AccountRegister(String username, String password, String role, String firstName, String middleName, String lastName, String phone, Date dob, String vin) {
+    public AccountRegister(String username, String password, String role, String fullname, Date dob, String vin, String codeOTP) {
         this.username = username;
         this.password = password;
         this.role = role;
-        this.firstName = firstName;
-        this.middleName = middleName;
-        this.lastName = lastName;
-        this.phone = phone;
+        this.fullname = fullname;
         this.dob = dob;
         this.vin = vin;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
+        this.codeOTP = codeOTP;
     }
 
     public String getPassword() {
@@ -50,36 +39,12 @@ public class AccountRegister {
         this.role = role;
     }
 
-    public String getFirstName() {
-        return firstName;
+    public String getFullname() {
+        return fullname;
     }
 
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
-
-    public String getMiddleName() {
-        return middleName;
-    }
-
-    public void setMiddleName(String middleName) {
-        this.middleName = middleName;
-    }
-
-    public String getLastName() {
-        return lastName;
-    }
-
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
-
-    public String getPhone() {
-        return phone;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
+    public void setFullname(String fullname) {
+        this.fullname = fullname;
     }
 
     public Date getDob() {
@@ -98,9 +63,43 @@ public class AccountRegister {
         this.vin = vin;
     }
 
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getCodeOTP() {
+        return codeOTP;
+    }
+
+    public void setCodeOTP(String codeOTP) {
+        this.codeOTP = codeOTP;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final AccountRegister other = (AccountRegister) obj;
+        if (!Objects.equals(this.username, other.username)) {
+            return false;
+        }
+        return true;
+    }
+
     @Override
     public String toString() {
-        return "AccountRegister{" + "username=" + username + ", password=" + password + ", role=" + role + ", firstName=" + firstName + ", middleName=" + middleName + ", lastName=" + lastName + ", phone=" + phone + ", dob=" + dob + ", vin=" + vin + '}';
+        return "AccountRegister{" + "username=" + username + ", password=" + password + ", role=" + role + ", fullname=" + fullname + ", dob=" + dob + ", vin=" + vin + ", codeOTP=" + codeOTP + '}';
     }
 
 }

@@ -16,13 +16,16 @@ import com.smhu.iface.IAccount;
 import com.smhu.iface.IShipper;
 import com.smhu.iface.ITransaction;
 import com.smhu.response.ResponseMsg;
+import com.smhu.system.SystemTime;
 
 import java.io.UnsupportedEncodingException;
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -40,7 +43,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @CrossOrigin
-@RequestMapping("/api")
+@RequestMapping("/api/smhu")
 public class AccountController {
 
     final String STAFF = "STAFF";
@@ -48,6 +51,7 @@ public class AccountController {
     final String SHIPPER = "SHIPPER";
 
     public static Map<String, String> mapRoles = new HashMap<>();
+    public static Map<AccountRegister, Long> mapAccountWaitToConfirm = new HashMap<>();
 
     private final IAccount service;
     private final IShipper shipperListener;
@@ -163,6 +167,91 @@ public class AccountController {
         return new ResponseEntity<>("Logout success", HttpStatus.OK);
     }
 
+    @GetMapping("/account/{username}/otp/{otpcode}")
+    public ResponseEntity<?> confirmOtpCode(@PathVariable("username") String username, @PathVariable("otpcode") String codeOtp) {
+        try {
+            Iterator<AccountRegister> iterator = mapAccountWaitToConfirm.keySet().iterator();
+            while (iterator.hasNext()) {
+                AccountRegister account = iterator.next();
+                if (account.getUsername().equals(username)) {
+                    if (account.getCodeOTP().equals(codeOtp)) {
+                        long expiredTime = mapAccountWaitToConfirm.get(account);
+                        if (SystemTime.SYSTEM_TIME <= expiredTime) {
+                            service.insertAccount(account);
+                            iterator.remove();
+                            return new ResponseEntity<>("Account is created", HttpStatus.OK);
+                        } else {
+                            return new ResponseEntity<>("Time out confirmed", HttpStatus.NOT_ACCEPTABLE);
+                        }
+                    } else {
+                        return new ResponseEntity<>("Otp Code is not correct", HttpStatus.METHOD_NOT_ALLOWED);
+                    }
+                }
+            }
+        } catch (ClassNotFoundException | SQLException | NoSuchAlgorithmException | UnsupportedEncodingException e) {
+            Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, e.getMessage());
+            return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return new ResponseEntity<>("Account is not correct", HttpStatus.METHOD_NOT_ALLOWED);
+    }
+
+    @GetMapping("/account/{username}/newOtp")
+    public ResponseEntity<?> newOtp(@PathVariable("username") String username) {
+        try {
+            Iterator<AccountRegister> iterator = mapAccountWaitToConfirm.keySet().iterator();
+            while (iterator.hasNext()) {
+                AccountRegister account = iterator.next();
+                if (account.getUsername().equals(username)) {
+                    StringBuilder codeOTP = new StringBuilder();
+                    Random rand = new Random();
+                    for (int i = 0; i < 4; i++) {
+                        codeOTP.append(rand.nextInt(10));
+                    }
+                    account.setCodeOTP(codeOTP.toString());
+                    mapAccountWaitToConfirm.put(account, SystemTime.SYSTEM_TIME + (60 * 1000));
+                    return new ResponseEntity<>("new OTP Code: " + codeOTP.toString(), HttpStatus.OK);
+                }
+            }
+        } catch (Exception e) {
+            Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, e.getMessage());
+            return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return new ResponseEntity<>("Account is not correct", HttpStatus.METHOD_NOT_ALLOWED);
+    }
+
+    @PostMapping("/account/register")
+    public ResponseEntity<?> registerAccount(@RequestBody AccountRegister account) {
+        try {
+            if (account == null) {
+                return new ResponseEntity<>("Account is null", HttpStatus.METHOD_NOT_ALLOWED);
+            }
+            if (!mapRoles.containsKey(account.getRole().toLowerCase())) {
+                return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
+            }
+
+            String encrypted = service.getEncryptionPassword(account.getUsername());
+            if (encrypted != null) {
+                return new ResponseEntity<>("Username is existed. Please try again!", HttpStatus.CONFLICT);
+            }
+            boolean isDuplicatePhoneOrVin = service.checkExistedPhoneOrVin(account.getUsername(), account.getVin());
+            if (isDuplicatePhoneOrVin) {
+                return new ResponseEntity<>("Phone or Vin is existed. Please try again!", HttpStatus.CONFLICT);
+            }
+
+            StringBuilder codeOTP = new StringBuilder();
+            Random rand = new Random();
+            for (int i = 0; i < 4; i++) {
+                codeOTP.append(rand.nextInt(10));
+            }
+            account.setCodeOTP(codeOTP.toString());
+            mapAccountWaitToConfirm.put(account, SystemTime.SYSTEM_TIME + (60 * 1000));
+            return new ResponseEntity<>("OTP Code: " + codeOTP.toString(), HttpStatus.OK);
+        } catch (ClassNotFoundException | SQLException e) {
+            Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     @PostMapping("/account/username")
     public ResponseEntity<?> getAccountByUsername(@RequestBody AccountLogin accountObj) {
         Object obj;
@@ -208,40 +297,6 @@ public class AccountController {
             Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, e.getMessage());
             return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
-    }
-
-    @PostMapping("/account/register")
-    public ResponseEntity<?> registerAccount(@RequestBody AccountRegister account) {
-        try {
-            System.out.println("Account: " + account);
-            if (account == null) {
-                return new ResponseEntity<>("Account is null", HttpStatus.METHOD_NOT_ALLOWED);
-            }
-            if (!mapRoles.containsKey(account.getRole().toLowerCase())) {
-                return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
-            }
-
-            String encrypted = service.getEncryptionPassword(account.getUsername());
-            if (encrypted != null) {
-                return new ResponseEntity<>("Username is existed. Please try again!", HttpStatus.CONFLICT);
-            }
-            boolean isDuplicatePhoneOrVin = service.checkExistedPhoneOrVin(account.getPhone(), account.getVin());
-            if (isDuplicatePhoneOrVin) {
-                return new ResponseEntity<>("Phone or Vin is existed. Please try again!", HttpStatus.CONFLICT);
-            }
-
-            int result = service.insertAccount(account);
-            if (result > 0) {
-                if (account.getRole().toUpperCase().equals(SHIPPER)) {
-                    service.insertMaxNumOrder(account.getUsername(), 1);
-                }
-            }
-        } catch (ClassNotFoundException | SQLException
-                | NoSuchAlgorithmException | UnsupportedEncodingException e) {
-            Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, e.getMessage());
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-        return new ResponseEntity<>("Registered Success", HttpStatus.OK);
     }
 
     @PutMapping("/account/wallet")

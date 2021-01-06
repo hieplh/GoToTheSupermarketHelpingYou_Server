@@ -33,6 +33,12 @@ public class Order implements Cloneable, Comparable<Order> {
     private List<OrderDetail> details;
 
     @JsonIgnore
+    private int commissionShipping;
+
+    @JsonIgnore
+    private int commissionShopping;
+
+    @JsonIgnore
     private List<Evidence> evidences;
 
     public Order() {
@@ -42,7 +48,7 @@ public class Order implements Cloneable, Comparable<Order> {
             Shipper shipper, String lat, String lng,
             Date createDate, Time createTime, Time lastUpdate,
             int status, String author, String reasonCancel, double costShopping, double costDelivery, double totalCost, double refundCost,
-            Date dateDelivery, Time timeDelivery, List<OrderDetail> details, List<Evidence> evidences) {
+            Date dateDelivery, Time timeDelivery, int commissionShipping, int commissionShopping, List<OrderDetail> details, List<Evidence> evidences) {
         this.id = id;
         this.cust = cust;
         this.addressDelivery = addressDelivery;
@@ -63,6 +69,8 @@ public class Order implements Cloneable, Comparable<Order> {
         this.refundCost = refundCost;
         this.dateDelivery = dateDelivery;
         this.timeDelivery = timeDelivery;
+        this.commissionShipping = commissionShipping;
+        this.commissionShopping = commissionShopping;
         this.details = details;
         this.evidences = evidences;
     }
@@ -227,6 +235,22 @@ public class Order implements Cloneable, Comparable<Order> {
         this.timeDelivery = timeDelivery;
     }
 
+    public int getCommissionShipping() {
+        return commissionShipping;
+    }
+
+    public void setCommissionShipping(int commissionShipping) {
+        this.commissionShipping = commissionShipping;
+    }
+
+    public int getCommissionShopping() {
+        return commissionShopping;
+    }
+
+    public void setCommissionShopping(int commissionShopping) {
+        this.commissionShopping = commissionShopping;
+    }
+
     public List<OrderDetail> getDetails() {
         return details;
     }
@@ -245,7 +269,7 @@ public class Order implements Cloneable, Comparable<Order> {
 
     @Override
     public String toString() {
-        return "Order{" + "id=" + id + ", cust=" + cust + ", addressDelivery=" + addressDelivery + ", note=" + note + ", market=" + market + ", shipper=" + shipper + ", lat=" + lat + ", lng=" + lng + ", createDate=" + createDate + ", createTime=" + createTime + ", lastUpdate=" + lastUpdate + ", status=" + status + ", author=" + author + ", reasonCancel=" + reasonCancel + ", costShopping=" + costShopping + ", costDelivery=" + costDelivery + ", totalCost=" + totalCost + ", refundCost=" + refundCost + ", dateDelivery=" + dateDelivery + ", timeDelivery=" + timeDelivery + ", details=" + details + ", evidences=" + evidences + '}';
+        return "Order{" + "id=" + id + ", cust=" + cust + ", addressDelivery=" + addressDelivery + ", note=" + note + ", market=" + market + ", shipper=" + shipper + ", lat=" + lat + ", lng=" + lng + ", createDate=" + createDate + ", createTime=" + createTime + ", lastUpdate=" + lastUpdate + ", status=" + status + ", author=" + author + ", reasonCancel=" + reasonCancel + ", costShopping=" + costShopping + ", costDelivery=" + costDelivery + ", totalCost=" + totalCost + ", refundCost=" + refundCost + ", dateDelivery=" + dateDelivery + ", timeDelivery=" + timeDelivery + ", details=" + details + ", commissionShipping=" + commissionShipping + ", commissionShopping=" + commissionShopping + ", evidences=" + evidences + '}';
     }
 
     @Override

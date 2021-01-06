@@ -84,6 +84,12 @@
             <version>0.15.0</version>
         </dependency>
         
+<!--        <dependency>
+            <groupId>com.twilio.sdk</groupId>
+            <artifactId>twilio</artifactId>
+            <version>8.5.1</version>
+        </dependency>-->
+        
         <!-- https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-gcp-starter -->
         <!--        <dependency>
             <groupId>org.springframework.cloud</groupId>
@@ -92,7 +98,7 @@
         </dependency>   -->
 
         <!-- https://mvnrepository.com/artifact/com.h2database/h2 -->
-<!--        <dependency>
+        <!--        <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <version>1.4.200</version>
@@ -100,14 +106,14 @@
         </dependency>-->
 
         <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-data-jpa -->
-<!--        <dependency>
+        <!--        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
             <version>2.3.5.RELEASE</version>
         </dependency>-->
 
         <!-- https://mvnrepository.com/artifact/org.hibernate/hibernate-entitymanager -->
-<!--        <dependency>
+        <!--        <dependency>
             <groupId>org.hibernate</groupId>
             <artifactId>hibernate-entitymanager</artifactId>
             <version>5.4.23.Final</version>

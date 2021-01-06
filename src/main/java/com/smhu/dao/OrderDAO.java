@@ -10,11 +10,13 @@ import com.smhu.order.Order;
 import com.smhu.order.OrderDetail;
 import com.smhu.statement.QueryStatement;
 import com.smhu.utils.DBUtils;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Time;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -35,8 +37,7 @@ public class OrderDAO implements IOrder {
         try {
             con = DBUtils.getConnection();
             if (con != null) {
-                String sql = "SELECT *\n"
-                        + "FROM GET_ORDER_BY_ID\n"
+                String sql = QueryStatement.selectOrder
                         + "WHERE ID = ?";
                 stmt = con.prepareStatement(sql);
                 stmt.setString(1, orderId);
@@ -52,8 +53,10 @@ public class OrderDAO implements IOrder {
                     order.setAddressDelivery(rs.getString("ADDRESS_DELIVERY"));
                     order.setNote(rs.getString("NOTE"));
                     order.setMarket(MarketController.mapMarket.get(rs.getString("MARKET")));
+
                     AccountDAO dao = new AccountDAO();
                     order.setShipper((Shipper) dao.getAccountById(rs.getString("SHIPPER"), "shipper"));
+
                     order.setCreateDate(rs.getDate("CREATED_DATE"));
                     order.setCreateTime(rs.getTime("CREATED_TIME"));
                     order.setStatus(rs.getInt("STATUS"));
@@ -65,6 +68,8 @@ public class OrderDAO implements IOrder {
                     order.setRefundCost(rs.getDouble("REFUND_COST"));
                     order.setDateDelivery(rs.getDate("DATE_DELIVERY"));
                     order.setTimeDelivery(rs.getTime("TIME_DELIVERY"));
+                    order.setCommissionShipping(rs.getInt("SHIPPING_COMMISSION"));
+                    order.setCommissionShopping(rs.getInt("SHOPPING_COMMISSION"));
                 }
             }
         } finally {
@@ -204,8 +209,7 @@ public class OrderDAO implements IOrder {
         try {
             con = DBUtils.getConnection();
             if (con != null) {
-                String sql = "INSERT INTO ORDER_DETAIL (ID, FOOD, ORIGINAL_PRICE, SALE_OFF, PAID_PRICE, WEIGHT, DH)\n"
-                        + "VALUES (?, ?, ?, ?, ?, ?, ?)";
+                String sql = QueryStatement.insertOrderDetail;
                 stmt = con.prepareStatement(sql);
 
                 int count = 0;
@@ -243,8 +247,7 @@ public class OrderDAO implements IOrder {
             con = DBUtils.getConnection();
             if (con != null) {
 
-                String sql = "UPDATE ORDERS SET SHIPPER = ?, STATUS = ?, LAT = ?, LNG = ?, LAST_UPDATE = ?\n"
-                        + "WHERE ID = ?";
+                String sql = QueryStatement.updateOrder;
                 stmt = con.prepareStatement(sql);
                 stmt.setString(1, order.getShipper().getUsername());
                 stmt.setInt(2, order.getStatus());
@@ -274,8 +277,7 @@ public class OrderDAO implements IOrder {
             con = DBUtils.getConnection();
             if (con != null) {
 
-                String sql = "UPDATE ORDERS SET STATUS = ?, AUTHOR = ?, REASON_CANCEL = ?, REFUND_COST = ?, LAST_UPDATE = ?\n"
-                        + "WHERE ID = ?";
+                String sql = QueryStatement.cancelOrder;
                 stmt = con.prepareStatement(sql);
                 stmt.setInt(1, order.getStatus());
                 stmt.setString(2, order.getAuthor());
