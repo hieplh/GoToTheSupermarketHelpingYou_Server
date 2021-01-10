@@ -37,7 +37,7 @@ public class CommissionController {
     public CommissionController() {
         service = new CommissionService();
     }
-
+    
     @GetMapping("/service/{marketId}/{destAddress}/{deliveryTime}/{quantity}")
     public ResponseEntity<?> getServiceCost(@PathVariable("marketId") String marketId, @PathVariable("destAddress") String destAddress,
             @PathVariable("deliveryTime") Time deliveryTime, @PathVariable("quantity") int quantity) {

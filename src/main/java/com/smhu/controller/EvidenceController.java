@@ -49,7 +49,7 @@ public class EvidenceController {
             ImageDAO dao = new ImageDAO();
             return new ResponseEntity<>(dao.getEvidencesByOrderId(orderId), HttpStatus.OK);
         } catch (ClassNotFoundException | SQLException e) {
-            Logger.getLogger(HistoryController.class.getName()).log(Level.SEVERE, e.getMessage());
+            Logger.getLogger(EvidenceController.class.getName()).log(Level.SEVERE, e.getMessage());
             return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.OK);
         }
     }

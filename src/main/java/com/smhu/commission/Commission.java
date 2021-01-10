@@ -43,6 +43,37 @@ public class Commission {
     public Commission() {
     }
 
+    public Commission(Date dateCreated, Time timeCreated, Date dateApply, Time timeApply, int firstShipping, int firstShopping, Time timeMorning, double fsiMorCost, double nsiMorCost, double fsoMorCost, double nsoMorCost, Time timeMidday, double fsiMidCost, double nsiMidCost, double fsoMidCost, double nsoMidCost, Time timeAfternoon, double fsiAfCost, double nsiAfCost, double fsoAfCost, double nsoAfCost, Time timeEvening, double fsiEveCost, double nsiEveCost, double fsoEveCost, double nsoEveCost, int commissionShipping, int commissionShopping) {
+        this.dateCreated = dateCreated;
+        this.timeCreated = timeCreated;
+        this.dateApply = dateApply;
+        this.timeApply = timeApply;
+        this.firstShipping = firstShipping;
+        this.firstShopping = firstShopping;
+        this.timeMorning = timeMorning;
+        this.fsiMorCost = fsiMorCost;
+        this.nsiMorCost = nsiMorCost;
+        this.fsoMorCost = fsoMorCost;
+        this.nsoMorCost = nsoMorCost;
+        this.timeMidday = timeMidday;
+        this.fsiMidCost = fsiMidCost;
+        this.nsiMidCost = nsiMidCost;
+        this.fsoMidCost = fsoMidCost;
+        this.nsoMidCost = nsoMidCost;
+        this.timeAfternoon = timeAfternoon;
+        this.fsiAfCost = fsiAfCost;
+        this.nsiAfCost = nsiAfCost;
+        this.fsoAfCost = fsoAfCost;
+        this.nsoAfCost = nsoAfCost;
+        this.timeEvening = timeEvening;
+        this.fsiEveCost = fsiEveCost;
+        this.nsiEveCost = nsiEveCost;
+        this.fsoEveCost = fsoEveCost;
+        this.nsoEveCost = nsoEveCost;
+        this.commissionShipping = commissionShipping;
+        this.commissionShopping = commissionShopping;
+    }
+    
     public Commission(String id, Date dateCreated, Time timeCreated, Date dateApply, Time timeApply, int firstShipping, int firstShopping, Time timeMorning, double fsiMorCost, double nsiMorCost, double fsoMorCost, double nsoMorCost, Time timeMidday, double fsiMidCost, double nsiMidCost, double fsoMidCost, double nsoMidCost, Time timeAfternoon, double fsiAfCost, double nsiAfCost, double fsoAfCost, double nsoAfCost, Time timeEvening, double fsiEveCost, double nsiEveCost, double fsoEveCost, double nsoEveCost, int commissionShipping, int commissionShopping) {
         this.id = id;
         this.dateCreated = dateCreated;

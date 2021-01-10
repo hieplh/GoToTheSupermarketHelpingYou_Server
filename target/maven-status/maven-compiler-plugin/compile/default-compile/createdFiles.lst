@@ -43,6 +43,7 @@ com\smhu\callable\TimeShopping.class
 com\smhu\controller\StatusController.class
 com\smhu\response\shipper\OrderDoneDelivery.class
 com\smhu\iface\IFeedback.class
+com\smhu\order\OrderRecording.class
 com\smhu\request\customer\OrderRequestCustomer.class
 com\smhu\google\geocoding\AddressComponent.class
 com\smhu\controller\StatusController$StatusService.class

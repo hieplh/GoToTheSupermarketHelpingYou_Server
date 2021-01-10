@@ -10,13 +10,12 @@ import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 
 @Component
-@RequestMapping("/api")
 public class TestController {
-
+    
     private void clear() {
         if (!OrderController.mapOrderInQueue.isEmpty()) {
             OrderController.mapOrderInQueue.clear();

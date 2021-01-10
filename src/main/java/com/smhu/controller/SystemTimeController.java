@@ -1,6 +1,8 @@
 package com.smhu.controller;
 
+import com.smhu.iface.IModeration;
 import com.smhu.system.SystemTime;
+import com.smhu.web.ModerationController;
 import java.sql.Date;
 import java.sql.Time;
 import java.time.ZoneId;
@@ -11,11 +13,13 @@ import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 @Component
+@CrossOrigin
 @RequestMapping("/api")
 public class SystemTimeController {
 
@@ -63,6 +67,9 @@ public class SystemTimeController {
                 service.getTime(time, service.SECOND));
 
         SystemTime.SYSTEM_TIME = calendar.getTimeInMillis();
+
+        IModeration modListener = new ModerationController();
+        modListener.reloadCommission();
         return new ResponseEntity(HttpStatus.OK);
     }
 

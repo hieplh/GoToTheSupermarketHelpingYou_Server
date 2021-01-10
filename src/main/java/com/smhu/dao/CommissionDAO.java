@@ -119,4 +119,55 @@ public class CommissionDAO {
         }
         return list;
     }
+    
+    public boolean insertModeration(Commission commission) throws SQLException, ClassNotFoundException {
+        Connection con = null;
+        PreparedStatement stmt = null;
+        
+        try {
+            con = DBUtils.getConnection();
+            if (con != null) {
+                String sql = QueryStatement.insertModeration;
+                stmt = con.prepareStatement(sql);
+                stmt.setString(1, commission.getId());
+                stmt.setDate(2, commission.getDateCreated());
+                stmt.setTime(3, commission.getTimeCreated());
+                stmt.setDate(4, commission.getDateApply());
+                stmt.setTime(5, commission.getTimeApply());
+                stmt.setInt(6, commission.getFirstShipping());
+                stmt.setInt(7, commission.getFirstShopping());
+                stmt.setTime(8, commission.getTimeMorning());
+                stmt.setDouble(9, commission.getFsiMorCost());
+                stmt.setDouble(10, commission.getNsiMorCost());
+                stmt.setDouble(11, commission.getFsoMorCost());
+                stmt.setDouble(12, commission.getNsoMorCost());
+                stmt.setTime(13, commission.getTimeMidday());
+                stmt.setDouble(14, commission.getFsiMidCost());
+                stmt.setDouble(15, commission.getNsiMidCost());
+                stmt.setDouble(16, commission.getFsoMidCost());
+                stmt.setDouble(17, commission.getNsoMidCost());
+                stmt.setTime(18, commission.getTimeAfternoon());
+                stmt.setDouble(19, commission.getFsiAfCost());
+                stmt.setDouble(20, commission.getNsiAfCost());
+                stmt.setDouble(21, commission.getFsoAfCost());
+                stmt.setDouble(22, commission.getNsoAfCost());
+                stmt.setTime(23, commission.getTimeEvening());
+                stmt.setDouble(24, commission.getFsiEveCost());
+                stmt.setDouble(25, commission.getNsiEveCost());
+                stmt.setDouble(26, commission.getFsoEveCost());
+                stmt.setDouble(27, commission.getNsoEveCost());
+                stmt.setInt(28, commission.getCommissionShipping());
+                stmt.setInt(29, commission.getCommissionShopping());
+                return stmt.execute();
+            }
+        } finally {
+            if (stmt != null) {
+                stmt.close();
+            }
+            if (con != null) {
+                con.close();
+            }
+        }
+        return false;
+    }
 }

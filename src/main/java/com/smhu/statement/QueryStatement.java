@@ -142,6 +142,19 @@ public class QueryStatement {
     public static String insertImage = "INSERT INTO EVIDENCE (ID, IMAGE, CREATE_DATE, CREATE_TIME, DH)\n"
             + "VALUES (?, ?, ?, ?, ?)\n";
 
+    public static String insertModeration = "INSERT INTO COST_MODERATION(ID, CREATED_DATE, CREATED_TIME, APPLY_DATE, APPLY_TIME, FIRST_SHIPPING, FIRST_SHOPPING,\n"
+            + "MORNING_TIME, FSI_MOR_COST, NSI_MOR_COST, FSO_MOR_COST, NSO_MOR_COST,\n"
+            + "MIDDAY_TIME, FSI_MID_COST, NSI_MID_COST, FSO_MID_COST, NSO_MID_COST,\n"
+            + "AFTERNOON_TIME, FSI_AF_COST, NSI_AF_COST, FSO_AF_COST, NSO_AF_COST,\n"
+            + "EVENING_TIME, FSI_EVE_COST, NSI_EVE_COST, FSO_EVE_COST, NSO_EVE_COST,\n"
+            + "SHIPPING_COMMISSION, SHOPPING_COMMISSION)\n"
+            + "VALUES (?, ?, ?, ?, ?, ?, ?,\n"
+            + "?, ?, ?, ?, ?,\n"
+            + "?, ?, ?, ?, ?,\n"
+            + "?, ?, ?, ?, ?,\n"
+            + "?, ?, ?, ?, ?,\n"
+            + "?, ?)";
+
     public static String feedbackOrder = "INSERT INTO FEEDBACK (ID, CUSTOMER, SHIPPER, DH, FEEDBACK, RATING)\n"
             + "VALUES (?, ?, ?, ?, ?, ?)\n";
 
