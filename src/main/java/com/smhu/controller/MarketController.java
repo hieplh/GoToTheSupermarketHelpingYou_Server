@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/smhu")
+@RequestMapping("/api")
 public class MarketController {
 
     public static Map<String, Market> mapMarket = new HashMap<>();

@@ -1,8 +1,9 @@
 package com.smhu.controller;
 
+import static com.smhu.controller.OrderController.mapOrderIsWaitingAccept;
+
 import com.smhu.response.shipper.OrderDelivery;
 import com.smhu.account.Shipper;
-import static com.smhu.controller.OrderController.mapOrderIsWaitingAccept;
 import com.smhu.core.CoreFunctions;
 import com.smhu.dao.ShipperDAO;
 import com.smhu.helper.SyncHelper;
@@ -187,6 +188,7 @@ public class ShipperController {
             }
         }
         return false;
+//        return OrderController.mapOrderInProgress.entrySet().stream().anyMatch((entry) -> (entry.getValue().getShipper().equals(shipper)));
     }
 
     private Order getOrder(String id) {

@@ -1,5 +1,6 @@
 package com.smhu.iface;
 
+import com.smhu.account.Shipper;
 import com.smhu.account.ShipperAlter;
 import com.smhu.order.Order;
 import com.smhu.order.OrderDetail;
@@ -13,6 +14,8 @@ public interface IOrder {
     public List<ShipperAlter> getListShipperAlter(String orderId) throws SQLException, ClassNotFoundException;
 
     public String insertAlterShipper(String orderId, String oldShipper, String newShipper, String author) throws SQLException, ClassNotFoundException;
+
+    public String insertRecordOrder(Order order, Shipper shipper) throws SQLException, ClassNotFoundException;
 
     public String insertOrder(Order order) throws SQLException, ClassNotFoundException;
 

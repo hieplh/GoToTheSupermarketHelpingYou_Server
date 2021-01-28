@@ -10,9 +10,6 @@ import com.smhu.system.SystemTime;
 import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.Time;
-import java.util.Calendar;
-import java.util.Locale;
-import java.util.TimeZone;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -54,14 +51,14 @@ public class ModerationController implements IModeration {
     public String updateCostModeration(Model model, @RequestParam(name = "applyDate") Date applyDate, @RequestParam("applyTime") Time applyTime,
             @RequestParam("firstShipping") int firstShipping, @RequestParam("firstShopping") int firstShopping,
             @RequestParam("commissionShipping") int commissionShipping, @RequestParam("commissionShopping") int commissionShopping,
-            @RequestParam("timeMorning") Time timeMorning, @RequestParam("fsiMorCost") double fsiMorCost, @RequestParam("nsiMorCost") double nsiMorCost,
-            @RequestParam("fsoMorCost") double fsoMorCost, @RequestParam("nsoMorCost") double nsoMorCost,
-            @RequestParam("timeMidday") Time timeMidday, @RequestParam("fsiMidCost") double fsiMidCost, @RequestParam("nsiMidCost") double nsiMidCost,
-            @RequestParam("fsoMidCost") double fsoMidCost, @RequestParam("nsoMidCost") double nsoMidCost,
-            @RequestParam("timeAfternoon") Time timeAfternoon, @RequestParam("fsiAfCost") double fsiAfCost, @RequestParam("nsiAfCost") double nsiAfCost,
-            @RequestParam("fsoAfCost") double fsoAfCost, @RequestParam("nsoAfCost") double nsoAfCost,
-            @RequestParam("timeEvening") Time timeEvening, @RequestParam("fsiEveCost") double fsiEveCost, @RequestParam("nsiEveCost") double nsiEveCost,
-            @RequestParam("fsoEveCost") double fsoEveCost, @RequestParam("nsoEveCost") double nsoEveCost) {
+            @RequestParam("timeMorning") Time timeMorning, @RequestParam("fsiMorCost") String fsiMorCost, @RequestParam("nsiMorCost") String nsiMorCost,
+            @RequestParam("fsoMorCost") String fsoMorCost, @RequestParam("nsoMorCost") String nsoMorCost,
+            @RequestParam("timeMidday") Time timeMidday, @RequestParam("fsiMidCost") String fsiMidCost, @RequestParam("nsiMidCost") String nsiMidCost,
+            @RequestParam("fsoMidCost") String fsoMidCost, @RequestParam("nsoMidCost") String nsoMidCost,
+            @RequestParam("timeAfternoon") Time timeAfternoon, @RequestParam("fsiAfCost") String fsiAfCost, @RequestParam("nsiAfCost") String nsiAfCost,
+            @RequestParam("fsoAfCost") String fsoAfCost, @RequestParam("nsoAfCost") String nsoAfCost,
+            @RequestParam("timeEvening") Time timeEvening, @RequestParam("fsiEveCost") String fsiEveCost, @RequestParam("nsiEveCost") String nsiEveCost,
+            @RequestParam("fsoEveCost") String fsoEveCost, @RequestParam("nsoEveCost") String nsoEveCost) {
         Date date = new Date(SystemTime.SYSTEM_TIME);
         Time time = new Time(SystemTime.SYSTEM_TIME);
         Commission commission = new Commission(date, time, applyDate, applyTime, firstShipping, firstShopping,
@@ -83,7 +80,7 @@ public class ModerationController implements IModeration {
         } else if (WINTER_VALUE >= monthApplyDateValue) {
             commission.setId(WINTER + monthApplyDateValue + yearApplyDateValue + commissionShipping + commissionShopping);
         } else {
-            model.addAttribute("ERROR", "Out of Month Range (1 - 12)");
+            model.addAttribute("RESULT", "Out of Month Range (1 - 12)");
             return MODERATION_PAGE;
         }
 
@@ -105,10 +102,10 @@ public class ModerationController implements IModeration {
             }
         }
         if (result) {
-            model.addAttribute("SUCCESS", "Thiết lập thành công");
+            model.addAttribute("RESULT", "Thiết lập thành công");
             reloadCommission();
         } else {
-            model.addAttribute("ERROR", "Thiết lập không thành công");
+            model.addAttribute("RESULT", "Thiết lập không thành công");
         }
         return getCommission(model);
     }

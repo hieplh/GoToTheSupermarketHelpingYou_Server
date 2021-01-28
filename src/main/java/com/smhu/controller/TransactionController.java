@@ -1,27 +1,23 @@
 package com.smhu.controller;
 
-import com.smhu.iface.IStatus;
+import com.smhu.callable.AmountStatistic;
+import com.smhu.callable.NumberOfOrders;
+import com.smhu.callable.WeeksStatistic;
+import com.smhu.dao.TransactionDAO;
 import com.smhu.iface.ITransaction;
 import com.smhu.response.ResponseMsg;
-import com.smhu.statement.QueryStatement;
-import com.smhu.transaction.Transaction;
-import com.smhu.utils.DBUtils;
-
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import com.smhu.statistic.Statistic;
+import com.smhu.system.SystemTime;
 import java.sql.SQLException;
-import java.sql.Time;
-
-import java.time.LocalTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
 
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.Locale;
-import java.util.TimeZone;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -35,15 +31,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @CrossOrigin
-@RequestMapping("/api/smhu")
+@RequestMapping("/api")
 public class TransactionController {
 
-    private final TransactionService service;
-    private final ITransaction transactionListener;
+    private final ITransaction service;
 
     public TransactionController() {
-        this.service = new TransactionService();
-        this.transactionListener = new TransactionService();
+        this.service = new TransactionDAO();
     }
 
     @GetMapping("/trans/{accountId}")
@@ -56,180 +50,88 @@ public class TransactionController {
         }
     }
 
-    public ITransaction getTransactionListener() {
-        return transactionListener;
+    @GetMapping("/trans/{accountId}/{monthly}")
+    public ResponseEntity<?> getMonthlyStatistic(@PathVariable("accountId") String accountId, @PathVariable("monthly") String monthly) {
+        if (checkIsNullOrEmpty(accountId) && checkIsNullOrEmpty(monthly)) {
+            return new ResponseEntity("Parameters must not be blank", HttpStatus.METHOD_NOT_ALLOWED);
+        }
+        if (!checkFormatMonthly(monthly)) {
+            return new ResponseEntity("Wrong format month. Format: yyyy-MM", HttpStatus.METHOD_NOT_ALLOWED);
+        }
+
+        if (!checkMonth(monthly)) {
+            return new ResponseEntity("Month is not correct. Month: 1-12", HttpStatus.METHOD_NOT_ALLOWED);
+        }
+
+        Date date = parseMonthYear(monthly);
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+        Statistic statistic = new Statistic();
+        statistic.setOfMonthYear(cal.get(Calendar.YEAR) + "-" + (cal.get(Calendar.MONTH) + 1));
+        statistic.setFromDate("1" +  "-" + cal.get(Calendar.DAY_OF_MONTH));
+
+        ExecutorService executorService = Executors.newFixedThreadPool(3);
+        List<Future<?>> futures = new ArrayList<>();
+        futures.add(executorService.submit(new NumberOfOrders(accountId, date, statistic)));
+        futures.add(executorService.submit(new AmountStatistic(accountId, date, statistic)));
+        futures.add(executorService.submit(new WeeksStatistic(accountId, date, statistic)));
+
+        try {
+            for (Future<?> future : futures) {
+                try {
+                    future.get();
+                } catch (ExecutionException | InterruptedException e) {
+                    Logger.getLogger(TransactionController.class.getName()).log(Level.SEVERE, "Get Statistic: {0}", e.getMessage());
+                }
+            }
+        } finally {
+            executorService.shutdown();
+        }
+        return new ResponseEntity(statistic, HttpStatus.OK);
     }
 
-    class TransactionService implements ITransaction {
+    private boolean checkIsNullOrEmpty(String s) {
+        return s == null || s.isEmpty();
+    }
 
-        private final String RECHARGE = "RECHARGE";
-        private final String DELIVERY = "DELIVERY";
-        private final String REFUND = "REFUND";
+    private boolean checkFormatMonthly(String monthly) {
+        String regex = "([0-1]?\\d(-[1-9]\\d{3})?)|([1-9]\\d{3}-[0-1]?\\d)";
+        return monthly.matches(regex);
+    }
 
-        private String generateId(String id, int status, String type) {
-            switch (type) {
-                case RECHARGE:
-                    LocalTime time = LocalTime.now(ZoneId.of("GMT+7"));
-                    Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"), new Locale("vi", "vn"));
-                    return "T" + id
-                            + String.valueOf(cal.get(Calendar.YEAR))
-                            + String.valueOf(cal.get(Calendar.MONTH) + 1)
-                            + String.valueOf(cal.get(Calendar.DAY_OF_MONTH))
-                            + String.valueOf(time.getHour())
-                            + String.valueOf(time.getMinute())
-                            + String.valueOf(time.getSecond());
-                case DELIVERY:
-                    return "TD" + status + id;
-                case REFUND:
-                    return "TR" + id;
-                default:
-                    return null;
-            }
-        }
-
-        public List<Transaction> getTransaction(String authorId) throws ClassNotFoundException, SQLException {
-            Connection con = null;
-            PreparedStatement stmt = null;
-            ResultSet rs = null;
-            List<Transaction> list = null;
-
-            try {
-                con = DBUtils.getConnection();
-                if (con != null) {
-                    String sql = "EXEC GET_ALL_TRANSACTION_BY_AUTHOR ?";
-                    stmt = con.prepareStatement(sql);
-                    stmt.setString(1, authorId);
-                    rs = stmt.executeQuery();
-                    while (rs.next()) {
-                        if (list == null) {
-                            list = new ArrayList<>();
-                        }
-                        list.add(new Transaction(
-                                rs.getString("ID"),
-                                rs.getString("FULL_NAME"),
-                                rs.getDouble("AMOUNT"),
-                                rs.getString("NOTE"),
-                                rs.getInt("STATUS"),
-                                rs.getString("DH"),
-                                rs.getDate("CREATE_DATE"),
-                                rs.getTime("CREATE_TIME")));
-                    }
-                }
-            } finally {
-                if (rs != null) {
-                    rs.close();
-                }
-                if (stmt != null) {
-                    stmt.close();
-                }
-                if (con != null) {
-                    con.close();
+    private boolean checkMonth(String monthly) {
+        String[] arrMonthly = monthly.split("-");
+        for (String s : arrMonthly) {
+            if (s.length() <= 2) {
+                if (Integer.parseInt(s) >= 12) {
+                    return false;
                 }
             }
-            return list;
         }
+        return true;
+    }
 
-        @Override
-        public int updateRechargeTransaction(String authorId, double amount) throws ClassNotFoundException, SQLException {
-            Connection con = null;
-            PreparedStatement stmt = null;
-
-            try {
-                con = DBUtils.getConnection();
-                if (con != null) {
-                    String sql = QueryStatement.insertTransactionWithoutOrder;
-                    stmt = con.prepareStatement(sql);
-                    stmt.setString(1, generateId(authorId, -1, RECHARGE));
-                    stmt.setString(2, authorId);
-                    stmt.setDouble(3, amount);
-                    stmt.setString(4, authorId);
-
-                    java.sql.Date date = new java.sql.Date(new Date().getTime());
-                    Time time = new Time(new Date().getTime());
-                    stmt.setDate(5, date);
-                    stmt.setTime(6, time);
-
-                    IStatus statusListener = new StatusController().getStatusListener();
-                    stmt.setInt(7, statusListener.getStatusIsRecharge());
-                    return stmt.executeUpdate() > 0 ? 1 : 0;
-                }
-            } finally {
-                if (stmt != null) {
-                    stmt.close();
-                }
-                if (con != null) {
-                    con.close();
-                }
+    private Date parseMonthYear(String monthly) {
+        Calendar cal = Calendar.getInstance();
+        String[] arrMonthly = monthly.split("-");
+        String[] result = new String[2];
+        if (arrMonthly.length == 1) {
+            cal.setTimeInMillis(SystemTime.SYSTEM_TIME);
+            result[0] = String.valueOf(cal.get(Calendar.YEAR));
+            result[1] = arrMonthly[0];
+        } else {
+            if (arrMonthly[0].length() <= 2) {
+                result[0] = arrMonthly[1];
+                result[1] = arrMonthly[0];
+            } else {
+                result = arrMonthly;
             }
-            return 0;
         }
+        cal.set(Integer.parseInt(result[0]), Integer.parseInt(result[1]), 0);
+        return new Date(cal.getTimeInMillis());
+    }
 
-        @Override
-        public int updateDeliveryTransaction(String affectedId, String authorId, double amount, int status, String orderId) throws ClassNotFoundException, SQLException {
-            Connection con = null;
-            PreparedStatement stmt = null;
-
-            try {
-                con = DBUtils.getConnection();
-                if (con != null) {
-                    String sql = QueryStatement.insertTransaction;
-                    stmt = con.prepareStatement(sql);
-                    stmt.setString(1, generateId(orderId, status, DELIVERY));
-                    stmt.setString(2, affectedId);
-                    stmt.setDouble(3, amount);
-                    stmt.setString(4, authorId);
-
-                    java.sql.Date date = new java.sql.Date(new Date().getTime());
-                    Time time = new Time(new Date().getTime());
-                    stmt.setDate(5, date);
-                    stmt.setTime(6, time);
-                    stmt.setInt(7, status);
-                    stmt.setString(8, orderId);
-                    return stmt.executeUpdate() > 0 ? 1 : 0;
-                }
-            } finally {
-                if (stmt != null) {
-                    stmt.close();
-                }
-                if (con != null) {
-                    con.close();
-                }
-            }
-            return 0;
-        }
-
-        @Override
-        public int updateRefundTransaction(String affectedId, String authorId, double amount, int status, String orderId) throws ClassNotFoundException, SQLException {
-            Connection con = null;
-            PreparedStatement stmt = null;
-
-            try {
-                con = DBUtils.getConnection();
-                if (con != null) {
-                    String sql = QueryStatement.insertTransaction;
-                    stmt = con.prepareStatement(sql);
-                    stmt.setString(1, generateId(orderId, status, REFUND));
-                    stmt.setString(2, affectedId);
-                    stmt.setDouble(3, amount);
-                    stmt.setString(4, authorId);
-
-                    java.sql.Date date = new java.sql.Date(new Date().getTime());
-                    Time time = new Time(new Date().getTime());
-                    stmt.setDate(5, date);
-                    stmt.setTime(6, time);
-                    stmt.setInt(7, status);
-                    stmt.setString(8, orderId);
-                    return stmt.executeUpdate() > 0 ? 1 : 0;
-                }
-            } finally {
-                if (stmt != null) {
-                    stmt.close();
-                }
-                if (con != null) {
-                    con.close();
-                }
-            }
-            return 0;
-        }
+    public ITransaction getTransactionListener() {
+        return service;
     }
 }

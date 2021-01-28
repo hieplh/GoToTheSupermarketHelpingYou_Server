@@ -5,6 +5,7 @@ import com.smhu.food.Food;
 import com.smhu.food.SaleOff;
 import com.smhu.iface.IFood;
 import com.smhu.iface.IMarket;
+import com.smhu.statement.QueryStatement;
 import com.smhu.utils.DBUtils;
 
 import java.sql.Connection;
@@ -64,16 +65,19 @@ public class FoodDAO implements IFood {
         try {
             con = DBUtils.getConnection();
             if (con != null) {
-                String sql = "EXEC GET_FOOD_OF_MARKET_BY_CATEGORY_ID ?, ?, ?, ?";
+                String sql = QueryStatement.selectFoodOfMarketByCategory;
                 stmt = con.prepareStatement(sql);
                 stmt.setString(1, market);
-                stmt.setString(2, category);
+                stmt.setString(2, market);
 
                 java.sql.Date date = new java.sql.Date(new Date().getTime());
                 Time time = new Time(new Date().getTime());
                 stmt.setDate(3, date);
-                stmt.setTime(4, time);
+                stmt.setDate(4, date);
+                stmt.setTime(5, time);
+                stmt.setTime(6, time);
                 
+                stmt.setString(7, category);
                 rs = stmt.executeQuery();
                 while (rs.next()) {
                     if (listFoods == null) {
@@ -114,16 +118,20 @@ public class FoodDAO implements IFood {
         try {
             con = DBUtils.getConnection();
             if (con != null) {
-                String sql = "EXEC GET_FOOD_BY_ID ?, ?, ?, ?";
+                String sql = QueryStatement.selectFoodById;
                 stmt = con.prepareStatement(sql);
                 stmt.setString(1, marketId);
                 stmt.setString(2, foodId);
+                stmt.setString(3, marketId);
                 
                 java.sql.Date date = new java.sql.Date(new Date().getTime());
                 Time time = new Time(new Date().getTime());
-                stmt.setDate(3, date);
-                stmt.setTime(4, time);
+                stmt.setDate(4, date);
+                stmt.setDate(5, date);
+                stmt.setTime(6, time);
+                stmt.setTime(7, time);
                 
+                stmt.setString(8, foodId);
                 rs = stmt.executeQuery();
                 if (rs.next()) {
                     return new Food(rs.getString("ID"),

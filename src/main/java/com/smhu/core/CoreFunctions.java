@@ -319,7 +319,12 @@ public class CoreFunctions implements ICore {
 
     @Override
     public void filterOrder(Order order) {
-        boolean isHasShipperInProgress = filterOrderToShipperInProgress(order);
+        boolean isHasShipperInProgress;
+        try {
+            isHasShipperInProgress = filterOrderToShipperInProgress(order);
+        } catch (Exception e) {
+            isHasShipperInProgress = false;
+        }
 
         if (isHasShipperInProgress) {
             return;
@@ -476,6 +481,10 @@ public class CoreFunctions implements ICore {
             } else {
                 removedOrder = order;
             }
+            removedOrder.setCostDelivery(removedOrder.getCostDelivery() * ((100 - removedOrder.getCommissionShipping()) / 100.0));
+            removedOrder.setCostShopping(removedOrder.getCostShopping() * ((100 - removedOrder.getCommissionShopping()) / 100.0));
+
+            recordReleasedOrder(removedOrder, shipper);
             result.add(sync.syncOrderSystemToOrderDelivery(removedOrder));
         }
 
@@ -518,6 +527,14 @@ public class CoreFunctions implements ICore {
 
         if (listStrings.isEmpty()) {
             mapFilterOrders.put(market, null);
+        }
+    }
+
+    private void recordReleasedOrder(Order order, Shipper shipper) {
+        try {
+            orderListener.insertRecordOrder(order, shipper);
+        } catch (ClassNotFoundException | SQLException e) {
+            Logger.getLogger(OrderController.class.getName()).log(Level.SEVERE, "Record Released Order: {0}", e.getMessage());
         }
     }
 
@@ -651,10 +668,10 @@ public class CoreFunctions implements ICore {
     @Override
     public void scanOrder() {
         scanOrderExpire();
-        
+
         synchronized (mapFilterShippers) {
             System.out.println("SCAN ORDER");
-            
+
             for (Map.Entry<String, List<String>> entry : mapFilterShippers.entrySet()) {
                 List<String> listIdShippers = entry.getValue();
                 if (listIdShippers != null && !listIdShippers.isEmpty()) {

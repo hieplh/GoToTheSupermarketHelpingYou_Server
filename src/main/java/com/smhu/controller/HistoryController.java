@@ -8,6 +8,7 @@ import com.smhu.iface.IStatus;
 import com.smhu.order.Order;
 import com.smhu.order.OrderDetail;
 import com.smhu.response.ResponseMsg;
+import com.smhu.statement.QueryStatement;
 import com.smhu.utils.DBUtils;
 
 import java.sql.Connection;
@@ -29,7 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @CrossOrigin
-@RequestMapping("/api/smhu")
+@RequestMapping("/api")
 public class HistoryController {
 
     HistoryService service;
@@ -83,21 +84,12 @@ public class HistoryController {
                 con = DBUtils.getConnection();
                 if (con != null) {
 
-                    String sql;
-                    switch (type.toUpperCase()) {
-                        case CUSTOMER:
-                            sql = "EXEC GET_HISTORY_CUSTOMER_BY_ID ?, ?, ?";
-                            break;
-                        case SHIPPER:
-                            sql = "EXEC GET_HISTORY_SHIPPER_BY_ID ?, ?, ?";
-                            break;
-                        default:
-                            return null;
-                    }
+                    String sql = QueryStatement.selectHistoryById;
                     stmt = con.prepareStatement(sql);
                     stmt.setString(1, id);
-                    stmt.setInt(2, page);
-                    stmt.setInt(3, ROWS);
+                    stmt.setString(2, id);
+                    stmt.setInt(3, page);
+                    stmt.setInt(4, ROWS);
                     rs = stmt.executeQuery();
                     while (rs.next()) {
                         if (list == null) {
@@ -184,9 +176,10 @@ public class HistoryController {
                         return null;
                     }
 
-                    String sql = "EXEC GET_ORDER_DETAIL_BY_ID ?";
+                    String sql = QueryStatement.selectHistoryDetailById;
                     stmt = con.prepareStatement(sql);
                     stmt.setString(1, orderId);
+                    stmt.setString(2, orderId);
                     rs = stmt.executeQuery();
                     while (rs.next()) {
                         if (listDetails == null) {

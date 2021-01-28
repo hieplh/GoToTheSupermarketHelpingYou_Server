@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @CrossOrigin
-@RequestMapping("/api/smhu")
+@RequestMapping("/api")
 public class FeedbackController {
 
     @GetMapping("/feedback/{orderId}")

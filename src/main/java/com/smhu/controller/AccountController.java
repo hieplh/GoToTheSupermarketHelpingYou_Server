@@ -6,6 +6,7 @@ import com.smhu.account.AccountRegister;
 import com.smhu.account.AccountUpdate;
 import com.smhu.account.Customer;
 import com.smhu.account.CustomerUpdateAddress;
+import com.smhu.account.ForgetPassword;
 import com.smhu.account.Shipper;
 import com.smhu.account.ShipperUpdateMaxNumOrder;
 import com.smhu.core.CoreFunctions;
@@ -22,7 +23,6 @@ import java.io.UnsupportedEncodingException;
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -43,15 +43,18 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @CrossOrigin
-@RequestMapping("/api/smhu")
+@RequestMapping("/api")
 public class AccountController {
 
     final String STAFF = "STAFF";
     final String CUSTOMER = "CUSTOMER";
     final String SHIPPER = "SHIPPER";
 
+    final String REGISTER = "REGISTER";
+    final String FORGET_PASSWORD = "FORGET";
+
     public static Map<String, String> mapRoles = new HashMap<>();
-    public static Map<AccountRegister, Long> mapAccountWaitToConfirm = new HashMap<>();
+    public static Map<AccountRegister, Map<String, Long>> mapAccountWaitToConfirm = new HashMap<>();
 
     private final IAccount service;
     private final IShipper shipperListener;
@@ -167,56 +170,107 @@ public class AccountController {
         return new ResponseEntity<>("Logout success", HttpStatus.OK);
     }
 
-    @GetMapping("/account/{username}/otp/{otpcode}")
-    public ResponseEntity<?> confirmOtpCode(@PathVariable("username") String username, @PathVariable("otpcode") String codeOtp) {
+    @GetMapping("/account/{username}/otp/{otpcode}/{type}")
+    public ResponseEntity<?> confirmOtpCode(@PathVariable("username") String username, @PathVariable("otpcode") String codeOtp,
+            @PathVariable("type") String type) {
         try {
-            Iterator<AccountRegister> iterator = mapAccountWaitToConfirm.keySet().iterator();
-            while (iterator.hasNext()) {
-                AccountRegister account = iterator.next();
-                if (account.getUsername().equals(username)) {
-                    if (account.getCodeOTP().equals(codeOtp)) {
-                        long expiredTime = mapAccountWaitToConfirm.get(account);
-                        if (SystemTime.SYSTEM_TIME <= expiredTime) {
-                            service.insertAccount(account);
-                            iterator.remove();
-                            return new ResponseEntity<>("Account is created", HttpStatus.OK);
-                        } else {
-                            return new ResponseEntity<>("Time out confirmed", HttpStatus.NOT_ACCEPTABLE);
-                        }
-                    } else {
-                        return new ResponseEntity<>("Otp Code is not correct", HttpStatus.METHOD_NOT_ALLOWED);
-                    }
+            AccountRegister account = mapAccountWaitToConfirm.keySet()
+                    .stream()
+                    .filter(o -> o.getUsername().equals(username))
+                    .findFirst()
+                    .orElse(null);
+            Map<String, Long> mapOtp = mapAccountWaitToConfirm.get(account);
+            if (mapOtp == null) {
+                return new ResponseEntity<>("Username is not correct", HttpStatus.METHOD_NOT_ALLOWED);
+            }
+
+            long expiredTime = mapOtp.getOrDefault(codeOtp, -1L);
+            if (expiredTime < 0) {
+                return new ResponseEntity<>("Otp Code is not correct", HttpStatus.METHOD_NOT_ALLOWED);
+            }
+
+            if (SystemTime.SYSTEM_TIME <= expiredTime) {
+                switch (type.toUpperCase()) {
+                    case REGISTER:
+                        service.insertAccount(account);
+                        mapAccountWaitToConfirm.remove(account);
+                        return new ResponseEntity<>("Account is created", HttpStatus.OK);
+                    case FORGET_PASSWORD:
+                        mapAccountWaitToConfirm.remove(account);
+                        return new ResponseEntity<>("OTP forget password has been confirmed", HttpStatus.OK);
+                    default:
+                        return new ResponseEntity<>("Type is not correct", HttpStatus.METHOD_NOT_ALLOWED);
                 }
             }
         } catch (ClassNotFoundException | SQLException | NoSuchAlgorithmException | UnsupportedEncodingException e) {
             Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, e.getMessage());
             return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        return new ResponseEntity<>("Account is not correct", HttpStatus.METHOD_NOT_ALLOWED);
+        return new ResponseEntity<>("Timeout OTP", HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @GetMapping("/account/{username}/newOtp")
     public ResponseEntity<?> newOtp(@PathVariable("username") String username) {
         try {
-            Iterator<AccountRegister> iterator = mapAccountWaitToConfirm.keySet().iterator();
-            while (iterator.hasNext()) {
-                AccountRegister account = iterator.next();
-                if (account.getUsername().equals(username)) {
-                    StringBuilder codeOTP = new StringBuilder();
-                    Random rand = new Random();
-                    for (int i = 0; i < 4; i++) {
-                        codeOTP.append(rand.nextInt(10));
-                    }
-                    account.setCodeOTP(codeOTP.toString());
-                    mapAccountWaitToConfirm.put(account, SystemTime.SYSTEM_TIME + (60 * 1000));
-                    return new ResponseEntity<>("new OTP Code: " + codeOTP.toString(), HttpStatus.OK);
-                }
+            AccountRegister account = mapAccountWaitToConfirm.keySet()
+                    .stream()
+                    .filter(o -> o.getUsername().equals(username))
+                    .findFirst()
+                    .orElse(null);
+            if (account == null) {
+                return new ResponseEntity<>("Username is not correct", HttpStatus.METHOD_NOT_ALLOWED);
             }
+
+            StringBuilder codeOTP = new StringBuilder();
+            Random rand = new Random();
+            for (int i = 0; i < 4; i++) {
+                codeOTP.append(rand.nextInt(10));
+            }
+            Map<String, Long> mapOtp = new HashMap<>();
+            mapOtp.put(codeOTP.toString(), SystemTime.SYSTEM_TIME + (60 * 1000));
+            mapAccountWaitToConfirm.put(account, mapOtp);
+
+            return new ResponseEntity<>("new OTP Code: " + codeOTP.toString(), HttpStatus.OK);
         } catch (Exception e) {
             Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, e.getMessage());
             return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        return new ResponseEntity<>("Account is not correct", HttpStatus.METHOD_NOT_ALLOWED);
+    }
+
+    @GetMapping("/account/{username}/{role}/forget")
+    public ResponseEntity<?> sendTicketForgetPassword(@PathVariable("username") String username, @PathVariable("role") String role) {
+        try {
+            if (username == null) {
+                return new ResponseEntity<>("Username is empty", HttpStatus.METHOD_NOT_ALLOWED);
+            }
+
+            AccountRegister account = mapAccountWaitToConfirm.keySet()
+                    .stream()
+                    .filter(o -> o.getUsername().equals(username))
+                    .findFirst()
+                    .orElse(null);
+            if (account == null) {
+                Account obj = (Account) service.getAccountById(username, role);
+                if (obj == null) {
+                    return new ResponseEntity<>("Username is not correct. Please try again!", HttpStatus.CONFLICT);
+                }
+                account = new AccountRegister(obj.getUsername(), null, obj.getRole(), obj.getFullname(), obj.getDob(), null);
+            }
+
+            StringBuilder codeOTP = new StringBuilder();
+            Random rand = new Random();
+            for (int i = 0; i < 4; i++) {
+                codeOTP.append(rand.nextInt(10));
+            }
+            Map<String, Long> mapOtp = new HashMap();
+            mapOtp.put(codeOTP.toString(), SystemTime.SYSTEM_TIME + (60 * 1000));
+            mapAccountWaitToConfirm.put(account, mapOtp);
+
+            return new ResponseEntity<>("OTP Code: " + codeOTP.toString(), HttpStatus.OK);
+        } catch (ClassNotFoundException | SQLException e) {
+            Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @PostMapping("/account/register")
@@ -238,13 +292,23 @@ public class AccountController {
                 return new ResponseEntity<>("Phone or Vin is existed. Please try again!", HttpStatus.CONFLICT);
             }
 
+            AccountRegister obj = mapAccountWaitToConfirm.keySet()
+                    .stream()
+                    .filter(o -> o.getUsername().equals(account.getUsername()))
+                    .findFirst()
+                    .orElse(null);
+            if (obj != null) {
+                mapAccountWaitToConfirm.remove(obj);
+            }
+
             StringBuilder codeOTP = new StringBuilder();
             Random rand = new Random();
             for (int i = 0; i < 4; i++) {
                 codeOTP.append(rand.nextInt(10));
             }
-            account.setCodeOTP(codeOTP.toString());
-            mapAccountWaitToConfirm.put(account, SystemTime.SYSTEM_TIME + (60 * 1000));
+            Map<String, Long> mapOtp = new HashMap();
+            mapOtp.put(codeOTP.toString(), SystemTime.SYSTEM_TIME + (60 * 1000));
+            mapAccountWaitToConfirm.put(account, mapOtp);
             return new ResponseEntity<>("OTP Code: " + codeOTP.toString(), HttpStatus.OK);
         } catch (ClassNotFoundException | SQLException e) {
             Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, e.getMessage());
@@ -403,6 +467,28 @@ public class AccountController {
             return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return new ResponseEntity<>("Update pwd Success", HttpStatus.OK);
+    }
+
+    @PutMapping("/account/forget")
+    public ResponseEntity<?> forgetPassword(@RequestBody ForgetPassword account) {
+        try {
+            switch (account.getRole().toUpperCase()) {
+                case CUSTOMER:
+                case SHIPPER:
+                case STAFF:
+                    int result = service.updatePassword(account.getUsername(), account.getNewPwd());
+                    if (result <= 0) {
+                        return new ResponseEntity<>("Update password failed. Please try again", HttpStatus.INTERNAL_SERVER_ERROR);
+                    }
+                    return new ResponseEntity<>("Update Success", HttpStatus.OK);
+                default:
+                    return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
+            }
+        } catch (ClassNotFoundException | SQLException
+                | NumberFormatException | NoSuchAlgorithmException | UnsupportedEncodingException e) {
+            Logger.getLogger(AccountController.class.getName()).log(Level.SEVERE, "Update Password: {0}", e.getMessage());
+            return new ResponseEntity<>(new ResponseMsg(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @DeleteMapping("/delete/{accountId}")

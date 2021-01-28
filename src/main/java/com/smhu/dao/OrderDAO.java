@@ -161,6 +161,34 @@ public class OrderDAO implements IOrder {
     }
 
     @Override
+    public String insertRecordOrder(Order order, Shipper shipper) throws SQLException, ClassNotFoundException {
+        Connection con = null;
+        PreparedStatement stmt = null;
+
+        try {
+            con = DBUtils.getConnection();
+            if (con != null) {
+                String sql = QueryStatement.insertRecordOrder;
+                stmt = con.prepareStatement(sql);
+                stmt.setString(1, order.getId());
+                stmt.setString(2, order.getCust());
+                stmt.setString(3, shipper.getUsername());
+                stmt.setDate(4, new java.sql.Date(new Date().getTime()));
+                stmt.setTime(5, new Time(new Date().getTime()));
+                return stmt.executeUpdate() > 0 ? order.getId() : null;
+            }
+        } finally {
+            if (stmt != null) {
+                stmt.close();
+            }
+            if (con != null) {
+                con.close();
+            }
+        }
+        return null;
+    }
+    
+    @Override
     public String insertOrder(Order order) throws SQLException, ClassNotFoundException {
         Connection con = null;
         PreparedStatement stmt = null;
@@ -188,6 +216,8 @@ public class OrderDAO implements IOrder {
 
                 stmt.setDate(14, order.getDateDelivery());
                 stmt.setTime(15, order.getTimeDelivery());
+                stmt.setInt(16, order.getCommissionShipping());
+                stmt.setInt(17, order.getCommissionShopping());
                 return stmt.executeUpdate() > 0 ? order.getId() : null;
             }
         } finally {

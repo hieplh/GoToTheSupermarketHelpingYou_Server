@@ -7,6 +7,8 @@ import static com.smhu.controller.ShipperController.mapAvailableShipper;
 import static com.smhu.controller.ShipperController.mapInProgressShipper;
 import static com.smhu.controller.ShipperController.mapShipperOrdersInProgress;
 
+import static com.smhu.controller.CommissionController.commission;
+
 import com.smhu.GototheSupermarketHelpingYouApplication;
 import com.smhu.account.Account;
 import com.smhu.account.Customer;
@@ -84,7 +86,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @CrossOrigin
-@RequestMapping("/api/smhu")
+@RequestMapping("/api")
 public class OrderController {
 
     public final static Map<String, Order> mapOrderInQueue = new HashMap<>();
@@ -157,7 +159,7 @@ public class OrderController {
                     if (order.getAuthor() != null) {
                         orderStaff.setAuthor((Account) accountListener.getAccountById(order.getAuthor(), STAFF));
                     }
-                    orderStaff.setAlters(dao.getListShipperAlter(id));
+//                    orderStaff.setAlters(dao.getListShipperAlter(id));
                     return new ResponseEntity<>(orderStaff, HttpStatus.OK);
                 default:
                     return new ResponseEntity<>(HttpStatus.METHOD_NOT_ALLOWED.toString(), HttpStatus.METHOD_NOT_ALLOWED);
@@ -239,6 +241,8 @@ public class OrderController {
             order.setDateDelivery(orderReceive.getDateDelivery());
             order.setTimeDelivery(orderReceive.getTimeDelivery());
             order.setDetails(orderReceive.getDetails());
+            order.setCommissionShipping(commission.getCommissionShipping());
+            order.setCommissionShopping(commission.getCommissionShopping());
 
             result = dao.insertOrder(order);
 
@@ -748,15 +752,25 @@ public class OrderController {
             }
         }
 
+        double getTotalFoodMoneyOfOrder(Order order) {
+            double result = 0;
+            List<OrderDetail> list = order.getDetails();
+            for (OrderDetail ele : list) {
+                result += ele.getPricePaid();
+            }
+            return result;
+        }
+
         OrderDoneDelivery executeOrderIsDone(Shipper shipper, Order order, int status, SyncHelper sync) throws ClassNotFoundException, SQLException {
             Order orderDoneObj = mapOrderInProgress.remove(order.getId());
             mapOrderIsDone.put(orderDoneObj.getId(), orderDoneObj);
             service.removeOrderBelongToShipper(shipper, orderDoneObj);
 
-            double totalReceiveTransMoney = (orderDoneObj.getCostShopping() + orderDoneObj.getCostDelivery()) / 2;
+            double totalReceiveTransMoney = (orderDoneObj.getCostDelivery() * ((100 - order.getCommissionShipping()) / 100.0))
+                    + (orderDoneObj.getCostShopping() * ((100 - order.getCommissionShopping()) / 100.0));
             transactionListener.updateDeliveryTransaction(shipper.getUsername(), shipper.getUsername(),
                     totalReceiveTransMoney, status, orderDoneObj.getId());
-            accountListener.updateWalletAccount(shipper.getUsername(), orderDoneObj.getTotalCost());
+            accountListener.updateWalletAccount(shipper.getUsername(), totalReceiveTransMoney + getTotalFoodMoneyOfOrder(order));
             accountListener.updateNumSuccess(orderDoneObj.getCust(), 1);
 
             shipper.setNumDelivery(shipper.getNumDelivery() + 1);

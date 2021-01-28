@@ -1,5 +1,6 @@
 package com.smhu.helper;
 
+import com.smhu.statement.QueryStatement;
 import com.smhu.utils.DBUtils;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -22,13 +23,14 @@ public class AverageTimeTravel {
         try {
             con = DBUtils.getConnection();
             if (con != null) {
-                String sql = "EXEC GET_AVG_TIME_TRAVEL_BY_DATE_IN_MONTH ?, ?, ?";
+                String sql = QueryStatement.selectAvgTimeTravelByDayOfWeekInMonth;
                 stmt = con.prepareStatement(sql);
                 
                 Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"), new Locale("vi", "vn"));
                 stmt.setInt(1, cal.get(Calendar.DAY_OF_WEEK));
                 stmt.setInt(2, cal.get(Calendar.MONTH) + 1);
                 stmt.setInt(3, range);
+                stmt.setInt(4, range);
                 
                 rs = stmt.executeQuery();
                 while (rs.next()) {
@@ -61,8 +63,7 @@ public class AverageTimeTravel {
             con = DBUtils.getConnection();
             if (con != null) {
 
-                String sql = "INSERT INTO AVG_TIME_TRAVEL (MARKET, LAT, LNG, DATE, MONTH, RANGE, DISTANCE, TIME)\n"
-                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                String sql = QueryStatement.insertAvgTimeTravel;
                 stmt = con.prepareStatement(sql);
                 stmt.setString(1, market);
                 stmt.setString(2, lat);

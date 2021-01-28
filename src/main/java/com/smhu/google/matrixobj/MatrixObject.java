@@ -1,11 +1,6 @@
 package com.smhu.google.matrixobj;
 
 import com.google.gson.annotations.SerializedName;
-import com.smhu.helper.GsonHelper;
-import com.smhu.url.UrlConnection;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.List;
 
 public class MatrixObject {
 

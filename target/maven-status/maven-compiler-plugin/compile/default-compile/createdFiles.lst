@@ -87,7 +87,6 @@ com\smhu\market\Market.class
 com\smhu\iface\IShipper.class
 com\smhu\system\SystemTime.class
 com\smhu\history\History.class
-com\smhu\controller\TransactionController$TransactionService.class
 com\smhu\iface\IStatus.class
 com\smhu\response\shipper\OrderDelivery.class
 com\smhu\dao\FeedbackDAO.class

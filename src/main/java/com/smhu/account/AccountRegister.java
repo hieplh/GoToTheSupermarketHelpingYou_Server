@@ -11,16 +11,14 @@ public class AccountRegister {
     private String fullname;
     private Date dob;
     private String vin;
-    private String codeOTP;
 
-    public AccountRegister(String username, String password, String role, String fullname, Date dob, String vin, String codeOTP) {
+    public AccountRegister(String username, String password, String role, String fullname, Date dob, String vin) {
         this.username = username;
         this.password = password;
         this.role = role;
         this.fullname = fullname;
         this.dob = dob;
         this.vin = vin;
-        this.codeOTP = codeOTP;
     }
 
     public String getPassword() {
@@ -71,14 +69,6 @@ public class AccountRegister {
         this.username = username;
     }
 
-    public String getCodeOTP() {
-        return codeOTP;
-    }
-
-    public void setCodeOTP(String codeOTP) {
-        this.codeOTP = codeOTP;
-    }
-
     @Override
     public boolean equals(Object obj) {
         if (this == obj) {
@@ -99,7 +89,7 @@ public class AccountRegister {
 
     @Override
     public String toString() {
-        return "AccountRegister{" + "username=" + username + ", password=" + password + ", role=" + role + ", fullname=" + fullname + ", dob=" + dob + ", vin=" + vin + ", codeOTP=" + codeOTP + '}';
+        return "AccountRegister{" + "username=" + username + ", password=" + password + ", role=" + role + ", fullname=" + fullname + ", dob=" + dob + ", vin=" + vin + '}';
     }
 
 }

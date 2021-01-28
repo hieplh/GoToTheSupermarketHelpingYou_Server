@@ -191,7 +191,7 @@ public class MarketDAO implements IMarket {
             con = DBUtils.getConnection();
             if (con != null) {
                 String sql = QueryStatement.selectCategory
-                        + "WHERE MARKET_ID = ?";
+                        + "WHERE M.ID = ?";
                 stmt = con.prepareStatement(sql);
                 stmt.setString(1, id);
                 rs = stmt.executeQuery();

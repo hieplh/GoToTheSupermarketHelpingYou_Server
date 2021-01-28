@@ -43,7 +43,12 @@ public class Commission {
     public Commission() {
     }
 
-    public Commission(Date dateCreated, Time timeCreated, Date dateApply, Time timeApply, int firstShipping, int firstShopping, Time timeMorning, double fsiMorCost, double nsiMorCost, double fsoMorCost, double nsoMorCost, Time timeMidday, double fsiMidCost, double nsiMidCost, double fsoMidCost, double nsoMidCost, Time timeAfternoon, double fsiAfCost, double nsiAfCost, double fsoAfCost, double nsoAfCost, Time timeEvening, double fsiEveCost, double nsiEveCost, double fsoEveCost, double nsoEveCost, int commissionShipping, int commissionShopping) {
+    public Commission(Date dateCreated, Time timeCreated, Date dateApply, Time timeApply, int firstShipping, int firstShopping,
+            Time timeMorning, String fsiMorCost, String nsiMorCost, String fsoMorCost, String nsoMorCost,
+            Time timeMidday, String fsiMidCost, String nsiMidCost, String fsoMidCost, String nsoMidCost,
+            Time timeAfternoon, String fsiAfCost, String nsiAfCost, String fsoAfCost, String nsoAfCost,
+            Time timeEvening, String fsiEveCost, String nsiEveCost, String fsoEveCost, String nsoEveCost,
+            int commissionShipping, int commissionShopping) {
         this.dateCreated = dateCreated;
         this.timeCreated = timeCreated;
         this.dateApply = dateApply;
@@ -51,30 +56,35 @@ public class Commission {
         this.firstShipping = firstShipping;
         this.firstShopping = firstShopping;
         this.timeMorning = timeMorning;
-        this.fsiMorCost = fsiMorCost;
-        this.nsiMorCost = nsiMorCost;
-        this.fsoMorCost = fsoMorCost;
-        this.nsoMorCost = nsoMorCost;
+        this.fsiMorCost = convertStringToDouble(fsiMorCost);
+        this.nsiMorCost = convertStringToDouble(nsiMorCost);
+        this.fsoMorCost = convertStringToDouble(fsoMorCost);
+        this.nsoMorCost = convertStringToDouble(nsoMorCost);
         this.timeMidday = timeMidday;
-        this.fsiMidCost = fsiMidCost;
-        this.nsiMidCost = nsiMidCost;
-        this.fsoMidCost = fsoMidCost;
-        this.nsoMidCost = nsoMidCost;
+        this.fsiMidCost = convertStringToDouble(fsiMidCost);
+        this.nsiMidCost = convertStringToDouble(nsiMidCost);
+        this.fsoMidCost = convertStringToDouble(fsoMidCost);
+        this.nsoMidCost = convertStringToDouble(nsoMidCost);
         this.timeAfternoon = timeAfternoon;
-        this.fsiAfCost = fsiAfCost;
-        this.nsiAfCost = nsiAfCost;
-        this.fsoAfCost = fsoAfCost;
-        this.nsoAfCost = nsoAfCost;
+        this.fsiAfCost = convertStringToDouble(fsiAfCost);
+        this.nsiAfCost = convertStringToDouble(nsiAfCost);
+        this.fsoAfCost = convertStringToDouble(fsoAfCost);
+        this.nsoAfCost = convertStringToDouble(nsoAfCost);
         this.timeEvening = timeEvening;
-        this.fsiEveCost = fsiEveCost;
-        this.nsiEveCost = nsiEveCost;
-        this.fsoEveCost = fsoEveCost;
-        this.nsoEveCost = nsoEveCost;
+        this.fsiEveCost = convertStringToDouble(fsiEveCost);
+        this.nsiEveCost = convertStringToDouble(nsiEveCost);
+        this.fsoEveCost = convertStringToDouble(fsoEveCost);
+        this.nsoEveCost = convertStringToDouble(nsoEveCost);
         this.commissionShipping = commissionShipping;
         this.commissionShopping = commissionShopping;
     }
-    
-    public Commission(String id, Date dateCreated, Time timeCreated, Date dateApply, Time timeApply, int firstShipping, int firstShopping, Time timeMorning, double fsiMorCost, double nsiMorCost, double fsoMorCost, double nsoMorCost, Time timeMidday, double fsiMidCost, double nsiMidCost, double fsoMidCost, double nsoMidCost, Time timeAfternoon, double fsiAfCost, double nsiAfCost, double fsoAfCost, double nsoAfCost, Time timeEvening, double fsiEveCost, double nsiEveCost, double fsoEveCost, double nsoEveCost, int commissionShipping, int commissionShopping) {
+
+    public Commission(String id, Date dateCreated, Time timeCreated, Date dateApply, Time timeApply, int firstShipping, int firstShopping,
+            Time timeMorning, double fsiMorCost, double nsiMorCost, double fsoMorCost, double nsoMorCost,
+            Time timeMidday, double fsiMidCost, double nsiMidCost, double fsoMidCost, double nsoMidCost,
+            Time timeAfternoon, double fsiAfCost, double nsiAfCost, double fsoAfCost, double nsoAfCost,
+            Time timeEvening, double fsiEveCost, double nsiEveCost, double fsoEveCost, double nsoEveCost,
+            int commissionShipping, int commissionShopping) {
         this.id = id;
         this.dateCreated = dateCreated;
         this.timeCreated = timeCreated;
@@ -343,4 +353,12 @@ public class Commission {
         return "Commission{" + "id=" + id + ", dateCreated=" + dateCreated + ", timeCreated=" + timeCreated + ", dateApply=" + dateApply + ", timeApply=" + timeApply + ", firstShipping=" + firstShipping + ", firstShopping=" + firstShopping + ", timeMorning=" + timeMorning + ", fsiMorCost=" + fsiMorCost + ", nsiMorCost=" + nsiMorCost + ", fsoMorCost=" + fsoMorCost + ", nsoMorCost=" + nsoMorCost + ", timeMidday=" + timeMidday + ", fsiMidCost=" + fsiMidCost + ", nsiMidCost=" + nsiMidCost + ", fsoMidCost=" + fsoMidCost + ", nsoMidCost=" + nsoMidCost + ", timeAfternoon=" + timeAfternoon + ", fsiAfCost=" + fsiAfCost + ", nsiAfCost=" + nsiAfCost + ", fsoAfCost=" + fsoAfCost + ", nsoAfCost=" + nsoAfCost + ", timeEvening=" + timeEvening + ", fsiEveCost=" + fsiEveCost + ", nsiEveCost=" + nsiEveCost + ", fsoEveCost=" + fsoEveCost + ", nsoEveCost=" + nsoEveCost + ", commissionShipping=" + commissionShipping + ", commissionShopping=" + commissionShopping + '}';
     }
 
+    private double convertStringToDouble(String s) {
+        return Double.parseDouble(s.replaceAll(",", ""));
+    }
+
+//    private Time convertStringToTime(String s) {
+//        Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"), Locale.forLanguageTag("vi-vn"));
+//        
+//    }
 }
