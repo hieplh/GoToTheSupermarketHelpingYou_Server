@@ -305,6 +305,9 @@ public class QueryStatement {
             + "AND T.ACCOUNT = ?\n"
             + "ORDER BY T.CREATE_DATE ASC, T.CREATE_TIME ASC";
 
+    public static String selectOverallOrder = "SELECT CREATED_DATE, COST_SHOPPING, COST_DELIVERY, SHOPPING_COMMISSION, SHIPPING_COMMISSION\n"
+            + "FROM ORDERS\n";
+    
     public static String insertAccount = "INSERT INTO ACCOUNT(PHONE, PASSWORD, SALT, ROLE, \n"
             + "FULLNAME, DOB, CREATED_DATE, WALLET, \n"
             + "NUM_SUCCESS, NUM_CANCEL, IS_ACTIVE, VIN, MAX_ACCEPT_ORDER)\n"

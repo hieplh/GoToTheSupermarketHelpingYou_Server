@@ -101,6 +101,7 @@ public class ModerationController implements IModeration {
                 }
             }
         }
+
         if (result) {
             model.addAttribute("RESULT", "Thiết lập thành công");
             reloadCommission();

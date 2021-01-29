@@ -8,6 +8,7 @@ import com.smhu.iface.IAccount;
 import com.smhu.iface.IOrder;
 import com.smhu.order.Order;
 import com.smhu.order.OrderDetail;
+import com.smhu.order.PartOrder;
 import com.smhu.statement.QueryStatement;
 import com.smhu.utils.DBUtils;
 
@@ -326,5 +327,131 @@ public class OrderDAO implements IOrder {
             }
         }
         return null;
+    }
+    
+    public List<PartOrder> getOverallOrder(int year) throws SQLException, ClassNotFoundException {
+        Connection con = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+        List<PartOrder> list = null;
+
+        try {
+            con = DBUtils.getConnection();
+            if (con != null) {
+                String sql = QueryStatement.selectOverallOrder
+                        + "WHERE YEAR(CREATED_DATE) = ?\n"
+                        + "AND STATUS = ?;";
+                stmt = con.prepareStatement(sql);
+                stmt.setInt(1, year);
+                stmt.setInt(2, 24);
+                rs = stmt.executeQuery();
+                while (rs.next()) {
+                    if (list == null) {
+                        list = new ArrayList<>();
+                    }
+                    list.add(new PartOrder(rs.getDate("CREATED_DATE"),
+                            rs.getDouble("COST_DELIVERY"),
+                            rs.getDouble("COST_SHOPPING"),
+                            rs.getInt("SHIPPING_COMMISSION"),
+                            rs.getInt("SHOPPING_COMMISSION")));
+                }
+            }
+        } finally {
+            if (rs != null) {
+                rs.close();
+            }
+            if (stmt != null) {
+                stmt.close();
+            }
+            if (con != null) {
+                con.close();
+            }
+        }
+        return list;
+    }
+
+    public List<PartOrder> getOverallOrder(int fromMonth, int toMonth, int year) throws SQLException, ClassNotFoundException {
+        Connection con = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+        List<PartOrder> list = null;
+
+        try {
+            con = DBUtils.getConnection();
+            if (con != null) {
+                String sql = QueryStatement.selectOverallOrder
+                        + "WHERE MONTH(CREATED_DATE) >= ? AND MONTH(CREATED_DATE) <= ? AND YEAR(CREATED_DATE) = ?\n"
+                        + "AND STATUS = ?";
+                stmt = con.prepareStatement(sql);
+                stmt.setInt(1, fromMonth);
+                stmt.setInt(2, toMonth);
+                stmt.setInt(3, year);
+                stmt.setInt(4, 24);
+                rs = stmt.executeQuery();
+                while (rs.next()) {
+                    if (list == null) {
+                        list = new ArrayList<>();
+                    }
+                    list.add(new PartOrder(rs.getDate("CREATED_DATE"),
+                            rs.getDouble("COST_DELIVERY"),
+                            rs.getDouble("COST_SHOPPING"),
+                            rs.getInt("SHIPPING_COMMISSION"),
+                            rs.getInt("SHOPPING_COMMISSION")));
+                }
+            }
+        } finally {
+            if (rs != null) {
+                rs.close();
+            }
+            if (stmt != null) {
+                stmt.close();
+            }
+            if (con != null) {
+                con.close();
+            }
+        }
+        return list;
+    }
+
+    public List<PartOrder> getOverallOrder(int month, int year) throws SQLException, ClassNotFoundException {
+        Connection con = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+        List<PartOrder> list = null;
+
+        try {
+            con = DBUtils.getConnection();
+            if (con != null) {
+                String sql = QueryStatement.selectOverallOrder
+                        + "WHERE MONTH(CREATED_DATE) = ? AND YEAR(CREATED_DATE) = ?\n"
+                        + "AND STATUS = ?";
+                stmt = con.prepareStatement(sql);
+                stmt.setInt(1, month);
+                stmt.setInt(2, year);
+                stmt.setInt(3, 24);
+                rs = stmt.executeQuery();
+                while (rs.next()) {
+                    if (list == null) {
+                        list = new ArrayList<>();
+                    }
+                    list.add(new PartOrder(rs.getDate("CREATED_DATE"),
+                            rs.getDouble("COST_DELIVERY"),
+                            rs.getDouble("COST_SHOPPING"),
+                            rs.getInt("SHIPPING_COMMISSION"),
+                            rs.getInt("SHOPPING_COMMISSION")));
+                }
+            }
+        } finally {
+            if (rs != null) {
+                rs.close();
+            }
+            if (stmt != null) {
+                stmt.close();
+            }
+            if (con != null) {
+                con.close();
+            }
+        }
+        return list;
     }
 }

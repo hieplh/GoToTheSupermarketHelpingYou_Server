@@ -158,7 +158,7 @@ public class CommissionDAO {
                 stmt.setDouble(27, commission.getNsoEveCost());
                 stmt.setInt(28, commission.getCommissionShipping());
                 stmt.setInt(29, commission.getCommissionShopping());
-                return stmt.execute();
+                return stmt.executeUpdate() > 0;
             }
         } finally {
             if (stmt != null) {
